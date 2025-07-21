@@ -23,6 +23,8 @@ function useIsNarrow() {
   return isNarrow;
 }
 
+const API_BASE = process.env.REACT_APP_API_BASE || '';
+
 export default function SchoolsList() {
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()
@@ -32,7 +34,7 @@ export default function SchoolsList() {
   const rowRefs = useRef({})
 
   useEffect(() => {
-    fetch('/api/schools')
+    fetch(`${API_BASE}/api/schools`)
       .then(res => res.json())
       .then(setSchools)
   }, [])

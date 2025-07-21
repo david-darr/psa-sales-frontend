@@ -78,19 +78,22 @@ export default function SchoolFinder() {
     );
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    const res = await fetch('/api/find-schools', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address, keywords: selectedKeywords })
-    });
-    const data = await res.json();
-    setSchools(data.schools);
-    setCoords(data.location);
-    setSelectedRouteSchools([]); // Reset selected schools for route
-    setRouteOrder(null);         // Reset previous route order
-  }
+
+const API_BASE = process.env.REACT_APP_API_BASE || '';
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const res = await fetch(`${API_BASE}/api/find-schools`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address, keywords: selectedKeywords })
+  });
+  const data = await res.json();
+  setSchools(data.schools);
+  setCoords(data.location);
+  setSelectedRouteSchools([]); // Reset selected schools for route
+  setRouteOrder(null);         // Reset previous route order
+}
 
   // Handle school selection for route
   function toggleRouteSchool(place_id) {
@@ -112,7 +115,7 @@ export default function SchoolFinder() {
       alert("Please enter a starting address.");
       return;
     }
-    const res = await fetch('/api/route-plan', {
+    const res = await fetch(`${API_BASE}/api/route-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ schools: schoolsToRoute, start_address: startAddress })

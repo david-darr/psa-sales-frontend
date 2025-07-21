@@ -23,7 +23,6 @@ function useIsNarrow() {
   return isNarrow;
 }
 
-const API_BASE = process.env.REACT_APP_API_BASE || '';
 
 export default function SchoolsList() {
   const isMobile = useIsMobile()
@@ -34,7 +33,7 @@ export default function SchoolsList() {
   const rowRefs = useRef({})
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/schools`)
+    fetch(`https://psa-sales-backend.onrender.com/api/schools`)
       .then(res => res.json())
       .then(setSchools)
   }, [])

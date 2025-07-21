@@ -79,11 +79,10 @@ export default function SchoolFinder() {
   }
 
 
-const API_BASE = process.env.REACT_APP_API_BASE || '';
 
 async function handleSubmit(e) {
   e.preventDefault();
-  const res = await fetch(`${API_BASE}/api/find-schools`, {
+  const res = await fetch(`https://psa-sales-backend.onrender.com/api/find-schools`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ address, keywords: selectedKeywords })
@@ -115,7 +114,7 @@ async function handleSubmit(e) {
       alert("Please enter a starting address.");
       return;
     }
-    const res = await fetch(`${API_BASE}/api/route-plan`, {
+    const res = await fetch(`https://psa-sales-backend.onrender.com/api/route-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ schools: schoolsToRoute, start_address: startAddress })

@@ -2,11 +2,11 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Use public URLs for production
+// Use correct public URLs for production and local
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: '/leaflet/marker-icon-2x.png',
-  iconUrl: '/leaflet/marker-icon.png',
-  shadowUrl: '/leaflet/marker-shadow.png',
+  iconRetinaUrl: '/map/marker-icon-2x.png',
+  iconUrl: '/map/marker-icon.png',
+  shadowUrl: '/map/marker-shadow.png',
 });
 
 function SchoolMap({ coords, schools }) {

@@ -5,8 +5,10 @@ export default function Team() {
   const navigate = useNavigate()
   const [sheetData, setSheetData] = useState({})
   const [selectedSheet, setSelectedSheet] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
+  const fetchSheets = () => {
+    setLoading(true)
     fetch("https://psa-sales-backend.onrender.com/api/team-sheets")
       .then(res => res.json())
       .then(data => {
@@ -14,6 +16,11 @@ export default function Team() {
         const firstSheet = Object.keys(data)[0] || ""
         setSelectedSheet(firstSheet)
       })
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchSheets()
   }, [])
 
   const handleSheetChange = (e) => {
@@ -40,6 +47,13 @@ export default function Team() {
             ))}
           </select>
         </label>
+        <button
+          style={{ marginLeft: "1rem", padding: "0.3rem 1rem" }}
+          onClick={fetchSheets}
+          disabled={loading}
+        >
+          {loading ? "Refreshing..." : "Refresh"}
+        </button>
       </div>
       <div style={{ marginTop: "2rem" }}>
         {selectedSheet && sheetData[selectedSheet] && (
@@ -51,8 +65,8 @@ export default function Team() {
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                color: "black", // <-- Ensures table text is black
-                background: "white" // Optional: ensures background is white
+                color: "black",
+                background: "white"
               }}
             >
               <tbody>

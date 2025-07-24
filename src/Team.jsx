@@ -9,13 +9,17 @@ export default function Team() {
 
   const fetchSheets = () => {
     setLoading(true)
-    fetch("https://psa-sales-backend.onrender.com/api/team-sheets")
-      .then(res => res.json())
-      .then(data => {
-        setSheetData(data)
-        const firstSheet = Object.keys(data)[0] || ""
-        setSelectedSheet(firstSheet)
-      })
+    // First, trigger backend to reload sheets
+    fetch("https://psa-sales-backend.onrender.com/api/refresh-sheets", { method: "POST" })
+      .then(() =>
+        fetch("https://psa-sales-backend.onrender.com/api/team-sheets")
+          .then(res => res.json())
+          .then(data => {
+            setSheetData(data)
+            const firstSheet = Object.keys(data)[0] || ""
+            setSelectedSheet(firstSheet)
+          })
+      )
       .finally(() => setLoading(false))
   }
 

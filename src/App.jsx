@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-
+import { AuthProvider } from "./AuthContext"
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom'
 import SchoolsList from './SchoolsList'
 import SchoolFinder from './SchoolFinder'
 import Emails from './Emails'
 import Team from './Team'
 import Account from './Account'
+import ProtectedRoute from "./ProtectedRoute"
 
 
 
@@ -329,17 +330,18 @@ function Home() {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/schools" element={<SchoolsList />} />
-        <Route path="/finder" element={<SchoolFinder />} />
-        <Route path="/emails" element={<Emails />} />
-        <Route path="/team" element={<Team />} />
-        <Route path="/account" element={<Account />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/schools" element={<ProtectedRoute><SchoolsList /></ProtectedRoute>} />
+          <Route path="/finder" element={<ProtectedRoute><SchoolFinder /></ProtectedRoute>} />
+          <Route path="/emails" element={<ProtectedRoute><Emails /></ProtectedRoute>} />
+          <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   )
 }
-
 export default App

@@ -118,34 +118,6 @@ export default function Account() {
               </span>
             </button>
           </div>
-          {isNarrow && menuOpen && (
-            <div style={{
-              position: "absolute",
-              top: 80,
-              right: "12%",
-              background: "#c40c0c",
-              borderRadius: 12,
-              boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-              padding: "12px 0",
-              minWidth: 180,
-              maxHeight: "60vh",
-              overflowY: "auto",
-              zIndex: 300
-            }}>
-              {buttons.map(btn => (
-                <button
-                  key={btn.path}
-                  className="home-btn"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate(btn.path);
-                  }}
-                >
-                  {btn.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       );
     }
@@ -153,15 +125,33 @@ export default function Account() {
     return (
       <div className="header-container">
         <img src="/PSA_logo.png" alt="PSA logo" className="logo" />
-        {buttons.map(btn => (
-          <button
-            key={btn.path}
-            className="home-btn"
-            onClick={() => navigate(btn.path)}
-          >
-            {btn.label}
-          </button>
-        ))}
+        {!isNarrow ? (
+          buttons.map(btn => (
+            <button
+              key={btn.path}
+              className="home-btn"
+              onClick={() => navigate(btn.path)}
+            >
+              {btn.label}
+            </button>
+          ))
+        ) : (
+          <div style={{ marginLeft: "auto" }}>
+            <button
+              className="home-btn"
+              onClick={() => setMenuOpen(open => !open)}
+              aria-label="Open menu"
+            >
+              <span style={{ display: "inline-block", verticalAlign: "middle" }}>
+                <svg width="32" height="32" viewBox="0 0 32 32">
+                  <rect y="7" width="32" height="4" rx="2" fill="white"/>
+                  <rect y="14" width="32" height="4" rx="2" fill="white"/>
+                  <rect y="21" width="32" height="4" rx="2" fill="white"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -183,11 +173,42 @@ export default function Account() {
     ? { width: "100vw", height: 210, objectFit: "cover", display: "block" }
     : { width: "100vw", height: 310, objectFit: "cover", display: "block" }
 
+  // --- Dropdown menu overlay (like SchoolFinder) ---
+  const DropdownMenu = () => (
+    <div style={{
+      position: isMobile ? "absolute" : "fixed",
+      top: isMobile ? 80 : 110,
+      right: "12%",
+      background: "#c40c0c",
+      borderRadius: 12,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+      padding: "12px 0",
+      minWidth: 180,
+      maxHeight: "60vh",
+      overflowY: "auto",
+      zIndex: 300
+    }}>
+      {buttons.map(btn => (
+        <button
+          key={btn.path}
+          className="home-btn"
+          onClick={() => {
+            setMenuOpen(false);
+            navigate(btn.path);
+          }}
+        >
+          {btn.label}
+        </button>
+      ))}
+    </div>
+  );
+
   // LOGGED IN VIEW
   if (user) {
     return (
       <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
         <Header />
+        {(menuOpen && (isMobile || isNarrow)) && <DropdownMenu />}
         <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
           <img src={images[bgIndex]} alt="" style={bgImgStyle} />
         </div>
@@ -229,6 +250,7 @@ export default function Account() {
   return (
     <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
       <Header />
+      {(menuOpen && (isMobile || isNarrow)) && <DropdownMenu />}
       <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
         <img src={images[bgIndex]} alt="" style={bgImgStyle} />
       </div>

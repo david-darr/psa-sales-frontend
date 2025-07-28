@@ -67,7 +67,7 @@ export default function Account() {
     )
   }
 
-  console.log("Google Client ID:", process.env.REACT_APP_GOOGLE_CLIENT_ID)
+  console.log("Google Client ID:", process.env.GOOGLE_CLIENT_ID)
 
   return (
     <div>
@@ -95,7 +95,7 @@ export default function Account() {
         </button>
         {error && <div style={{ color: "red" }}>{error}</div>}
       </form>
-      <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+      <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID}>
         <GoogleLogin
           onSuccess={handleGoogleSuccess}
           onError={() => setError("Google login failed")}

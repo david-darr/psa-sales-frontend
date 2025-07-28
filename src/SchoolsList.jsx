@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from 'react'
 
 const buttons = [
   { label: "Home +", path: "/" },
-  { label: "Schools List +", path: "/schools" },
   { label: "School Finder +", path: "/finder" },
   { label: "Emails +", path: "/emails" },
   { label: "Team +", path: "/team" },

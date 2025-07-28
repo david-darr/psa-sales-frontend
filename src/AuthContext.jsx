@@ -13,8 +13,14 @@ export function AuthProvider({ children }) {
       fetch("https://psa-sales-backend.onrender.com/api/profile", {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => setUser(data && !data.error ? data : null))
+        .then(res => {
+          console.log("Profile status:", res.status)
+          return res.ok ? res.json() : null
+        })
+        .then(data => {
+          console.log("Profile data:", data)
+          setUser(data && !data.error ? data : null)
+        })
         .finally(() => setLoading(false))
     } else {
       setUser(null)

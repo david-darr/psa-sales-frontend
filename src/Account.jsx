@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "./AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 
 const buttons = [
@@ -37,6 +37,7 @@ export default function Account() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" })
   const [error, setError] = useState("")
   const navigate = useNavigate()
+  const location = useLocation()
   const isMobile = useIsMobile();
   const isNarrow = useIsNarrow();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -73,7 +74,9 @@ export default function Account() {
     const data = await res.json()
     if (data.access_token) {
       login(data.access_token, data.user)
-      navigate("/schools")
+      // Redirect to intended page or default to /schools
+      const redirectTo = location.state?.from?.pathname || "/schools"
+      navigate(redirectTo, { replace: true })
     } else if (data.message && isRegister) {
       setIsRegister(false)
       setForm({ name: "", email: "", phone: "", password: "" })
@@ -91,7 +94,9 @@ export default function Account() {
     const data = await res.json()
     if (data.access_token) {
       login(data.access_token, data.user)
-      navigate("/schools")
+      // Redirect to intended page or default to /schools
+      const redirectTo = location.state?.from?.pathname || "/schools"
+      navigate(redirectTo, { replace: true })
     } else {
       setError(data.error || "Google login failed")
     }

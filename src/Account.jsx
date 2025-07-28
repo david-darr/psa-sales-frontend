@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useAuth } from "./AuthContext"
 import { useNavigate } from "react-router-dom"
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 
 export default function Account() {
   const { user, login, logout } = useAuth()
@@ -31,6 +32,21 @@ export default function Account() {
       setForm({ name: "", email: "", phone: "", password: "" })
     } else {
       setError(data.error || "Unknown error")
+    }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const res = await fetch("https://psa-sales-backend.onrender.com/api/google-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: credentialResponse.credential })
+    })
+    const data = await res.json()
+    if (data.access_token) {
+      login(data.access_token, data.user)
+      navigate("/schools")
+    } else {
+      setError(data.error || "Google login failed")
     }
   }
 
@@ -77,6 +93,12 @@ export default function Account() {
         </button>
         {error && <div style={{ color: "red" }}>{error}</div>}
       </form>
+      <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={() => setError("Google login failed")}
+        />
+      </GoogleOAuthProvider>
     </div>
   )
 }

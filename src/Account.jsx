@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "./AuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
-import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
+import { GoogleLogin, GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
 
 const buttons = [
   { label: "Home +", path: "/" },
@@ -85,22 +85,26 @@ export default function Account() {
     }
   }
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    const res = await fetch("https://psa-sales-backend.onrender.com/api/google-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: credentialResponse.credential })
-    })
-    const data = await res.json()
-    if (data.access_token) {
-      login(data.access_token, data.user)
-      // Redirect to intended page or default to /schools
-      const redirectTo = location.state?.from?.pathname || "/schools"
-      navigate(redirectTo, { replace: true })
-    } else {
-      setError(data.error || "Google login failed")
-    }
-  }
+  const googleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    scope: 'openid email profile https://www.googleapis.com/auth/gmail.send',
+    onSuccess: async ({ code }) => {
+      const res = await fetch("https://psa-sales-backend.onrender.com/api/google-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      })
+      const data = await res.json()
+      if (data.access_token) {
+        login(data.access_token, data.user)
+        const redirectTo = location.state?.from?.pathname || "/schools"
+        navigate(redirectTo, { replace: true })
+      } else {
+        setError(data.error || "Google login failed")
+      }
+    },
+    onError: () => setError("Google login failed")
+  })
 
   // HEADER
   function Header() {

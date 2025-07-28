@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useAuth } from "./AuthContext"
 
 const buttons = [
   { label: "Home +", path: "/" },
@@ -34,6 +35,9 @@ export default function Emails() {
   const isMobile = useIsMobile();
   const isNarrow = useIsNarrow();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, accessToken } = useAuth();
+  const [recipient, setRecipient] = useState("");
+  const [status, setStatus] = useState("");
 
   const images = [
     "/psa pics/bg1.jpg",
@@ -50,6 +54,26 @@ export default function Emails() {
     }, 6000);
     return () => clearInterval(interval);
   }, [images.length]);
+
+  async function handleSend(e) {
+    e.preventDefault();
+    setStatus("");
+    const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ recipient })
+    });
+    const data = await res.json();
+    if (data.status === "sent") {
+      setStatus("Email sent!");
+      setRecipient("");
+    } else {
+      setStatus(data.error || "Failed to send email.");
+    }
+  }
 
   // HEADER
   function Header() {
@@ -186,8 +210,25 @@ export default function Emails() {
         EMAILS
       </div>
       <div style={cardStyle}>
-        <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>Emails</h2>
-        <h1>Work In Progress</h1>
+        <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>Send Email</h2>
+        {user ? (
+          <form onSubmit={handleSend}>
+            <input
+              type="email"
+              placeholder="School's Email"
+              value={recipient}
+              onChange={e => setRecipient(e.target.value)}
+              required
+              style={{ marginBottom: 12, width: "100%" }}
+            />
+            <button type="submit" className="home-btn" style={{ width: "100%" }}>
+              Send Email
+            </button>
+            {status && <div style={{ marginTop: 10, color: status === "Email sent!" ? "green" : "#e53935" }}>{status}</div>}
+          </form>
+        ) : (
+          <div>Please log in to send emails.</div>
+        )}
       </div>
     </div>
   )

@@ -54,11 +54,10 @@ export default function Emails() {
     let sentCount = 0;
     const rows = sheetData[selectedSheet] || [];
     for (const i of selectedRows) {
-      const row = rows[i];
+      const row = rows[i + 1]; 
       const schoolName = row[0];
-      // Find the first valid email in the row
       const schoolEmail = row.find(cell => isValidEmail(cell));
-      if (!schoolEmail) continue; // skip if no valid email
+      if (!schoolEmail) continue;
       const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
         method: "POST",
         headers: {

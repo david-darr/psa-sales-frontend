@@ -5,8 +5,8 @@ const buttons = [
   { label: "Home +", path: "/" },
   { label: "Schools List +", path: "/schools" },
   { label: "School Finder +", path: "/finder" },
-  { label: "Emails +", path: "/emails" },
-  { label: "Team +", path: "/team" }
+  { label: "Team +", path: "/team" },
+  { label: "Account +", path: "/account" }
 ]
 
 function useIsMobile() {

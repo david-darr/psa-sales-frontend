@@ -191,6 +191,28 @@ export default function Account() {
         <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
           <img src={images[bgIndex]} alt="" style={bgImgStyle} />
         </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: isMobile ? 130 : 140,
+            transform: "translateX(-50%)",
+            zIndex: 210,
+            fontWeight: 900,
+            fontSize: isMobile ? "7vw" : "3vw",
+            color: "#fff",
+            letterSpacing: 1,
+            textShadow: "2px 4px 8px rgba(0,0,0,1)",
+            maxWidth: "90vw",
+            minWidth: "200px",
+            wordBreak: "break-word",
+            lineHeight: 1.1,
+            textAlign: "center",
+            pointerEvents: "none"
+          }}
+        >
+          ACCOUNT SETTINGS
+        </div>
         <div style={cardStyle}>
           <h2 style={{ color: "#c40c0c" }}>Welcome, {user.name}!</h2>
           <div style={{ margin: "1.5rem 0" }}>
@@ -209,6 +231,28 @@ export default function Account() {
       <Header />
       <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
         <img src={images[bgIndex]} alt="" style={bgImgStyle} />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: isMobile ? 130 : 140,
+          transform: "translateX(-50%)",
+          zIndex: 210,
+          fontWeight: 900,
+          fontSize: isMobile ? "7vw" : "3vw",
+          color: "#fff",
+          letterSpacing: 1,
+          textShadow: "2px 4px 8px rgba(0,0,0,1)",
+          maxWidth: "90vw",
+          minWidth: "200px",
+          wordBreak: "break-word",
+          lineHeight: 1.1,
+          textAlign: "center",
+          pointerEvents: "none"
+        }}
+      >
+        ACCOUNT SETTINGS
       </div>
       <div style={cardStyle}>
         <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>{isRegister ? "Register" : "Login"}</h2>

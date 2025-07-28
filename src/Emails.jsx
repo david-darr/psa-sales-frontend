@@ -42,19 +42,23 @@ export default function Emails() {
     )
   }
 
+  function isValidEmail(email) {
+    return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
   async function handleSend(e) {
-    e.preventDefault()
-    setStatus("")
-    setLoading(true)
-    const subject = "Let's Connect! PSA Programs"
-    let sentCount = 0
-    const rows = sheetData[selectedSheet] || []
+    e.preventDefault();
+    setStatus("");
+    setLoading(true);
+    const subject = "Let's Connect! PSA Programs";
+    let sentCount = 0;
+    const rows = sheetData[selectedSheet] || [];
     for (const i of selectedRows) {
-      const row = rows[i]
-      // Adjust these indices based on your sheet columns:
-      const schoolName = row[0]
-      const schoolEmail = row[4] || row.find(cell => cell.includes("@")) // fallback if needed
-      if (!schoolEmail) continue
+      const row = rows[i];
+      const schoolName = row[0];
+      // Find the first valid email in the row
+      const schoolEmail = row.find(cell => isValidEmail(cell));
+      if (!schoolEmail) continue; // skip if no valid email
       const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
         method: "POST",
         headers: {
@@ -64,15 +68,15 @@ export default function Emails() {
         body: JSON.stringify({
           recipient: schoolEmail,
           subject,
-          school_name: schoolName // send for personalization if you want
+          school_name: schoolName
         })
-      })
-      const data = await res.json()
-      if (data.status === "sent") sentCount++
+      });
+      const data = await res.json();
+      if (data.status === "sent") sentCount++;
     }
-    setStatus(`${sentCount} email${sentCount === 1 ? "" : "s"} sent!`)
-    setLoading(false)
-    setSelectedRows([])
+    setStatus(`${sentCount} email${sentCount === 1 ? "" : "s"} sent!`);
+    setLoading(false);
+    setSelectedRows([]);
   }
 
   return (

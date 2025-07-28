@@ -67,8 +67,6 @@ export default function Account() {
     )
   }
 
-  console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID)
-
   return (
     <div>
       <div className="section-header">

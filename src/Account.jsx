@@ -6,9 +6,9 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 const buttons = [
   { label: "Home +", path: "/" },
   { label: "Schools List +", path: "/schools" },
+  { label: "School Finder +", path: "/finder" },
   { label: "Emails +", path: "/emails" },
-  { label: "Team +", path: "/team" },
-  { label: "Account +", path: "/account" }
+  { label: "Team +", path: "/team" }
 ]
 
 function useIsMobile() {

@@ -67,6 +67,8 @@ export default function Account() {
     )
   }
 
+  console.log("Google Client ID:", process.env.REACT_APP_GOOGLE_CLIENT_ID)
+
   return (
     <div>
       <div className="section-header">

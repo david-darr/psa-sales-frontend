@@ -5,16 +5,20 @@ const AuthContext = createContext()
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(() => localStorage.getItem("jwt") || "")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (token) {
+      setLoading(true)
       fetch("https://psa-sales-backend.onrender.com/api/profile", {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.ok ? res.json() : null)
         .then(data => setUser(data && !data.error ? data : null))
+        .finally(() => setLoading(false))
     } else {
       setUser(null)
+      setLoading(false)
     }
   }, [token])
 
@@ -31,7 +35,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   )

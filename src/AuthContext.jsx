@@ -4,14 +4,14 @@ const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(() => localStorage.getItem("jwt") || "")
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem("jwt") || "")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (token) {
+    if (accessToken) {
       setLoading(true)
       fetch("https://psa-sales-backend.onrender.com/api/profile", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
         .then(res => {
           if (res.status === 401) {
@@ -28,22 +28,22 @@ export function AuthProvider({ children }) {
       setUser(null)
       setLoading(false)
     }
-  }, [token])
+  }, [accessToken])
 
   const login = (token, user) => {
-    setToken(token)
+    setAccessToken(token)
     setUser(user)
     localStorage.setItem("jwt", token)
   }
 
   const logout = () => {
-    setToken("")
-    setUser(null)
-    localStorage.removeItem("jwt")
-  }
+    setAccessToken("");
+    setUser(null);
+    localStorage.removeItem("jwt");
+  };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, accessToken, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -58,6 +58,7 @@ export default function Emails() {
   async function handleSend(e) {
     e.preventDefault();
     setStatus("");
+    console.log("accessToken:", accessToken); // <--- Add this
     const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
       method: "POST",
       headers: {

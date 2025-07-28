@@ -14,11 +14,13 @@ export function AuthProvider({ children }) {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => {
-          console.log("Profile status:", res.status)
+          if (res.status === 401) {
+            logout()
+            return null
+          }
           return res.ok ? res.json() : null
         })
         .then(data => {
-          console.log("Profile data:", data)
           setUser(data && !data.error ? data : null)
         })
         .finally(() => setLoading(false))

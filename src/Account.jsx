@@ -337,13 +337,14 @@ export default function Account() {
           {isRegister ? "Already have an account? Login" : "No account? Register"}
         </button>
         <div style={{ margin: "18px 0" }}>
-          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError("Google login failed")}
-              width="100%"
-            />
-          </GoogleOAuthProvider>
+          <button
+            type="button"
+            className="home-btn"
+            style={{ width: "100%", background: "#4285F4", color: "#fff" }}
+            onClick={() => googleLogin()}
+          >
+            Sign in with Google
+          </button>
         </div>
         {error && <div style={{ color: "#e53935", marginTop: 8 }}>{error}</div>}
       </div>

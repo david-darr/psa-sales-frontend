@@ -261,7 +261,19 @@ export default function Emails() {
                     {sheetData[selectedSheet] &&
                       sheetData[selectedSheet][0] &&
                       sheetData[selectedSheet][0].map((cell, idx) => (
-                        <th key={idx} style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{cell}</th>
+                        <th
+                          key={idx}
+                          style={{
+                            whiteSpace: "nowrap",
+                            fontSize: isMobile ? "0.8rem" : "1.1rem",
+                            padding: isMobile ? "4px 6px" : "8px 12px",
+                            maxWidth: 180,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}
+                        >
+                          {cell}
+                        </th>
                       ))}
                   </tr>
                 </thead>
@@ -277,7 +289,19 @@ export default function Emails() {
                           />
                         </td>
                         {row.map((cell, idx) => (
-                          <td key={idx} style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{cell}</td>
+                          <td
+                            key={idx}
+                            style={{
+                              whiteSpace: "nowrap", // Prevent word breaks
+                              fontSize: isMobile ? "0.75rem" : "1rem", // Responsive font size
+                              padding: isMobile ? "4px 6px" : "8px 12px",
+                              maxWidth: 180,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis"
+                            }}
+                          >
+                            {cell}
+                          </td>
                         ))}
                       </tr>
                     ))}

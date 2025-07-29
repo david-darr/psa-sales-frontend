@@ -236,31 +236,51 @@ export default function Emails() {
         </label>
         {user ? (
           <form onSubmit={handleSend}>
-            <div className="schools-table-scroll-container" style={{ maxHeight: 500, overflowY: "auto" }}>
-              <table className="schools-table">
+            <div
+              className="schools-table-scroll-container"
+              style={{
+                maxHeight: 500,
+                overflowY: "auto",
+                overflowX: "auto", // allow horizontal scroll if needed
+                width: "100%",
+                margin: "0 auto"
+              }}
+            >
+              <table
+                className="schools-table"
+                style={{
+                  width: "100%",
+                  tableLayout: "auto",
+                  minWidth: 0,
+                  wordBreak: "break-word"
+                }}
+              >
                 <thead>
                   <tr>
                     <th></th>
-                    {sheetData[selectedSheet] && sheetData[selectedSheet][0] && sheetData[selectedSheet][0].map((cell, idx) => (
-                      <th key={idx}>{cell}</th>
-                    ))}
+                    {sheetData[selectedSheet] &&
+                      sheetData[selectedSheet][0] &&
+                      sheetData[selectedSheet][0].map((cell, idx) => (
+                        <th key={idx} style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{cell}</th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {sheetData[selectedSheet] && sheetData[selectedSheet].slice(1).map((row, i) => (
-                    <tr key={i}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(i)}
-                          onChange={() => handleRowSelect(i)}
-                        />
-                      </td>
-                      {row.map((cell, idx) => (
-                        <td key={idx}>{cell}</td>
-                      ))}
-                    </tr>
-                  ))}
+                  {sheetData[selectedSheet] &&
+                    sheetData[selectedSheet].slice(1).map((row, i) => (
+                      <tr key={i}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.includes(i)}
+                            onChange={() => handleRowSelect(i)}
+                          />
+                        </td>
+                        {row.map((cell, idx) => (
+                          <td key={idx} style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

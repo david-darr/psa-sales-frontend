@@ -84,7 +84,7 @@ export default function PSAMap() {
     boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
     padding: "1.5rem 1rem",
     maxWidth: 1200,
-    margin: isMobile ? "110px auto 0 auto" : "140px auto 0 auto",
+    margin: isMobile ? "90px auto 40px auto" : "120px auto 60px auto", // changed
     textAlign: "center"
   }
 

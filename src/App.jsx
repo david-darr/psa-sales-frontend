@@ -54,6 +54,7 @@ function Home() {
   }, [images.length])
 
   const buttons = [
+    { label: "Map +", path: "/map" },
     { label: "Schools List +", path: "/schools" },
     { label: "School Finder +", path: "/finder" },
     { label: "Emails +", path: "/emails" },

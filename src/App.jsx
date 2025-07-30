@@ -336,7 +336,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/account" element={<Account />} />
           <Route path="/schools" element={<ProtectedRoute><SchoolsList /></ProtectedRoute>} />
-          <Route path="/finder" element={<ProtectedRoute><SchoolFinder /></ProtectedRoute>} />
+          <Route path="/finder" element={<SchoolFinder />} />
           <Route path="/emails" element={<ProtectedRoute><Emails /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
         </Routes>

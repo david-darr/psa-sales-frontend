@@ -16,7 +16,8 @@ const buttons = [
 const markerIcons = {
   happyfeet: new L.Icon({ iconUrl: "/map/marker-red.png", iconSize: [32, 32] }),
   psa: new L.Icon({ iconUrl: "/map/marker-blue.png", iconSize: [32, 32] }),
-  sheet: new L.Icon({ iconUrl: "/map/marker-yellow.png", iconSize: [32, 32] })
+  sheet: new L.Icon({ iconUrl: "/map/marker-yellow.png", iconSize: [32, 32] }),
+  rec: new L.Icon({ iconUrl: "/map/marker-green.png", iconSize: [32, 32] })
 }
 
 function useIsMobile() {
@@ -244,11 +245,21 @@ export default function PSAMap() {
               </Popup>
             </Marker>
           ))}
+          {Array.isArray(schools.rec) && schools.rec.map((s, i) => (
+            s.lat && s.lng &&
+            <Marker key={`rec-${i}`} position={[s.lat, s.lng]} icon={markerIcons.rec}>
+              <Popup>
+                <b>{s.name}</b><br />Rec Site
+              </Popup>
+            </Marker>
+          ))}
         </MapContainer>
         <div style={{ marginTop: 24, color: "#232323", fontWeight: 700 }}>
           <span style={{ color: "#c40c0c" }}>Red:</span> HappyFeet School &nbsp;
           <span style={{ color: "#1976d2" }}>Blue:</span> PSA School &nbsp;
+          <span style={{ color: "#0f4404ff" }}>Green:</span> Rec &nbsp;
           <span style={{ color: "#fbc02d" }}>Yellow:</span> Reached Out (Sales)
+
         </div>
         <div style={{ marginBottom: 16 }}>
           <button

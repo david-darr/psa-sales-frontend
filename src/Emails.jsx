@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 
 const buttons = [
   { label: "Home +", path: "/" },
+  { label: "Map +", path: "/map" },
   { label: "Schools List +", path: "/schools" },
   { label: "School Finder +", path: "/finder" },
   { label: "Team +", path: "/team" },

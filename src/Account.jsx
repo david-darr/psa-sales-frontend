@@ -5,6 +5,7 @@ import { GoogleLogin, GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/g
 
 const buttons = [
   { label: "Home +", path: "/" },
+  { label: "Map +", path: "/map" },
   { label: "Schools List +", path: "/schools" },
   { label: "School Finder +", path: "/finder" },
   { label: "Emails +", path: "/emails" },

@@ -50,6 +50,22 @@ export default function PSAMap() {
     reached_out: []
   })
 
+  // Rotating background images
+  const images = [
+    "/psa pics/bg1.jpg",
+    "/psa pics/bg2.jpg",
+    "/psa pics/bg3.jpg",
+    "/psa pics/bg4.jpg",
+    "/psa pics/bg5.jpg"
+  ]
+  const [bgIndex, setBgIndex] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBgIndex(i => (i + 1) % images.length)
+    }, 6000)
+    return () => clearInterval(interval)
+  }, [images.length])
+
   useEffect(() => {
     fetch("https://psa-sales-backend.onrender.com/api/map-schools")
       .then(res => res.json())
@@ -60,10 +76,80 @@ export default function PSAMap() {
   const mapCenter = [38.9, -77.25]
   const mapZoom = 10
 
-  return (
-    <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
-      {/* Header */}
-      <div className={isMobile ? "mobile-header-container" : "header-container"}>
+  // Card style for consistency
+  const cardStyle = {
+    background: "#fff",
+    color: "#232323",
+    borderRadius: 16,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+    padding: "1.5rem 1rem",
+    maxWidth: 1200,
+    margin: isMobile ? "110px auto 0 auto" : "140px auto 0 auto",
+    textAlign: "center"
+  }
+
+  // Background image style
+  const bgImgStyle = isMobile
+    ? { width: "100vw", height: 210, objectFit: "cover", display: "block" }
+    : { width: "100vw", height: 310, objectFit: "cover", display: "block" }
+
+  // Dropdown menu overlay
+  const DropdownMenu = () => (
+    <div style={{
+      position: isMobile ? "absolute" : "fixed",
+      top: isMobile ? 80 : 110,
+      right: "12%",
+      background: "#c40c0c",
+      borderRadius: 12,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+      padding: "12px 0",
+      minWidth: 180,
+      maxHeight: "60vh",
+      overflowY: "auto",
+      zIndex: 300
+    }}>
+      {buttons.map(btn => (
+        <button
+          key={btn.path}
+          className="home-btn"
+          onClick={() => {
+            setMenuOpen(false)
+            navigate(btn.path)
+          }}
+        >
+          {btn.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  // HEADER
+  function Header() {
+    if (isMobile) {
+      return (
+        <div className="mobile-header-container">
+          <img src="/PSA_logo.png" alt="PSA logo" className="logo" />
+          <div style={{ marginLeft: "auto" }}>
+            <button
+              className="home-btn"
+              onClick={() => setMenuOpen(open => !open)}
+              aria-label="Open menu"
+            >
+              <span style={{ display: "inline-block", verticalAlign: "middle" }}>
+                <svg width="32" height="32" viewBox="0 0 32 32">
+                  <rect y="7" width="32" height="4" rx="2" fill="white"/>
+                  <rect y="14" width="32" height="4" rx="2" fill="white"/>
+                  <rect y="21" width="32" height="4" rx="2" fill="white"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+        </div>
+      )
+    }
+    // Desktop header
+    return (
+      <div className="header-container">
         <img src="/PSA_logo.png" alt="PSA logo" className="logo" />
         {!isNarrow ? (
           buttons.map(btn => (
@@ -93,35 +179,18 @@ export default function PSAMap() {
           </div>
         )}
       </div>
-      {(menuOpen && (isMobile || isNarrow)) && (
-        <div style={{
-          position: isMobile ? "absolute" : "fixed",
-          top: isMobile ? 80 : 110,
-          right: "12%",
-          background: "#c40c0c",
-          borderRadius: 12,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-          padding: "12px 0",
-          minWidth: 180,
-          maxHeight: "60vh",
-          overflowY: "auto",
-          zIndex: 300
-        }}>
-          {buttons.map(btn => (
-            <button
-              key={btn.path}
-              className="home-btn"
-              onClick={() => {
-                setMenuOpen(false)
-                navigate(btn.path)
-              }}
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {/* Section header */}
+    )
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
+      <Header />
+      {(menuOpen && (isMobile || isNarrow)) && <DropdownMenu />}
+      {/* Rotating background image */}
+      <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
+        <img src={images[bgIndex]} alt="" style={bgImgStyle} />
+      </div>
+      {/* Big Title */}
       <div
         style={{
           position: "absolute",
@@ -145,15 +214,7 @@ export default function PSAMap() {
         MAP
       </div>
       {/* Map Card */}
-      <div style={{
-        background: "#fff",
-        borderRadius: 16,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-        padding: "1rem",
-        maxWidth: 1200,
-        margin: isMobile ? "110px auto 0 auto" : "140px auto 0 auto",
-        textAlign: "center"
-      }}>
+      <div style={cardStyle}>
         <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "70vh", width: "100%" }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -14,6 +14,7 @@ const ALL_KEYWORDS = [
 
 const buttons = [
     { label: "Home +", path: "/" },
+    { label: "Map +", path: "/map" },
     { label: "Schools List +", path: "/schools" },
     { label: "Emails +", path: "/emails" },
     { label: "Team +", path: "/team" },

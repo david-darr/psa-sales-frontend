@@ -44,7 +44,11 @@ export default function PSAMap() {
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [schools, setSchools] = useState({ happyfeet: [], psa: [], reached_out: [] })
+  const [schools, setSchools] = useState({
+    happyfeet: [],
+    psa: [],
+    reached_out: []
+  })
 
   useEffect(() => {
     fetch("https://psa-sales-backend.onrender.com/api/map-schools")
@@ -155,7 +159,7 @@ export default function PSAMap() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
-          {schools.happyfeet.map((s, i) => (
+          {Array.isArray(schools.happyfeet) && schools.happyfeet.map((s, i) => (
             s.lat && s.lng &&
             <Marker key={`hf-${i}`} position={[s.lat, s.lng]} icon={markerIcons.happyfeet}>
               <Popup>
@@ -163,7 +167,7 @@ export default function PSAMap() {
               </Popup>
             </Marker>
           ))}
-          {schools.psa.map((s, i) => (
+          {Array.isArray(schools.psa) && schools.psa.map((s, i) => (
             s.lat && s.lng &&
             <Marker key={`psa-${i}`} position={[s.lat, s.lng]} icon={markerIcons.psa}>
               <Popup>
@@ -171,7 +175,7 @@ export default function PSAMap() {
               </Popup>
             </Marker>
           ))}
-          {schools.reached_out.map((s, i) => (
+          {Array.isArray(schools.reached_out) && schools.reached_out.map((s, i) => (
             s.lat && s.lng &&
             <Marker key={`sheet-${i}`} position={[s.lat, s.lng]} icon={markerIcons.sheet}>
               <Popup>

@@ -185,6 +185,20 @@ export default function PSAMap() {
           <span style={{ color: "#1976d2" }}>Blue:</span> PSA School &nbsp;
           <span style={{ color: "#fbc02d" }}>Yellow:</span> Reached Out (Sales)
         </div>
+        <div style={{ marginBottom: 16 }}>
+          <button
+            className="home-btn"
+            style={{ padding: "8px 24px", fontWeight: 700 }}
+            onClick={async () => {
+              await fetch("https://psa-sales-backend.onrender.com/api/refresh-map-schools", { method: "POST" });
+              fetch("https://psa-sales-backend.onrender.com/api/map-schools")
+                .then(res => res.json())
+                .then(setSchools);
+            }}
+          >
+            Refresh Map
+          </button>
+        </div>
       </div>
     </div>
   )

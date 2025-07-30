@@ -334,6 +334,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/map" element={<Map />} />
           <Route path="/account" element={<Account />} />
           <Route path="/schools" element={<ProtectedRoute><SchoolsList /></ProtectedRoute>} />
           <Route path="/finder" element={<SchoolFinder />} />

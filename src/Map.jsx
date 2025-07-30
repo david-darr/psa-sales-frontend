@@ -14,9 +14,9 @@ const buttons = [
 ]
 
 const markerIcons = {
-  happyfeet: new L.Icon({ iconUrl: "/marker-red.png", iconSize: [32, 32] }),
-  psa: new L.Icon({ iconUrl: "/marker-blue.png", iconSize: [32, 32] }),
-  sheet: new L.Icon({ iconUrl: "/marker-yellow.png", iconSize: [32, 32] })
+  happyfeet: new L.Icon({ iconUrl: "/map/marker-red.png", iconSize: [32, 32] }),
+  psa: new L.Icon({ iconUrl: "/map/marker-blue.png", iconSize: [32, 32] }),
+  sheet: new L.Icon({ iconUrl: "/map/marker-yellow.png", iconSize: [32, 32] })
 }
 
 function useIsMobile() {

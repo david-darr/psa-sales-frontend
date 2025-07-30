@@ -39,7 +39,7 @@ function useIsNarrow() {
   return isNarrow
 }
 
-export default function Map() {
+export default function PSAMap() {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()

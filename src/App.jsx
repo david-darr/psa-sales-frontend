@@ -8,6 +8,7 @@ import Emails from './Emails'
 import Team from './Team'
 import Account from './Account'
 import ProtectedRoute from "./ProtectedRoute"
+import PSAMap from './Map'
 
 
 
@@ -335,7 +336,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/map" element={<Map />} />
+          <Route path="/map" element={<PSAMap />} />
           <Route path="/account" element={<Account />} />
           <Route path="/schools" element={<ProtectedRoute><SchoolsList /></ProtectedRoute>} />
           <Route path="/finder" element={<SchoolFinder />} />

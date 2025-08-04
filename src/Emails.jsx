@@ -39,6 +39,7 @@ export default function Emails() {
   const [selectedRows, setSelectedRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState("")
+  const [emailStatuses, setEmailStatuses] = useState([]);
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -70,6 +71,14 @@ export default function Emails() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
+      .then(res => res.json())
+      .then(setEmailStatuses);
+  }, [accessToken]);
+
   const handleSheetChange = (e) => {
     setSelectedSheet(e.target.value)
     setSelectedRows([])
@@ -86,17 +95,17 @@ export default function Emails() {
   }
 
   async function handleSend(e) {
-    e.preventDefault()
-    setStatus("")
-    setLoading(true)
-    const subject = "Let's Connect! PSA Programs"
-    let sentCount = 0
-    const rows = sheetData[selectedSheet] || []
+    e.preventDefault();
+    setStatus("");
+    setLoading(true);
+    const subject = "Let's Connect! PSA Programs";
+    let sentCount = 0;
+    const rows = sheetData[selectedSheet] || [];
     for (const i of selectedRows) {
-      const row = rows[i + 1] // +1 to skip header
-      const schoolName = row[0]
-      const schoolEmail = row.find(cell => isValidEmail(cell))
-      if (!schoolEmail) continue
+      const row = rows[i + 1]; // +1 to skip header
+      const schoolName = row[0];
+      const schoolEmail = row.find(cell => isValidEmail(cell));
+      if (!schoolEmail) continue;
       const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
         method: "POST",
         headers: {
@@ -108,13 +117,13 @@ export default function Emails() {
           subject,
           school_name: schoolName
         })
-      })
-      const data = await res.json()
-      if (data.status === "sent") sentCount++
+      });
+      const data = await res.json();
+      if (data.status === "sent") sentCount++;
     }
-    setStatus(`${sentCount} email${sentCount === 1 ? "" : "s"} sent!`)
-    setLoading(false)
-    setSelectedRows([])
+    setStatus(`${sentCount} email${sentCount === 1 ? "" : "s"} sent!`);
+    setLoading(false);
+    setSelectedRows([]);
   }
 
   // Dropdown menu overlay (like SchoolFinder)
@@ -322,6 +331,53 @@ export default function Emails() {
         ) : (
           <div>Please log in to send emails.</div>
         )}
+        {/* Email Statuses Table */}
+        <div style={{ marginTop: 40 }}>
+          <h2>Email Statuses</h2>
+          <div
+            className="schools-table-scroll-container"
+            style={{
+              maxHeight: 500,
+              overflowY: "auto",
+              overflowX: "auto", // allow horizontal scroll if needed
+              width: "100%",
+              margin: "0 auto"
+            }}
+          >
+            <table
+              className="schools-table"
+              style={{
+                width: "100%",
+                tableLayout: "auto",
+                minWidth: 0,
+                wordBreak: "break-word"
+              }}
+            >
+              <thead>
+                <tr>
+                  <th>School Name</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emailStatuses.map(email => (
+                  <tr key={email.id}>
+                    <td>{email.school_name}</td>
+                    <td>{email.school_email}</td>
+                    <td>
+                      {email.responded
+                        ? "Responded"
+                        : email.followup_sent
+                        ? "Follow-Up Sent"
+                        : "Pending"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   )

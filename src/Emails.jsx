@@ -34,12 +34,19 @@ function useIsNarrow() {
 export default function Emails() {
   const navigate = useNavigate()
   const { user, accessToken } = useAuth()
-  const [sheetData, setSheetData] = useState({})
-  const [selectedSheet, setSelectedSheet] = useState("")
-  const [selectedRows, setSelectedRows] = useState([])
+  const [mySchools, setMySchools] = useState([])
+  const [selectedSchools, setSelectedSchools] = useState([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState("")
-  const [emailStatuses, setEmailStatuses] = useState([]);
+  const [emailStatuses, setEmailStatuses] = useState([])
+  const [showAddSchool, setShowAddSchool] = useState(false)
+  const [newSchool, setNewSchool] = useState({
+    school_name: "",
+    contact_name: "",
+    email: "",
+    phone: "",
+    address: ""
+  })
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -59,72 +66,27 @@ export default function Emails() {
     return () => clearInterval(interval)
   }, [images.length])
 
+  // Load user's schools
   useEffect(() => {
-    setLoading(true)
-    fetch("https://psa-sales-backend.onrender.com/api/team-sheets")
-      .then(res => res.json())
-      .then(data => {
-        setSheetData(data)
-        const firstSheet = Object.keys(data)[0] || ""
-        setSelectedSheet(firstSheet)
+    if (accessToken) {
+      fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    })
-      .then(res => res.json())
-      .then(setEmailStatuses);
-  }, [accessToken]);
-
-  const handleSheetChange = (e) => {
-    setSelectedSheet(e.target.value)
-    setSelectedRows([])
-  }
-
-  const handleRowSelect = (i) => {
-    setSelectedRows(rows =>
-      rows.includes(i) ? rows.filter(idx => idx !== i) : [...rows, i]
-    )
-  }
-
-  function isValidEmail(email) {
-    return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
-
-  async function handleSend(e) {
-    e.preventDefault();
-    setStatus("");
-    setLoading(true);
-    const subject = "Let's Connect! PSA Programs";
-    let sentCount = 0;
-    const rows = sheetData[selectedSheet] || [];
-    for (const i of selectedRows) {
-      const row = rows[i + 1]; // +1 to skip header
-      const schoolName = row[0];
-      const schoolEmail = row.find(cell => isValidEmail(cell));
-      if (!schoolEmail) continue;
-      const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          recipient: schoolEmail,
-          subject,
-          school_name: schoolName
-        })
-      });
-      const data = await res.json();
-      if (data.status === "sent") sentCount++;
+        .then(res => res.json())
+        .then(setMySchools)
     }
-    setStatus(`${sentCount} email${sentCount === 1 ? "" : "s"} sent!`);
-    setLoading(false);
-    setSelectedRows([]);
-  }
+  }, [accessToken])
+
+  // Load sent emails
+  useEffect(() => {
+    if (accessToken) {
+      fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+        .then(res => res.json())
+        .then(setEmailStatuses)
+    }
+  }, [accessToken])
 
   // Dropdown menu overlay (like SchoolFinder)
   const DropdownMenu = () => (
@@ -171,6 +133,75 @@ export default function Emails() {
   const bgImgStyle = isMobile
     ? { width: "100vw", height: 210, objectFit: "cover", display: "block" }
     : { width: "100vw", height: 310, objectFit: "cover", display: "block" }
+
+  const handleSchoolSelect = (schoolId) => {
+    setSelectedSchools(schools =>
+      schools.includes(schoolId) 
+        ? schools.filter(id => id !== schoolId) 
+        : [...schools, schoolId]
+    )
+  }
+
+  const handleAddSchool = async (e) => {
+    e.preventDefault()
+    const res = await fetch("https://psa-sales-backend.onrender.com/api/add-school", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(newSchool)
+    })
+    const data = await res.json()
+    if (data.message) {
+      // Refresh schools list
+      fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+        .then(res => res.json())
+        .then(setMySchools)
+      
+      setNewSchool({ school_name: "", contact_name: "", email: "", phone: "", address: "" })
+      setShowAddSchool(false)
+      setStatus("School added successfully!")
+    } else {
+      setStatus(data.error || "Failed to add school")
+    }
+  }
+
+  const handleSendEmails = async (e) => {
+    e.preventDefault()
+    setStatus("")
+    setLoading(true)
+    
+    const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        school_ids: selectedSchools,
+        subject: "Let's Connect! PSA Programs"
+      })
+    })
+    const data = await res.json()
+    
+    if (data.sent_count > 0) {
+      setStatus(`${data.sent_count} email${data.sent_count === 1 ? "" : "s"} sent!`)
+      setSelectedSchools([])
+      
+      // Refresh email statuses
+      fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+        .then(res => res.json())
+        .then(setEmailStatuses)
+    } else {
+      setStatus(data.error || "Failed to send emails")
+    }
+    setLoading(false)
+  }
 
   return (
     <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
@@ -235,149 +266,192 @@ export default function Emails() {
       </div>
       {/* Main card */}
       <div style={cardStyle}>
-        <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>Select Schools to Email (from Sheets)</h2>
-        <label>
-          Select Sheet:&nbsp;
-          <select value={selectedSheet} onChange={handleSheetChange} style={{ marginBottom: 24 }}>
-            {Object.keys(sheetData).map(sheetName => (
-              <option key={sheetName} value={sheetName}>{sheetName}</option>
-            ))}
-          </select>
-        </label>
+        <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>Email Schools</h2>
+        
         {user ? (
-          <form onSubmit={handleSend}>
-            <div
-              className="schools-table-scroll-container"
-              style={{
-                maxHeight: 500,
-                overflowY: "auto",
-                overflowX: "auto", // allow horizontal scroll if needed
-                width: "100%",
-                margin: "0 auto"
-              }}
-            >
-              <table
-                className="schools-table"
-                style={{
-                  width: "100%",
-                  tableLayout: "auto",
-                  minWidth: 0,
-                  wordBreak: "break-word"
-                }}
+          <>
+            {/* Add School Section */}
+            <div style={{ marginBottom: 32 }}>
+              <button
+                className="home-btn"
+                onClick={() => setShowAddSchool(!showAddSchool)}
+                style={{ marginBottom: 16 }}
               >
+                {showAddSchool ? "Cancel" : "Add New School"}
+              </button>
+              
+              {showAddSchool && (
+                <form onSubmit={handleAddSchool} style={{ marginBottom: 24 }}>
+                  <input
+                    placeholder="School Name *"
+                    value={newSchool.school_name}
+                    onChange={(e) => setNewSchool({...newSchool, school_name: e.target.value})}
+                    required
+                    style={{ marginBottom: 12, width: "100%" }}
+                  />
+                  <input
+                    placeholder="Contact Name"
+                    value={newSchool.contact_name}
+                    onChange={(e) => setNewSchool({...newSchool, contact_name: e.target.value})}
+                    style={{ marginBottom: 12, width: "100%" }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email *"
+                    value={newSchool.email}
+                    onChange={(e) => setNewSchool({...newSchool, email: e.target.value})}
+                    required
+                    style={{ marginBottom: 12, width: "100%" }}
+                  />
+                  <input
+                    placeholder="Phone"
+                    value={newSchool.phone}
+                    onChange={(e) => setNewSchool({...newSchool, phone: e.target.value})}
+                    style={{ marginBottom: 12, width: "100%" }}
+                  />
+                  <input
+                    placeholder="Address"
+                    value={newSchool.address}
+                    onChange={(e) => setNewSchool({...newSchool, address: e.target.value})}
+                    style={{ marginBottom: 12, width: "100%" }}
+                  />
+                  <button type="submit" className="home-btn">Add School</button>
+                </form>
+              )}
+            </div>
+
+            {/* School Selection */}
+            <h3>Select Schools to Email:</h3>
+            <div className="schools-table-scroll-container" style={{ maxHeight: 300, marginBottom: 24 }}>
+              <table className="schools-table">
                 <thead>
                   <tr>
                     <th></th>
-                    {sheetData[selectedSheet] &&
-                      sheetData[selectedSheet][0] &&
-                      sheetData[selectedSheet][0].map((cell, idx) => (
-                        <th
-                          key={idx}
-                          style={{
-                            whiteSpace: "nowrap",
-                            fontSize: isMobile ? "0.8rem" : "1.1rem",
-                            padding: isMobile ? "4px 6px" : "8px 12px",
-                            maxWidth: 180,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis"
-                          }}
-                        >
-                          {cell}
-                        </th>
-                      ))}
+                    <th>School Name</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sheetData[selectedSheet] &&
-                    sheetData[selectedSheet].slice(1).map((row, i) => (
-                      <tr key={i}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.includes(i)}
-                            onChange={() => handleRowSelect(i)}
-                          />
-                        </td>
-                        {row.map((cell, idx) => (
-                          <td
-                            key={idx}
-                            style={{
-                              whiteSpace: "nowrap", // Prevent word breaks
-                              fontSize: isMobile ? "0.75rem" : "1rem", // Responsive font size
-                              padding: isMobile ? "4px 6px" : "8px 12px",
-                              maxWidth: 180,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis"
-                            }}
-                          >
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                  {mySchools.map(school => (
+                    <tr key={school.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedSchools.includes(school.id)}
+                          onChange={() => handleSchoolSelect(school.id)}
+                        />
+                      </td>
+                      <td>{school.school_name}</td>
+                      <td>{school.contact_name || "—"}</td>
+                      <td>{school.email}</td>
+                      <td>{school.status}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
+
             <button
-              type="submit"
+              onClick={handleSendEmails}
               className="home-btn"
-              style={{ width: "100%", marginTop: 24 }}
-              disabled={selectedRows.length === 0 || loading}
+              style={{ width: "100%", marginBottom: 16 }}
+              disabled={selectedSchools.length === 0 || loading}
             >
-              {loading ? "Sending..." : "Send Email"}
+              {loading ? "Sending..." : `Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`}
             </button>
-            {status && <div style={{ marginTop: 10, color: "green" }}>{status}</div>}
-          </form>
+
+            {status && <div style={{ marginBottom: 24, color: status.includes("success") || status.includes("sent") ? "green" : "#e53935" }}>{status}</div>}
+
+            {/* Email Status Table - keep your existing table with follow-up buttons */}
+            <div style={{ marginTop: 40 }}>
+              <h2>Email Statuses</h2>
+              <div className="schools-table-scroll-container" style={{ maxHeight: 500 }}>
+                <table className="schools-table">
+                  <thead>
+                    <tr>
+                      <th>School Name</th>
+                      <th>Email</th>
+                      <th>Sent Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emailStatuses.map(email => (
+                      <tr key={email.id}>
+                        <td>{email.school_name}</td>
+                        <td>{email.school_email}</td>
+                        <td>{new Date(email.sent_at).toLocaleDateString()}</td>
+                        <td>
+                          {email.responded
+                            ? "Responded"
+                            : email.followup_sent
+                            ? "Follow-Up Sent"
+                            : "Pending"}
+                        </td>
+                        <td>
+                          {!email.responded && !email.followup_sent && (
+                            <button
+                              className="home-btn"
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", marginRight: "8px" }}
+                              onClick={async () => {
+                                const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": `Bearer ${accessToken}`
+                                  },
+                                  body: JSON.stringify({ email_id: email.id })
+                                })
+                                const data = await res.json()
+                                if (data.status === "follow-up sent") {
+                                  fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+                                    headers: { Authorization: `Bearer ${accessToken}` }
+                                  }).then(res => res.json()).then(setEmailStatuses)
+                                } else {
+                                  alert(data.error || "Failed to send follow-up")
+                                }
+                              }}
+                            >
+                              Send Follow-Up
+                            </button>
+                          )}
+                          {!email.responded && (
+                            <button
+                              className="home-btn"
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "#4caf50" }}
+                              onClick={async () => {
+                                const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": `Bearer ${accessToken}`
+                                  },
+                                  body: JSON.stringify({ email_id: email.id, responded: true })
+                                })
+                                if (res.ok) {
+                                  fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+                                    headers: { Authorization: `Bearer ${accessToken}` }
+                                  }).then(res => res.json()).then(setEmailStatuses)
+                                }
+                              }}
+                            >
+                              Mark Responded
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         ) : (
           <div>Please log in to send emails.</div>
         )}
-        {/* Email Statuses Table */}
-        <div style={{ marginTop: 40 }}>
-          <h2>Email Statuses</h2>
-          <div
-            className="schools-table-scroll-container"
-            style={{
-              maxHeight: 500,
-              overflowY: "auto",
-              overflowX: "auto", // allow horizontal scroll if needed
-              width: "100%",
-              margin: "0 auto"
-            }}
-          >
-            <table
-              className="schools-table"
-              style={{
-                width: "100%",
-                tableLayout: "auto",
-                minWidth: 0,
-                wordBreak: "break-word"
-              }}
-            >
-              <thead>
-                <tr>
-                  <th>School Name</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {emailStatuses.map(email => (
-                  <tr key={email.id}>
-                    <td>{email.school_name}</td>
-                    <td>{email.school_email}</td>
-                    <td>
-                      {email.responded
-                        ? "Responded"
-                        : email.followup_sent
-                        ? "Follow-Up Sent"
-                        : "Pending"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </div>
   )

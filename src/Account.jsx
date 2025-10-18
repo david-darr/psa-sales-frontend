@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "./AuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
-import { GoogleLogin, GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
 
 const buttons = [
   { label: "Home +", path: "/" },
@@ -33,10 +32,12 @@ function useIsNarrow() {
 }
 
 export default function Account() {
-  const { user, login, logout } = useAuth()
+  const { user, login, logout, accessToken } = useAuth()
   const [isRegister, setIsRegister] = useState(false)
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" })
   const [error, setError] = useState("")
+  const [emailSettings, setEmailSettings] = useState({ email_password: "" })
+  const [emailStatus, setEmailStatus] = useState("")
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useIsMobile();
@@ -86,26 +87,25 @@ export default function Account() {
     }
   }
 
-  const googleLogin = useGoogleLogin({
-    flow: 'auth-code',
-    scope: 'openid email profile https://www.googleapis.com/auth/gmail.send',
-    onSuccess: async ({ code }) => {
-      const res = await fetch("https://psa-sales-backend.onrender.com/api/google-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code })
-      })
-      const data = await res.json()
-      if (data.access_token) {
-        login(data.access_token, data.user)
-        const redirectTo = location.state?.from?.pathname || "/schools"
-        navigate(redirectTo, { replace: true })
-      } else {
-        setError(data.error || "Google login failed")
-      }
-    },
-    onError: () => setError("Google login failed")
-  })
+  const handleEmailSettings = async (e) => {
+    e.preventDefault()
+    setEmailStatus("")
+    const res = await fetch("https://psa-sales-backend.onrender.com/api/email-settings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(emailSettings)
+    })
+    const data = await res.json()
+    if (data.message) {
+      setEmailStatus("Email settings saved successfully!")
+      setEmailSettings({ email_password: "" })
+    } else {
+      setEmailStatus(data.error || "Failed to save settings")
+    }
+  }
 
   // HEADER
   function Header() {
@@ -252,6 +252,33 @@ export default function Account() {
           </div>
           <button className="home-btn" onClick={logout} style={{ width: "100%" }}>Logout</button>
         </div>
+        <div style={{ margin: "1.5rem 0" }}>
+          <h3 style={{ color: "#c40c0c" }}>Email Configuration</h3>
+          <p style={{ fontSize: "0.9rem", color: "#666" }}>
+            Configure your email app password to send emails from your account.
+          </p>
+          <form onSubmit={handleEmailSettings}>
+            <input
+              type="password"
+              placeholder="Gmail App Password"
+              value={emailSettings.email_password}
+              onChange={(e) => setEmailSettings({ email_password: e.target.value })}
+              style={{ marginBottom: 12, width: "100%" }}
+              required
+            />
+            <button type="submit" className="home-btn" style={{ width: "100%" }}>
+              Save Email Settings
+            </button>
+          </form>
+          {emailStatus && (
+            <div style={{ 
+              color: emailStatus.includes("success") ? "green" : "#e53935", 
+              marginTop: 8 
+            }}>
+              {emailStatus}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -338,14 +365,6 @@ export default function Account() {
           {isRegister ? "Already have an account? Login" : "No account? Register"}
         </button>
         <div style={{ margin: "18px 0" }}>
-          <button
-            type="button"
-            className="home-btn"
-            style={{ width: "100%", background: "#4285F4", color: "#fff" }}
-            onClick={() => googleLogin()}
-          >
-            Sign in with Google
-          </button>
         </div>
         {error && <div style={{ color: "#e53935", marginTop: 8 }}>{error}</div>}
       </div>

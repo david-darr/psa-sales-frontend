@@ -275,6 +275,36 @@ export default function Emails() {
     setTimeout(() => setStatus(""), 5000)
   }
 
+  const handleCheckEmailReplies = async () => {
+    setLoading(true)
+    setStatus("Checking for email replies...")
+    
+    try {
+      const res = await fetch("https://psa-sales-backend.onrender.com/api/check-email-replies", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        }
+      })
+      
+      const data = await res.json()
+      
+      if (data.status) {
+        setStatus("Email reply check completed! Refreshing email statuses...")
+        // Refresh the email statuses
+        fetchEmailStatuses()
+      } else {
+        setStatus(data.error || "Failed to check email replies")
+      }
+    } catch (error) {
+      setStatus("Error checking email replies")
+    }
+    
+    setLoading(false)
+    setTimeout(() => setStatus(""), 5000)
+  }
+
   return (
     <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
       {/* Header */}
@@ -486,6 +516,19 @@ export default function Emails() {
                   >
                     {selectedEmailsToDelete.length === emailStatuses.length ? "Deselect All" : "Select All"}
                   </button>
+                  <button
+                    className="home-btn"
+                    onClick={handleCheckEmailReplies}
+                    style={{ 
+                      padding: "6px 12px", 
+                      fontSize: "0.9rem", 
+                      background: "#2196f3",
+                      border: "1px solid #1976d2"
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? "Checking..." : "Check Replies"}
+                  </button>
                   {selectedEmailsToDelete.length > 0 && (
                     <button
                       className="home-btn"
@@ -539,10 +582,10 @@ export default function Emails() {
                             fontSize: '0.85rem'
                           }}>
                             {email.responded
-                              ? "Responded"
+                              ? "✅ Responded"
                               : email.followup_sent
-                              ? "Follow-Up Sent"
-                              : "Pending"}
+                              ? "📧 Follow-Up Sent"
+                              : "⏳ Pending"}
                           </span>
                         </td>
                         <td>

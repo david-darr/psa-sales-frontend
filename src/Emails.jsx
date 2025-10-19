@@ -36,6 +36,7 @@ export default function Emails() {
   const { user, accessToken } = useAuth()
   const [mySchools, setMySchools] = useState([])
   const [selectedSchools, setSelectedSchools] = useState([])
+  const [selectedEmailsToDelete, setSelectedEmailsToDelete] = useState([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState("")
   const [emailStatuses, setEmailStatuses] = useState([])
@@ -69,26 +70,34 @@ export default function Emails() {
   // Load user's schools
   useEffect(() => {
     if (accessToken) {
-      fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-        .then(res => res.json())
-        .then(setMySchools)
+      fetchMySchools()
     }
   }, [accessToken])
 
   // Load sent emails
   useEffect(() => {
     if (accessToken) {
-      fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-        .then(res => res.json())
-        .then(setEmailStatuses)
+      fetchEmailStatuses()
     }
   }, [accessToken])
 
-  // Dropdown menu overlay (like SchoolFinder)
+  const fetchMySchools = () => {
+    fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
+      .then(res => res.json())
+      .then(setMySchools)
+  }
+
+  const fetchEmailStatuses = () => {
+    fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
+      .then(res => res.json())
+      .then(setEmailStatuses)
+  }
+
+  // Dropdown menu overlay
   const DropdownMenu = () => (
     <div style={{
       position: isMobile ? "absolute" : "fixed",
@@ -142,6 +151,30 @@ export default function Emails() {
     )
   }
 
+  const handleEmailSelectToDelete = (emailId) => {
+    setSelectedEmailsToDelete(emails =>
+      emails.includes(emailId)
+        ? emails.filter(id => id !== emailId)
+        : [...emails, emailId]
+    )
+  }
+
+  const handleSelectAllSchools = () => {
+    if (selectedSchools.length === mySchools.length) {
+      setSelectedSchools([])
+    } else {
+      setSelectedSchools(mySchools.map(school => school.id))
+    }
+  }
+
+  const handleSelectAllEmails = () => {
+    if (selectedEmailsToDelete.length === emailStatuses.length) {
+      setSelectedEmailsToDelete([])
+    } else {
+      setSelectedEmailsToDelete(emailStatuses.map(email => email.id))
+    }
+  }
+
   const handleAddSchool = async (e) => {
     e.preventDefault()
     const res = await fetch("https://psa-sales-backend.onrender.com/api/add-school", {
@@ -154,18 +187,14 @@ export default function Emails() {
     })
     const data = await res.json()
     if (data.message) {
-      // Refresh schools list
-      fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-        .then(res => res.json())
-        .then(setMySchools)
-      
+      fetchMySchools()
       setNewSchool({ school_name: "", contact_name: "", email: "", phone: "", address: "" })
       setShowAddSchool(false)
       setStatus("School added successfully!")
+      setTimeout(() => setStatus(""), 3000)
     } else {
       setStatus(data.error || "Failed to add school")
+      setTimeout(() => setStatus(""), 3000)
     }
   }
 
@@ -190,17 +219,60 @@ export default function Emails() {
     if (data.sent_count > 0) {
       setStatus(`${data.sent_count} email${data.sent_count === 1 ? "" : "s"} sent!`)
       setSelectedSchools([])
-      
-      // Refresh email statuses
-      fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-        .then(res => res.json())
-        .then(setEmailStatuses)
+      fetchEmailStatuses()
+      fetchMySchools() // Refresh to show updated status
     } else {
       setStatus(data.error || "Failed to send emails")
     }
     setLoading(false)
+    setTimeout(() => setStatus(""), 5000)
+  }
+
+  const handleDeleteSelectedEmails = async () => {
+    if (selectedEmailsToDelete.length === 0) return
+    
+    if (!confirm(`Are you sure you want to delete ${selectedEmailsToDelete.length} email record${selectedEmailsToDelete.length === 1 ? '' : 's'}?`)) {
+      return
+    }
+
+    setLoading(true)
+    let deletedCount = 0
+    let errors = []
+
+    for (const emailId of selectedEmailsToDelete) {
+      try {
+        const res = await fetch("https://psa-sales-backend.onrender.com/api/delete-sent-email", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ email_id: emailId })
+        })
+
+        if (res.ok) {
+          deletedCount++
+        } else {
+          const data = await res.json()
+          errors.push(data.error || "Failed to delete")
+        }
+      } catch (error) {
+        errors.push("Network error")
+      }
+    }
+
+    setSelectedEmailsToDelete([])
+    fetchEmailStatuses()
+    
+    if (deletedCount > 0) {
+      setStatus(`${deletedCount} email record${deletedCount === 1 ? '' : 's'} deleted successfully!`)
+    }
+    if (errors.length > 0) {
+      setStatus(prev => prev + ` ${errors.length} failed to delete.`)
+    }
+    
+    setLoading(false)
+    setTimeout(() => setStatus(""), 5000)
   }
 
   return (
@@ -237,10 +309,12 @@ export default function Emails() {
         )}
       </div>
       {(menuOpen && (isMobile || isNarrow)) && <DropdownMenu />}
+      
       {/* Background image */}
       <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
         <img src={images[bgIndex]} alt="" style={bgImgStyle} />
       </div>
+      
       {/* Section header */}
       <div
         style={{
@@ -264,12 +338,27 @@ export default function Emails() {
       >
         EMAIL SCHOOLS
       </div>
+      
       {/* Main card */}
       <div style={cardStyle}>
         <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>Email Schools</h2>
         
         {user ? (
           <>
+            {/* Status Message */}
+            {status && (
+              <div style={{ 
+                marginBottom: 24, 
+                padding: "12px", 
+                borderRadius: "8px",
+                background: status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#e8f5e8" : "#ffebee",
+                color: status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#2e7d32" : "#c62828",
+                border: `1px solid ${status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#4caf50" : "#f44336"}`
+              }}>
+                {status}
+              </div>
+            )}
+
             {/* Add School Section */}
             <div style={{ marginBottom: 32 }}>
               <button
@@ -321,56 +410,105 @@ export default function Emails() {
             </div>
 
             {/* School Selection */}
-            <h3>Select Schools to Email:</h3>
-            <div className="schools-table-scroll-container" style={{ maxHeight: 300, marginBottom: 24 }}>
-              <table className="schools-table">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th>School Name</th>
-                    <th>Contact</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mySchools.map(school => (
-                    <tr key={school.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedSchools.includes(school.id)}
-                          onChange={() => handleSchoolSelect(school.id)}
-                        />
-                      </td>
-                      <td>{school.school_name}</td>
-                      <td>{school.contact_name || "—"}</td>
-                      <td>{school.email}</td>
-                      <td>{school.status}</td>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h3 style={{ margin: 0 }}>Select Schools to Email:</h3>
+                <button
+                  className="home-btn"
+                  onClick={handleSelectAllSchools}
+                  style={{ padding: "6px 12px", fontSize: "0.9rem" }}
+                >
+                  {selectedSchools.length === mySchools.length ? "Deselect All" : "Select All"}
+                </button>
+              </div>
+              
+              <div className="schools-table-scroll-container" style={{ maxHeight: 300, marginBottom: 24 }}>
+                <table className="schools-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "50px" }}>Select</th>
+                      <th>School Name</th>
+                      <th>Contact</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      {user.admin && <th>Added By</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {mySchools.map(school => (
+                      <tr key={school.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedSchools.includes(school.id)}
+                            onChange={() => handleSchoolSelect(school.id)}
+                          />
+                        </td>
+                        <td>{school.school_name}</td>
+                        <td>{school.contact_name || "—"}</td>
+                        <td>{school.email}</td>
+                        <td>
+                          <span style={{
+                            background: school.status === 'contacted' ? '#e8f5e8' : '#f0f0f0',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem'
+                          }}>
+                            {school.status}
+                          </span>
+                        </td>
+                        {user.admin && <td>{school.user_name || "Unknown"}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <button
+                onClick={handleSendEmails}
+                className="home-btn"
+                style={{ width: "100%", marginBottom: 16 }}
+                disabled={selectedSchools.length === 0 || loading}
+              >
+                {loading ? "Sending..." : `Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`}
+              </button>
             </div>
 
-            <button
-              onClick={handleSendEmails}
-              className="home-btn"
-              style={{ width: "100%", marginBottom: 16 }}
-              disabled={selectedSchools.length === 0 || loading}
-            >
-              {loading ? "Sending..." : `Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`}
-            </button>
-
-            {status && <div style={{ marginBottom: 24, color: status.includes("success") || status.includes("sent") ? "green" : "#e53935" }}>{status}</div>}
-
-            {/* Email Status Table - keep your existing table with follow-up buttons */}
+            {/* Email Status Table */}
             <div style={{ marginTop: 40 }}>
-              <h2>Email Statuses</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2 style={{ margin: 0 }}>Email History ({emailStatuses.length})</h2>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    className="home-btn"
+                    onClick={handleSelectAllEmails}
+                    style={{ padding: "6px 12px", fontSize: "0.9rem" }}
+                  >
+                    {selectedEmailsToDelete.length === emailStatuses.length ? "Deselect All" : "Select All"}
+                  </button>
+                  {selectedEmailsToDelete.length > 0 && (
+                    <button
+                      className="home-btn"
+                      onClick={handleDeleteSelectedEmails}
+                      style={{ 
+                        padding: "6px 12px", 
+                        fontSize: "0.9rem", 
+                        background: "#f44336",
+                        border: "1px solid #d32f2f"
+                      }}
+                      disabled={loading}
+                    >
+                      {loading ? "Deleting..." : `Delete ${selectedEmailsToDelete.length}`}
+                    </button>
+                  )}
+                </div>
+              </div>
+              
               <div className="schools-table-scroll-container" style={{ maxHeight: 500 }}>
                 <table className="schools-table">
                   <thead>
                     <tr>
+                      <th style={{ width: "50px" }}>Select</th>
                       <th>School Name</th>
                       <th>Email</th>
                       <th>Sent Date</th>
@@ -382,73 +520,91 @@ export default function Emails() {
                   <tbody>
                     {emailStatuses.map(email => (
                       <tr key={email.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedEmailsToDelete.includes(email.id)}
+                            onChange={() => handleEmailSelectToDelete(email.id)}
+                          />
+                        </td>
                         <td>{email.school_name}</td>
                         <td>{email.school_email}</td>
                         <td>{new Date(email.sent_at).toLocaleDateString()}</td>
                         {user.admin && <td>{email.user_name || "Unknown"}</td>}
                         <td>
-                          {email.responded
-                            ? "Responded"
-                            : email.followup_sent
-                            ? "Follow-Up Sent"
-                            : "Pending"}
+                          <span style={{
+                            background: email.responded ? '#e8f5e8' : email.followup_sent ? '#fff3cd' : '#ffebee',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem'
+                          }}>
+                            {email.responded
+                              ? "Responded"
+                              : email.followup_sent
+                              ? "Follow-Up Sent"
+                              : "Pending"}
+                          </span>
                         </td>
                         <td>
-                          {!email.responded && !email.followup_sent && (
-                            <button
-                              className="home-btn"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", marginRight: "8px" }}
-                              onClick={async () => {
-                                const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
-                                  method: "POST",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                    "Authorization": `Bearer ${accessToken}`
-                                  },
-                                  body: JSON.stringify({ email_id: email.id })
-                                })
-                                const data = await res.json()
-                                if (data.status === "follow-up sent") {
-                                  fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
-                                    headers: { Authorization: `Bearer ${accessToken}` }
-                                  }).then(res => res.json()).then(setEmailStatuses)
-                                } else {
-                                  alert(data.error || "Failed to send follow-up")
-                                }
-                              }}
-                            >
-                              Send Follow-Up
-                            </button>
-                          )}
-                          {!email.responded && (
-                            <button
-                              className="home-btn"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "#4caf50" }}
-                              onClick={async () => {
-                                const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
-                                  method: "POST",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                    "Authorization": `Bearer ${accessToken}`
-                                  },
-                                  body: JSON.stringify({ email_id: email.id, responded: true })
-                                })
-                                if (res.ok) {
-                                  fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
-                                    headers: { Authorization: `Bearer ${accessToken}` }
-                                  }).then(res => res.json()).then(setEmailStatuses)
-                                }
-                              }}
-                            >
-                              Mark Responded
-                            </button>
-                          )}
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                            {!email.responded && !email.followup_sent && (
+                              <button
+                                className="home-btn"
+                                style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                                onClick={async () => {
+                                  const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      "Authorization": `Bearer ${accessToken}`
+                                    },
+                                    body: JSON.stringify({ email_id: email.id })
+                                  })
+                                  const data = await res.json()
+                                  if (data.status === "follow-up sent") {
+                                    fetchEmailStatuses()
+                                  } else {
+                                    alert(data.error || "Failed to send follow-up")
+                                  }
+                                }}
+                              >
+                                Follow-Up
+                              </button>
+                            )}
+                            {!email.responded && (
+                              <button
+                                className="home-btn"
+                                style={{ padding: "4px 8px", fontSize: "0.75rem", background: "#4caf50" }}
+                                onClick={async () => {
+                                  const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      "Authorization": `Bearer ${accessToken}`
+                                    },
+                                    body: JSON.stringify({ email_id: email.id, responded: true })
+                                  })
+                                  if (res.ok) {
+                                    fetchEmailStatuses()
+                                  }
+                                }}
+                              >
+                                Mark Responded
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              
+              {emailStatuses.length === 0 && (
+                <div style={{ textAlign: "center", padding: "2rem", color: "#666" }}>
+                  No emails sent yet. Send some emails to see them here!
+                </div>
+              )}
             </div>
           </>
         ) : (

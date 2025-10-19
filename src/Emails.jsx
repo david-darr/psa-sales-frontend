@@ -480,6 +480,7 @@ export default function Emails() {
                         <td>
                           <span style={{
                             background: school.status === 'contacted' ? '#e8f5e8' : '#f0f0f0',
+                            color: '#000000',  // Add black text color
                             padding: '2px 8px',
                             borderRadius: '4px',
                             fontSize: '0.85rem'
@@ -577,6 +578,7 @@ export default function Emails() {
                         <td>
                           <span style={{
                             background: email.responded ? '#e8f5e8' : email.followup_sent ? '#fff3cd' : '#ffebee',
+                            color: '#000000',  // Add black text color
                             padding: '2px 8px',
                             borderRadius: '4px',
                             fontSize: '0.85rem'

@@ -21,7 +21,6 @@ export function AuthProvider({ children }) {
           return res.ok ? res.json() : null
         })
         .then(data => {
-          console.log("Profile data received:", data); // Debug log
           setUser(data && !data.error ? data : null)
         })
         .finally(() => setLoading(false))
@@ -32,7 +31,6 @@ export function AuthProvider({ children }) {
   }, [accessToken])
 
   const login = (token, userData) => {
-    console.log("Login - storing user data:", userData); // Debug log
     setAccessToken(token)
     setUser({
       id: userData.id,

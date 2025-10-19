@@ -374,6 +374,7 @@ export default function Emails() {
                       <th>School Name</th>
                       <th>Email</th>
                       <th>Sent Date</th>
+                      {user.admin && <th>User</th>}
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -384,6 +385,7 @@ export default function Emails() {
                         <td>{email.school_name}</td>
                         <td>{email.school_email}</td>
                         <td>{new Date(email.sent_at).toLocaleDateString()}</td>
+                        {user.admin && <td>{email.user_name || "Unknown"}</td>}
                         <td>
                           {email.responded
                             ? "Responded"

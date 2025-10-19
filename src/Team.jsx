@@ -104,6 +104,7 @@ export default function Team() {
                 <th>School Name</th>
                 <th>Contact</th>
                 <th>Email</th>
+                {user.admin && <th>Added By</th>}
                 <th>Status</th>
                 <th>Added Date</th>
               </tr>
@@ -114,6 +115,7 @@ export default function Team() {
                   <td>{school.school_name}</td>
                   <td>{school.contact_name || "—"}</td>
                   <td>{school.email}</td>
+                  {user.admin && <td>{school.user_name || "Unknown"}</td>}
                   <td>
                     <span style={{
                       background: school.status === 'contacted' ? '#e8f5e8' : '#f0f0f0',

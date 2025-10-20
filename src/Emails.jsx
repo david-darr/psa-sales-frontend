@@ -452,7 +452,7 @@ export default function Emails() {
                 </button>
               </div>
               
-              <div className="schools-table-scroll-container" style={{ maxHeight: 300, marginBottom: 24 }}>
+              <div className="schools-table-scroll-container" style={{ maxHeight: 500, marginBottom: 24 }}>
                 <table className="schools-table">
                   <thead>
                     <tr>

@@ -25,6 +25,10 @@ export default function Home() {
     loading: true
   })
 
+  // State for recent emails
+  const [recentEmails, setRecentEmails] = useState([])
+  const [emailsLoading, setEmailsLoading] = useState(true)
+
   // Get current date for welcome message
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -89,9 +93,73 @@ export default function Home() {
     }
   }
 
+  // Fetch recent emails with school contact info
+  const fetchRecentEmails = async () => {
+    if (!accessToken) {
+      setEmailsLoading(false)
+      return
+    }
+
+    try {
+      setEmailsLoading(true)
+
+      // Fetch sent emails
+      const emailsResponse = await fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+      const emailsData = await emailsResponse.json()
+
+      // Fetch schools to get contact info
+      const schoolsResponse = await fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+      const schoolsData = await schoolsResponse.json()
+
+      // Create a map of school emails to contact info
+      const schoolsMap = {}
+      if (Array.isArray(schoolsData)) {
+        schoolsData.forEach(school => {
+          schoolsMap[school.email] = {
+            contact_name: school.contact_name,
+            school_name: school.school_name
+          }
+        })
+      }
+
+      // Process and enrich email data, then get last 4
+      if (Array.isArray(emailsData)) {
+        const enrichedEmails = emailsData.map(email => {
+          const schoolInfo = schoolsMap[email.school_email] || {}
+          return {
+            ...email,
+            contact_name: schoolInfo.contact_name || 'Unknown',
+            school_display_name: schoolInfo.school_name || email.school_name
+          }
+        })
+
+        // Sort by sent date (newest first) and take last 4
+        const sortedEmails = enrichedEmails.sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))
+        setRecentEmails(sortedEmails.slice(0, 4))
+      } else {
+        setRecentEmails([])
+      }
+
+    } catch (error) {
+      console.error('Error fetching recent emails:', error)
+      setRecentEmails([])
+    } finally {
+      setEmailsLoading(false)
+    }
+  }
+
   // Load user stats when component mounts or user changes
   useEffect(() => {
     fetchUserStats()
+  }, [accessToken, user])
+
+  // Load recent emails when component mounts or user changes
+  useEffect(() => {
+    fetchRecentEmails()
   }, [accessToken, user])
 
   // Ensure full viewport coverage
@@ -291,74 +359,114 @@ export default function Home() {
           marginBottom: "2rem"
         }}>
           
-          {/* Email Status Card - Now takes equal space */}
+          {/* Email Status Card - Recent Emails List */}
           <div className="modern-dashboard-card">
             <div className="modern-card-header">
-              <div className="modern-card-title">Email Status</div>
+              <div className="modern-card-title">Recent Emails</div>
               <div className="modern-card-icon" style={{ background: "#3b82f620", color: "#3b82f6" }}>
                 📧
               </div>
             </div>
             <div className="modern-card-content">
               {user ? (
-                userStats.loading ? (
+                emailsLoading ? (
                   <div style={{ textAlign: "center", padding: "2rem 0", color: "#94a3b8" }}>
-                    Loading email status...
+                    Loading recent emails...
                   </div>
-                ) : (
+                ) : recentEmails.length > 0 ? (
                   <>
-                    <div style={{ display: "grid", gap: "0.8rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span>Total Emails:</span>
-                        <span style={{ color: "#3b82f6", fontWeight: "600" }}>{userStats.totalEmails}</span>
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "0.5rem" }}>
+                        Last {recentEmails.length} emails sent:
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span>Schools Added:</span>
-                        <span style={{ color: "#10b981", fontWeight: "600" }}>{userStats.totalSchools}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span>Pending Replies:</span>
-                        <span style={{ color: "#f59e0b", fontWeight: "600" }}>{userStats.pendingEmails}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span>Responded:</span>
-                        <span style={{ color: "#8b5cf6", fontWeight: "600" }}>{userStats.respondedEmails}</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span>Response Rate:</span>
-                        <span style={{ color: "#10b981", fontWeight: "600" }}>
-                          {userStats.totalEmails > 0 
-                            ? `${Math.round((userStats.respondedEmails / userStats.totalEmails) * 100)}%`
-                            : '0%'
-                          }
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span>Status:</span>
-                        <span style={{ 
-                          color: "#10b981", 
-                          fontWeight: "600",
-                          background: "rgba(16, 185, 129, 0.2)",
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          fontSize: "0.8rem"
-                        }}>
-                          {userStats.totalEmails > 0 ? 'Active' : 'Getting Started'}
-                        </span>
-                      </div>
+                      {recentEmails.map((email, index) => (
+                        <div 
+                          key={email.id} 
+                          style={{ 
+                            background: "rgba(59, 130, 246, 0.05)",
+                            padding: "0.75rem",
+                            borderRadius: "8px",
+                            marginBottom: index < recentEmails.length - 1 ? "0.5rem" : "0",
+                            border: "1px solid rgba(59, 130, 246, 0.1)"
+                          }}
+                        >
+                          <div style={{ 
+                            fontWeight: "600", 
+                            color: "#f1f5f9", 
+                            fontSize: "0.9rem",
+                            marginBottom: "0.25rem"
+                          }}>
+                            {email.school_display_name}
+                          </div>
+                          <div style={{ 
+                            fontSize: "0.8rem", 
+                            color: "#94a3b8",
+                            marginBottom: "0.25rem"
+                          }}>
+                            📧 {email.school_email}
+                          </div>
+                          <div style={{ 
+                            fontSize: "0.8rem", 
+                            color: "#94a3b8",
+                            marginBottom: "0.25rem"
+                          }}>
+                            👤 {email.contact_name}
+                          </div>
+                          <div style={{ 
+                            display: "flex", 
+                            justifyContent: "space-between", 
+                            alignItems: "center",
+                            fontSize: "0.75rem"
+                          }}>
+                            <span style={{ color: "#64748b" }}>
+                              📅 {new Date(email.sent_at).toLocaleDateString()}
+                            </span>
+                            <span style={{ 
+                              color: email.responded ? "#10b981" : email.followup_sent ? "#f59e0b" : "#64748b",
+                              fontWeight: "600",
+                              background: email.responded 
+                                ? "rgba(16, 185, 129, 0.2)" 
+                                : email.followup_sent 
+                                ? "rgba(245, 158, 11, 0.2)" 
+                                : "rgba(100, 116, 139, 0.2)",
+                              padding: "2px 6px",
+                              borderRadius: "4px"
+                            }}>
+                              {email.responded 
+                                ? "✅ Replied" 
+                                : email.followup_sent 
+                                ? "📧 Follow-up" 
+                                : "⏳ Pending"
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     <button 
                       className="modern-btn-primary"
                       onClick={() => window.location.href = '/emails'}
-                      style={{ width: "100%", marginTop: "1rem" }}
+                      style={{ width: "100%" }}
                     >
-                      Manage Emails →
+                      View All Emails →
                     </button>
                   </>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "2rem 0", color: "#94a3b8" }}>
+                    <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📧</div>
+                    <p style={{ marginBottom: "1rem" }}>No emails sent yet</p>
+                    <button 
+                      className="modern-btn-primary"
+                      onClick={() => window.location.href = '/emails'}
+                      style={{ width: "100%" }}
+                    >
+                      Send Your First Email →
+                    </button>
+                  </div>
                 )
               ) : (
                 <div style={{ textAlign: "center", padding: "2rem 0", color: "#94a3b8" }}>
-                  <p style={{ marginBottom: "1rem" }}>Login to view email status</p>
+                  <p style={{ marginBottom: "1rem" }}>Login to view recent emails</p>
                   <button 
                     className="modern-btn-primary"
                     onClick={() => window.location.href = '/account'}
@@ -371,7 +479,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Team Card - Now takes equal space (changed from 2 columns to 1 column) */}
+          {/* Team Card - Now takes equal space */}
           <div className="modern-dashboard-card">
             <div className="modern-card-header">
               <div className="modern-card-title">Team</div>

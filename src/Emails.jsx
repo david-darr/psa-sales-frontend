@@ -46,7 +46,8 @@ export default function Emails() {
     contact_name: "",
     email: "",
     phone: "",
-    address: ""
+    address: "",
+    school_type: "preschool"  // NEW FIELD
   })
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()
@@ -188,7 +189,14 @@ export default function Emails() {
     const data = await res.json()
     if (data.message) {
       fetchMySchools()
-      setNewSchool({ school_name: "", contact_name: "", email: "", phone: "", address: "" })
+      setNewSchool({ 
+        school_name: "", 
+        contact_name: "", 
+        email: "", 
+        phone: "", 
+        address: "",
+        school_type: "preschool"  // Reset to default
+      })
       setShowAddSchool(false)
       setStatus("School added successfully!")
       setTimeout(() => setStatus(""), 3000)
@@ -434,6 +442,21 @@ export default function Emails() {
                     onChange={(e) => setNewSchool({...newSchool, address: e.target.value})}
                     style={{ marginBottom: 12, width: "100%" }}
                   />
+                  {/* NEW SCHOOL TYPE SELECTOR */}
+                  <select
+                    value={newSchool.school_type}
+                    onChange={(e) => setNewSchool({...newSchool, school_type: e.target.value})}
+                    style={{ 
+                      marginBottom: 12, 
+                      width: "100%", 
+                      padding: "8px 12px",
+                      borderRadius: "4px",
+                      border: "1px solid #ccc"
+                    }}
+                  >
+                    <option value="preschool">Preschool</option>
+                    <option value="elementary">Elementary School</option>
+                  </select>
                   <button type="submit" className="home-btn">Add School</button>
                 </form>
               )}
@@ -458,6 +481,7 @@ export default function Emails() {
                     <tr>
                       <th style={{ width: "50px" }}>Select</th>
                       <th>School Name</th>
+                      <th>Type</th>  {/* NEW COLUMN */}
                       <th>Contact</th>
                       <th>Email</th>
                       <th>Status</th>
@@ -475,6 +499,17 @@ export default function Emails() {
                           />
                         </td>
                         <td>{school.school_name}</td>
+                        <td>
+                          <span style={{
+                            background: school.school_type === 'preschool' ? '#e3f2fd' : '#f3e5f5',
+                            color: '#000000',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.85rem'
+                          }}>
+                            {school.school_type === 'preschool' ? '🧸 Preschool' : '🎒 Elementary'}
+                          </span>
+                        </td>
                         <td>{school.contact_name || "—"}</td>
                         <td>{school.email}</td>
                         <td>

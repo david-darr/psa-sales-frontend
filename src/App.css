@@ -290,3 +290,643 @@ a:hover {
   align-items: flex-start;
   justify-content: flex-end;
 }
+
+
+/* =========================
+   NAVIGATION CARD STYLES
+   ========================= */
+
+.nav-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  padding: 2rem 1.5rem;
+  width: 280px; /* Fixed narrow width */
+  position: fixed; /* Fixed position on left side */
+  left: 20px; /* Positioned from left edge */
+  top: 50%; /* Centered vertically */
+  transform: translateY(-50%); /* Perfect vertical centering */
+  text-align: center;
+  overflow: hidden;
+  z-index: 1000; /* High z-index to stay on top */
+  max-height: 90vh; /* Prevent overflow on small screens */
+  overflow-y: auto; /* Scroll if content is too tall */
+}
+
+.nav-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(196, 12, 12, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.nav-card:hover::before {
+  left: 100%;
+}
+
+.nav-card-title {
+  font-size: 1.8rem; /* Smaller for narrow card */
+  font-weight: 900;
+  color: #c40c0c;
+  margin-bottom: 1.5rem;
+  letter-spacing: 1px; /* Reduced letter spacing */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+  line-height: 1.2; /* Better line height for narrow space */
+}
+
+.nav-card-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Single column for narrow layout */
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.nav-card-button {
+  background: linear-gradient(135deg, #c40c0c 0%, #e53935 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  padding: 0.8rem 1rem; /* Smaller padding for narrow buttons */
+  font-size: 0.85rem; /* Smaller font size */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(196, 12, 12, 0.3);
+  white-space: nowrap; /* Prevent text wrapping */
+  text-overflow: ellipsis; /* Add ellipsis if text is too long */
+}
+
+.nav-card-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.3s;
+}
+
+.nav-card-button:hover::before {
+  left: 100%;
+}
+
+.nav-card-button:hover {
+  transform: translateY(-2px) scale(1.02); /* Slightly smaller transform */
+  box-shadow: 0 6px 20px rgba(196, 12, 12, 0.4);
+  background: linear-gradient(135deg, #e53935 0%, #f44336 100%);
+}
+
+.nav-card-button:active {
+  transform: translateY(-1px);
+}
+
+.nav-card-button.protected {
+  background: linear-gradient(135deg, #666 0%, #888 100%);
+  box-shadow: 0 4px 15px rgba(102, 102, 102, 0.3);
+}
+
+.nav-card-button.protected:hover {
+  background: linear-gradient(135deg, #888 0%, #999 100%);
+  box-shadow: 0 6px 20px rgba(102, 102, 102, 0.4);
+}
+
+.nav-card-icon {
+  font-size: 1rem; /* Smaller icon for narrow layout */
+  margin-right: 0.5rem;
+}
+
+/* User status section styling for narrow card */
+.nav-card .user-status {
+  margin-top: 1.5rem;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Mobile adjustments - hide sidebar and show compact version */
+@media (max-width: 770px) {
+  .nav-card {
+    position: relative; /* Not fixed on mobile */
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    max-width: 400px;
+    margin: 1rem auto;
+    padding: 1.5rem;
+  }
+  
+  .nav-card-title {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .nav-card-grid {
+    grid-template-columns: repeat(2, 1fr); /* Two columns on mobile */
+    gap: 0.8rem;
+  }
+  
+  .nav-card-button {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 771px) {
+  .nav-card {
+    width: 250px; /* Slightly narrower on tablets */
+    left: 15px;
+  }
+  
+  .nav-card-title {
+    font-size: 1.6rem;
+  }
+  
+  .nav-card-button {
+    font-size: 0.8rem;
+    padding: 0.7rem 0.9rem;
+  }
+}
+
+/* Large desktop adjustments */
+@media (min-width: 1400px) {
+  .nav-card {
+    width: 320px; /* Slightly wider on large screens */
+    left: 30px;
+  }
+  
+  .nav-card-title {
+    font-size: 2rem;
+  }
+  
+  .nav-card-button {
+    font-size: 0.9rem;
+    padding: 0.9rem 1.1rem;
+  }
+}
+
+/* Add margin to main content to account for fixed sidebar */
+.main-content-with-sidebar {
+  margin-left: 320px; /* Space for the sidebar */
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+@media (max-width: 770px) {
+  .main-content-with-sidebar {
+    margin-left: 0; /* No margin on mobile */
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 771px) {
+  .main-content-with-sidebar {
+    margin-left: 280px; /* Adjusted margin for tablet */
+  }
+}
+
+/* =========================
+   NEW DASHBOARD STYLES (Home & NavigationCard only)
+   ========================= */
+
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background: #0f172a;
+}
+
+/* =========================
+   MODERN NAVIGATION SIDEBAR STYLES
+   ========================= */
+
+.nav-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-right: 1px solid #334155;
+  padding: 2rem;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.nav-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #334155;
+}
+
+.nav-sidebar-logo img {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.nav-sidebar-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: 0.5px;
+}
+
+.nav-sidebar-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.nav-menu {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-menu-item {
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-menu-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateX(4px);
+}
+
+.nav-menu-item.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+}
+
+.nav-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  color: #e2e8f0;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-menu-link:hover {
+  color: #f1f5f9;
+}
+
+.nav-menu-item.active .nav-menu-link {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.nav-menu-icon {
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+}
+
+.nav-menu-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.nav-user-section {
+  margin-top: auto;
+  padding-top: 2rem;
+  border-top: 1px solid #334155;
+}
+
+.nav-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.nav-user-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  font-size: 1.1rem;
+}
+
+.nav-user-details h4 {
+  font-size: 0.9rem;
+  color: #f1f5f9;
+  margin-bottom: 0.25rem;
+}
+
+.nav-user-details p {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* =========================
+   MODERN HOME PAGE STYLES
+   ========================= */
+
+.modern-main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 2rem;
+  background: #0f172a;
+  min-height: 100vh;
+}
+
+.modern-page-header {
+  margin-bottom: 2rem;
+}
+
+.modern-page-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin-bottom: 0.5rem;
+  margin-left: -1400px;
+}
+
+.modern-page-subtitle {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.modern-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.modern-dashboard-card {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border: 1px solid #475569;
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.modern-dashboard-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  border-radius: 16px 16px 0 0;
+}
+
+.modern-dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border-color: #3b82f6;
+}
+
+.modern-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.modern-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.modern-card-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.modern-card-content {
+  color: #e2e8f0;
+  line-height: 1.6;
+}
+
+.modern-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #3b82f6;
+  margin: 0.5rem 0;
+}
+
+.modern-stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modern-stat-change {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.modern-stat-change.positive {
+  color: #10b981;
+}
+
+.modern-stat-change.negative {
+  color: #ef4444;
+}
+
+.modern-stat-change.neutral {
+  color: #64748b;
+}
+
+.modern-btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modern-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* =========================
+   MOBILE RESPONSIVE (Modern styles only)
+   ========================= */
+
+@media (max-width: 768px) {
+  .nav-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .nav-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .modern-main-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+  
+  .modern-dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .modern-page-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* =========================
+   GLOBAL OVERRIDES FOR DASHBOARD CONTAINER
+   ========================= */
+
+/* Override body styles when dashboard container is present */
+body:has(.dashboard-container) {
+  display: block !important;
+  align-items: initial !important;
+  justify-content: initial !important;
+  background: #0f172a !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#root:has(.dashboard-container) {
+  display: block !important;
+  align-items: initial !important;
+  justify-content: initial !important;
+  background: #0f172a !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure dashboard container takes full viewport */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  background: #0f172a;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Fix sidebar positioning */
+.nav-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-right: 1px solid #334155;
+  padding: 2rem;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+/* Fix main content area */
+.modern-main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 2rem;
+  background: #0f172a;
+  min-height: 100vh;
+  width: calc(100vw - 280px);
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Ensure no white space around the layout */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+  
+  .nav-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    margin-left: 0;
+  }
+  
+  .modern-main-content {
+    margin-left: 0;
+    padding: 1rem;
+    width: 100%;
+  }
+  
+  body:has(.dashboard-container) {
+    overflow-x: hidden;
+  }
+  
+  #root:has(.dashboard-container) {
+    overflow-x: hidden;
+  }
+}

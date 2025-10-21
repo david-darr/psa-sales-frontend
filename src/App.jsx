@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import { AuthProvider } from "./AuthContext"
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom'
+import HomeTest from './Home'
 import SchoolsList from './SchoolsList'
 import SchoolFinder from './SchoolFinder'
 import Emails from './Emails'
@@ -336,6 +337,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/home" element={<HomeTest />} />
           <Route path="/map" element={<PSAMap />} />
           <Route path="/account" element={<Account />} />
           <Route path="/schools" element={<ProtectedRoute><SchoolsList /></ProtectedRoute>} />

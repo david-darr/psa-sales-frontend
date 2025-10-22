@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from "./AuthContext"
-import NavigationCard from './NavigationCard'  // ADD THIS LINE
+import NavigationCard from './NavigationCard'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+
+// Configure Leaflet icons
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: '/map/marker-icon-2x.png',
+  iconUrl: '/map/marker-icon.png',
+  shadowUrl: '/map/marker-shadow.png',
+});
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -44,6 +54,15 @@ export default function Home() {
   const [recentEmails, setRecentEmails] = useState([])
   const [emailsLoading, setEmailsLoading] = useState(true)
 
+  // State for map data
+  const [mapSchools, setMapSchools] = useState({
+    happyfeet: [],
+    psa: [],
+    reached_out: [],
+    rec: []
+  })
+  const [mapLoading, setMapLoading] = useState(true)
+
   // Get current date for welcome message
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -57,13 +76,6 @@ export default function Home() {
     { name: "Sarah Johnson", role: "Sales Associate", schools: 32, emails: 54 },
     { name: "Mike Davis", role: "Sales Associate", schools: 28, emails: 43 },
     { name: "Emily Chen", role: "Sales Associate", schools: 39, emails: 71 }
-  ]
-
-  const mapLocations = [
-    { area: "Northern VA", schools: 45 },
-    { area: "Washington DC", schools: 23 },
-    { area: "Maryland", schools: 18 },
-    { area: "Fairfax County", schools: 34 }
   ]
 
   // Fetch user statistics
@@ -167,6 +179,20 @@ export default function Home() {
     }
   }
 
+  // Fetch map schools data
+  const fetchMapSchools = async () => {
+    try {
+      setMapLoading(true)
+      const response = await fetch("https://psa-sales-backend.onrender.com/api/map-schools")
+      const data = await response.json()
+      setMapSchools(data)
+    } catch (error) {
+      console.error('Error fetching map schools:', error)
+    } finally {
+      setMapLoading(false)
+    }
+  }
+
   // Load user stats when component mounts or user changes
   useEffect(() => {
     fetchUserStats()
@@ -176,6 +202,11 @@ export default function Home() {
   useEffect(() => {
     fetchRecentEmails()
   }, [accessToken, user])
+
+  // Load map data when component mounts
+  useEffect(() => {
+    fetchMapSchools()
+  }, [])
 
   // Ensure full viewport coverage
   useEffect(() => {
@@ -229,7 +260,6 @@ export default function Home() {
     return "1fr 1fr" // Always equal width on non-mobile
   }
 
-  // Navigation handler for mobile
   return (
     <div className="dashboard-container">
       {/* Mobile Navigation Toggle Button */}
@@ -370,7 +400,8 @@ export default function Home() {
       }}>
         {/* Header Section */}
         <div className="modern-page-header" style={{ 
-          marginBottom: isMobile ? "1rem" : "2rem"
+          marginBottom: isMobile ? "1rem" : "2rem",
+          textAlign: "left"
         }}>
           <h1 className="modern-page-title" style={{
             fontSize: isMobile ? "2rem" : "3rem",
@@ -379,8 +410,10 @@ export default function Home() {
           }}>
             HOME
           </h1>
-          <p className="modern-page-subtitle">
-            {currentDate} |
+          <p className="modern-page-subtitle" style={{
+            textAlign: "left"
+          }}>
+            {currentDate}
           </p>
         </div>
 
@@ -505,42 +538,176 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Map Card - Only show on desktop/tablet, hidden on mobile */}
+          {/* Map Card with Mini Interactive Map - Only show on desktop/tablet, hidden on mobile */}
           {!isMobile && (
             <div className="modern-dashboard-card" style={{
               minHeight: "250px"
             }}>
               <div className="modern-card-header">
-                <div className="modern-card-title">Map</div>
+                <div className="modern-card-title">School Locations</div>
                 <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
                   🗺️
                 </div>
               </div>
               <div className="modern-card-content">
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
-                  {mapLocations.map((location, index) => (
-                    <div key={index} style={{
-                      background: "rgba(16, 185, 129, 0.1)",
-                      padding: "0.8rem",
-                      borderRadius: "8px",
-                      textAlign: "center"
+                {mapLoading ? (
+                  <div style={{ 
+                    textAlign: "center", 
+                    padding: "2rem 0", 
+                    color: "#94a3b8",
+                    height: "200px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    Loading map...
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ height: "200px", borderRadius: "8px", overflow: "hidden", marginBottom: "1rem" }}>
+                      <MapContainer 
+                        center={[38.9, -77.25]} 
+                        zoom={9} 
+                        style={{ width: '100%', height: '100%' }}
+                        scrollWheelZoom={false}
+                        doubleClickZoom={false}
+                        dragging={false}
+                        zoomControl={false}
+                      >
+                        <TileLayer
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          attribution='&copy; OpenStreetMap contributors'
+                        />
+                        
+                        {/* Happy Feet Schools - Red markers */}
+                        {Array.isArray(mapSchools.happyfeet) && mapSchools.happyfeet.map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`hf-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-red.png", 
+                                iconSize: [20, 20] 
+                              })}
+                            >
+                              <Popup>
+                                <b>{school.name}</b><br />
+                                HappyFeet School
+                              </Popup>
+                            </Marker>
+                          )
+                        ))}
+                        
+                        {/* PSA Schools - Blue markers */}
+                        {Array.isArray(mapSchools.psa) && mapSchools.psa.map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`psa-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-blue.png", 
+                                iconSize: [20, 20] 
+                              })}
+                            >
+                              <Popup>
+                                <b>{school.name}</b><br />
+                                PSA School
+                              </Popup>
+                            </Marker>
+                          )
+                        ))}
+                        
+                        {/* Reached Out Schools - Yellow markers */}
+                        {Array.isArray(mapSchools.reached_out) && mapSchools.reached_out.map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`reached-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-yellow.png", 
+                                iconSize: [20, 20] 
+                              })}
+                            >
+                              <Popup>
+                                <b>{school.name}</b><br />
+                                Contacted School
+                              </Popup>
+                            </Marker>
+                          )
+                        ))}
+                        
+                        {/* Rec Sites - Green markers */}
+                        {Array.isArray(mapSchools.rec) && mapSchools.rec.map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`rec-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-green.png", 
+                                iconSize: [20, 20] 
+                              })}
+                            >
+                              <Popup>
+                                <b>{school.name}</b><br />
+                                Recreation Site
+                              </Popup>
+                            </Marker>
+                          )
+                        ))}
+                      </MapContainer>
+                    </div>
+                    
+                    <div style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: "repeat(2, 1fr)", 
+                      gap: "0.5rem", 
+                      marginBottom: "1rem",
+                      fontSize: "0.75rem"
                     }}>
-                      <div style={{ fontWeight: "600", color: "#f1f5f9", fontSize: "0.9rem" }}>
-                        {location.area}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ 
+                          width: "12px", 
+                          height: "12px", 
+                          background: "#ef4444", 
+                          borderRadius: "50%" 
+                        }}></div>
+                        <span style={{ color: "#94a3b8" }}>HappyFeet ({mapSchools.happyfeet?.length || 0})</span>
                       </div>
-                      <div style={{ color: "#10b981", fontWeight: "700", fontSize: "1.2rem" }}>
-                        {location.schools}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ 
+                          width: "12px", 
+                          height: "12px", 
+                          background: "#3b82f6", 
+                          borderRadius: "50%" 
+                        }}></div>
+                        <span style={{ color: "#94a3b8" }}>PSA ({mapSchools.psa?.length || 0})</span>
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                        schools
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ 
+                          width: "12px", 
+                          height: "12px", 
+                          background: "#eab308", 
+                          borderRadius: "50%" 
+                        }}></div>
+                        <span style={{ color: "#94a3b8" }}>Contacted ({mapSchools.reached_out?.length || 0})</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ 
+                          width: "12px", 
+                          height: "12px", 
+                          background: "#10b981", 
+                          borderRadius: "50%" 
+                        }}></div>
+                        <span style={{ color: "#94a3b8" }}>Rec Sites ({mapSchools.rec?.length || 0})</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
+                
                 <button 
                   className="modern-btn-primary"
                   onClick={() => window.location.href = '/map'}
-                  style={{ width: "100%", marginTop: "1rem", background: "#10b981" }}
+                  style={{ width: "100%", background: "#10b981" }}
                 >
                   View Full Map →
                 </button>
@@ -554,36 +721,97 @@ export default function Home() {
           <div style={{ marginBottom: "1rem" }}>
             <div className="modern-dashboard-card" style={{ minHeight: "200px" }}>
               <div className="modern-card-header">
-                <div className="modern-card-title">Map</div>
+                <div className="modern-card-title">School Locations</div>
                 <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
                   🗺️
                 </div>
               </div>
               <div className="modern-card-content">
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
-                  {mapLocations.map((location, index) => (
-                    <div key={index} style={{
-                      background: "rgba(16, 185, 129, 0.1)",
-                      padding: "0.8rem",
-                      borderRadius: "8px",
-                      textAlign: "center"
+                {mapLoading ? (
+                  <div style={{ 
+                    textAlign: "center", 
+                    padding: "2rem 0", 
+                    color: "#94a3b8",
+                    height: "120px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    Loading map...
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ height: "120px", borderRadius: "8px", overflow: "hidden", marginBottom: "1rem" }}>
+                      <MapContainer 
+                        center={[38.9, -77.25]} 
+                        zoom={8} 
+                        style={{ width: '100%', height: '100%' }}
+                        scrollWheelZoom={false}
+                        doubleClickZoom={false}
+                        dragging={false}
+                        zoomControl={false}
+                      >
+                        <TileLayer
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          attribution='&copy; OpenStreetMap contributors'
+                        />
+                        
+                        {/* Simplified markers for mobile - just show a few for performance */}
+                        {Array.isArray(mapSchools.happyfeet) && mapSchools.happyfeet.slice(0, 10).map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`hf-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-red.png", 
+                                iconSize: [16, 16] 
+                              })}
+                            />
+                          )
+                        ))}
+                        
+                        {Array.isArray(mapSchools.psa) && mapSchools.psa.slice(0, 10).map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`psa-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-blue.png", 
+                                iconSize: [16, 16] 
+                              })}
+                            />
+                          )
+                        ))}
+                      </MapContainer>
+                    </div>
+                    
+                    <div style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: "repeat(2, 1fr)", 
+                      gap: "0.5rem", 
+                      marginBottom: "1rem",
+                      fontSize: "0.7rem"
                     }}>
-                      <div style={{ fontWeight: "600", color: "#f1f5f9", fontSize: "0.9rem" }}>
-                        {location.area}
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ color: "#ef4444", fontWeight: "700", fontSize: "1rem" }}>
+                          {mapSchools.happyfeet?.length || 0}
+                        </div>
+                        <div style={{ color: "#64748b" }}>HappyFeet</div>
                       </div>
-                      <div style={{ color: "#10b981", fontWeight: "700", fontSize: "1.2rem" }}>
-                        {location.schools}
-                      </div>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                        schools
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ color: "#3b82f6", fontWeight: "700", fontSize: "1rem" }}>
+                          {mapSchools.psa?.length || 0}
+                        </div>
+                        <div style={{ color: "#64748b" }}>PSA</div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
+                
                 <button 
                   className="modern-btn-primary"
                   onClick={() => window.location.href = '/map'}
-                  style={{ width: "100%", marginTop: "1rem", background: "#10b981" }}
+                  style={{ width: "100%", background: "#10b981" }}
                 >
                   View Full Map →
                 </button>

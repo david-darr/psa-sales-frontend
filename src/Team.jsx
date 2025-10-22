@@ -90,7 +90,7 @@ export default function Team() {
     try {
       setLoading(true)
 
-      // Fetch user's own statistics
+      // Fetch user's own statistics first
       const [schoolsResponse, emailsResponse] = await Promise.all([
         fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
           headers: { Authorization: `Bearer ${accessToken}` }
@@ -111,63 +111,129 @@ export default function Team() {
           pendingEmails: emailsData.filter(email => !email.responded && !email.followup_sent).length,
           respondedEmails: emailsData.filter(email => email.responded).length
         })
+      }
 
-        // If user is admin, compile team statistics from the data
-        if (user.admin) {
-          // Group data by user
-          const userSchoolCounts = {}
-          const userEmailCounts = {}
-          const userInfo = {}
-
-          // Count schools per user
-          schoolsData.forEach(school => {
-            if (school.user_name) {
-              userSchoolCounts[school.user_name] = (userSchoolCounts[school.user_name] || 0) + 1
-              if (!userInfo[school.user_name]) {
-                userInfo[school.user_name] = {
-                  name: school.user_name,
-                  // We don't have email/phone from schools API, will need to be added or use placeholder
-                  email: 'Available to admin only',
-                  phone: 'Available to admin only'
-                }
-              }
-            }
-          })
-
-          // Count emails per user
-          emailsData.forEach(email => {
-            if (email.user_name) {
-              userEmailCounts[email.user_name] = (userEmailCounts[email.user_name] || 0) + 1
-            }
-          })
-
-          // Combine into team data
-          const teamStats = Object.keys(userInfo).map(userName => ({
-            name: userName,
-            email: userInfo[userName].email,
-            phone: userInfo[userName].phone,
-            role: userName === user.name && user.admin ? 'Administrator' : 'Sales Associate',
-            totalSchools: userSchoolCounts[userName] || 0,
-            totalEmails: userEmailCounts[userName] || 0,
-            isCurrentUser: userName === user.name
-          }))
-
-          setTeamData(teamStats)
+      // Fetch all team data (regardless of admin status)
+      try {
+        const teamResponse = await fetch("https://psa-sales-backend.onrender.com/api/team-stats", {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        })
+        
+        if (teamResponse.ok) {
+          const teamStatsData = await teamResponse.json()
+          if (Array.isArray(teamStatsData)) {
+            // Mark current user and sort to put them first
+            const sortedTeamData = teamStatsData
+              .map(member => ({
+                ...member,
+                isCurrentUser: member.name === user.name
+              }))
+              .sort((a, b) => {
+                // Current user first, then by total activity (schools + emails)
+                if (a.isCurrentUser) return -1
+                if (b.isCurrentUser) return 1
+                return (b.totalSchools + b.totalEmails) - (a.totalSchools + a.totalEmails)
+              })
+            
+            setTeamData(sortedTeamData)
+          }
         } else {
-          // For non-admin users, only show their own data
-          setTeamData([{
-            name: user.name,
-            email: user.email,
-            phone: user.phone || 'Not provided',
-            role: 'Sales Associate',
-            totalSchools: schoolsData.length,
-            totalEmails: emailsData.length,
-            isCurrentUser: true
-          }])
+          // Fallback to old method if new endpoint doesn't exist yet
+          console.log('Team stats endpoint not available, using fallback method')
+          
+          // Get all schools and emails to build team stats
+          const [allSchoolsResponse, allEmailsResponse] = await Promise.all([
+            fetch("https://psa-sales-backend.onrender.com/api/all-schools", {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            }),
+            fetch("https://psa-sales-backend.onrender.com/api/all-emails", {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            })
+          ])
+
+          if (allSchoolsResponse.ok && allEmailsResponse.ok) {
+            const allSchools = await allSchoolsResponse.json()
+            const allEmails = await allEmailsResponse.json()
+            
+            // Build team stats from all data
+            const userStats = {}
+            
+            // Count schools per user
+            if (Array.isArray(allSchools)) {
+              allSchools.forEach(school => {
+                if (school.user_name) {
+                  if (!userStats[school.user_name]) {
+                    userStats[school.user_name] = {
+                      name: school.user_name,
+                      email: school.user_email || 'Not available',
+                      phone: school.user_phone || 'Not available',
+                      totalSchools: 0,
+                      totalEmails: 0
+                    }
+                  }
+                  userStats[school.user_name].totalSchools++
+                }
+              })
+            }
+            
+            // Count emails per user
+            if (Array.isArray(allEmails)) {
+              allEmails.forEach(email => {
+                if (email.user_name) {
+                  if (!userStats[email.user_name]) {
+                    userStats[email.user_name] = {
+                      name: email.user_name,
+                      email: email.user_email || 'Not available',
+                      phone: email.user_phone || 'Not available',
+                      totalSchools: 0,
+                      totalEmails: 0
+                    }
+                  }
+                  userStats[email.user_name].totalEmails++
+                }
+              })
+            }
+            
+            // Convert to array and add role information
+            const teamArray = Object.values(userStats).map(member => ({
+              ...member,
+              role: member.name === user.name && user.admin ? 'Administrator' : 'Sales Associate',
+              isCurrentUser: member.name === user.name
+            })).sort((a, b) => {
+              if (a.isCurrentUser) return -1
+              if (b.isCurrentUser) return 1
+              return (b.totalSchools + b.totalEmails) - (a.totalSchools + a.totalEmails)
+            })
+            
+            setTeamData(teamArray)
+          } else {
+            // Final fallback - show only current user
+            setTeamData([{
+              name: user.name,
+              email: user.email,
+              phone: user.phone || 'Not provided',
+              role: user.admin ? 'Administrator' : 'Sales Associate',
+              totalSchools: myStats.totalSchools,
+              totalEmails: myStats.totalEmails,
+              isCurrentUser: true
+            }])
+          }
         }
+      } catch (teamError) {
+        console.error('Error fetching team data:', teamError)
+        // Show only current user if team data fails
+        setTeamData([{
+          name: user.name,
+          email: user.email,
+          phone: user.phone || 'Not provided',
+          role: user.admin ? 'Administrator' : 'Sales Associate',
+          totalSchools: myStats.totalSchools,
+          totalEmails: myStats.totalEmails,
+          isCurrentUser: true
+        }])
       }
     } catch (error) {
-      console.error('Error fetching team data:', error)
+      console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
     }
@@ -335,13 +401,13 @@ export default function Team() {
             marginBottom: isMobile ? "0.25rem" : "0.5rem",
             textAlign: "left"
           }}>
-            TEAM ANALYTICS
+            TEAM DIRECTORY
           </h1>
           <p className="modern-page-subtitle" style={{
             textAlign: "left"
           }}>
             {user ? `Welcome, ${user.name}! ` : ''}
-            {user?.admin ? 'Team Performance Overview' : 'Your Performance Dashboard'}
+            Team Member Contact Information & Performance Statistics
           </p>
         </div>
 
@@ -475,7 +541,7 @@ export default function Team() {
             <div className="modern-dashboard-card">
               <div className="modern-card-header">
                 <div className="modern-card-title">
-                  {user.admin ? `Team Members (${teamData.length} members)` : 'Your Performance'}
+                  Team Directory ({teamData.length} members)
                 </div>
                 <div className="modern-card-icon" style={{ background: "#f59e0b20", color: "#f59e0b" }}>
                   👥
@@ -490,7 +556,7 @@ export default function Team() {
                   }}>
                     <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
                     <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem" }}>Loading Team Data...</h3>
-                    <p>Fetching the latest team statistics.</p>
+                    <p>Fetching the latest team information and statistics.</p>
                   </div>
                 ) : teamData.length === 0 ? (
                   <div style={{ 
@@ -501,7 +567,7 @@ export default function Team() {
                     <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
                     <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem" }}>No Team Data Available</h3>
                     <p style={{ marginBottom: "1.5rem" }}>
-                      Unable to load team statistics at this time.
+                      Unable to load team information at this time.
                     </p>
                     <button 
                       className="modern-btn-primary"
@@ -513,8 +579,8 @@ export default function Team() {
                   </div>
                 ) : (
                   <>
-                    {/* Team Summary (Admin Only) */}
-                    {user.admin && teamData.length > 1 && (
+                    {/* Team Summary */}
+                    {teamData.length > 1 && (
                       <div style={{ 
                         marginBottom: "2rem",
                         padding: "1.5rem",
@@ -599,7 +665,7 @@ export default function Team() {
                       marginBottom: "1.5rem" 
                     }}>
                       <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
-                        {user.admin ? 'Team member performance data' : 'Your individual performance data'}
+                        Complete team directory with contact information and performance data
                       </div>
                       <button
                         className="modern-btn-primary"
@@ -685,11 +751,11 @@ export default function Team() {
                               </div>
                               <div style={{ 
                                 fontSize: "0.85rem", 
-                                color: member.role === 'Administrator' ? "#f59e0b" : "#64748b",
+                                color: (member.role === 'Administrator' || member.name === user.name && user.admin) ? "#f59e0b" : "#64748b",
                                 fontWeight: "600",
                                 marginBottom: "0.5rem"
                               }}>
-                                {member.role === 'Administrator' ? '👑 ' : '📊 '}{member.role}
+                                {(member.role === 'Administrator' || member.name === user.name && user.admin) ? '👑 ' : '📊 '}{member.role || (member.name === user.name && user.admin ? 'Administrator' : 'Sales Associate')}
                               </div>
                             </div>
                           </div>
@@ -788,7 +854,7 @@ export default function Team() {
               <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🔐</div>
               <h2 style={{ color: "#f1f5f9", marginBottom: "1rem" }}>Authentication Required</h2>
               <p style={{ color: "#94a3b8", marginBottom: "2rem", fontSize: "1.1rem" }}>
-                Please log in to access the Team Analytics and view performance data.
+                Please log in to access the Team Directory and view team member information.
               </p>
               <button 
                 className="modern-btn-primary"

@@ -1,39 +1,34 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from "./AuthContext"
-import { useNavigate } from "react-router-dom"
-
-const buttons = [
-  { label: "Home +", path: "/" },
-  { label: "Map +", path: "/map" },
-  { label: "Schools List +", path: "/schools" },
-  { label: "School Finder +", path: "/finder" },
-  { label: "Team +", path: "/team" },
-  { label: "Account +", path: "/account" }
-]
+import NavigationCard from './NavigationCard'
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 770)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 770)
+    const onResize = () => setIsMobile(window.innerWidth <= 768)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
   return isMobile
 }
 
-function useIsNarrow() {
-  const [isNarrow, setIsNarrow] = useState(window.innerWidth <= 1285)
+function useIsTablet() {
+  const [isTablet, setIsTablet] = useState(window.innerWidth <= 1024 && window.innerWidth > 768)
   useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth <= 1285)
+    const onResize = () => setIsTablet(window.innerWidth <= 1024 && window.innerWidth > 768)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-  return isNarrow
+  return isTablet
 }
 
 export default function Emails() {
-  const navigate = useNavigate()
   const { user, accessToken } = useAuth()
+  const isMobile = useIsMobile()
+  const isTablet = useIsTablet()
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  // Component state
   const [mySchools, setMySchools] = useState([])
   const [selectedSchools, setSelectedSchools] = useState([])
   const [selectedEmailsToDelete, setSelectedEmailsToDelete] = useState([])
@@ -47,26 +42,48 @@ export default function Emails() {
     email: "",
     phone: "",
     address: "",
-    school_type: "preschool"  // NEW FIELD
+    school_type: "preschool"
   })
-  const isMobile = useIsMobile()
-  const isNarrow = useIsNarrow()
-  const [menuOpen, setMenuOpen] = useState(false)
 
-  const images = [
-    "/psa pics/bg1.jpg",
-    "/psa pics/bg2.jpg",
-    "/psa pics/bg3.jpg",
-    "/psa pics/bg4.jpg",
-    "/psa pics/bg5.jpg"
-  ]
-  const [bgIndex, setBgIndex] = useState(0)
+  // Ensure full viewport coverage
   useEffect(() => {
-    const interval = setInterval(() => {
-      setBgIndex(i => (i + 1) % images.length)
-    }, 6000)
-    return () => clearInterval(interval)
-  }, [images.length])
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.documentElement.style.margin = '0';
+    document.documentElement.style.padding = '0';
+    
+    return () => {
+      if (!document.querySelector('.dashboard-container')) {
+        document.body.style.display = 'flex';
+        document.body.style.alignItems = 'center';
+        document.body.style.justifyContent = 'center';
+        document.body.style.background = '#f5f5f5';
+      }
+    };
+  }, []);
+
+  // Close mobile nav when clicking outside or on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (!isMobile && mobileNavOpen) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    const handleClickOutside = (event) => {
+      if (mobileNavOpen && !event.target.closest('.mobile-nav-sidebar') && !event.target.closest('.mobile-nav-toggle')) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('click', handleClickOutside)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isMobile, mobileNavOpen])
 
   // Load user's schools
   useEffect(() => {
@@ -97,52 +114,6 @@ export default function Emails() {
       .then(res => res.json())
       .then(setEmailStatuses)
   }
-
-  // Dropdown menu overlay
-  const DropdownMenu = () => (
-    <div style={{
-      position: isMobile ? "absolute" : "fixed",
-      top: isMobile ? 80 : 110,
-      right: "12%",
-      background: "#c40c0c",
-      borderRadius: 12,
-      boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-      padding: "12px 0",
-      minWidth: 180,
-      maxHeight: "60vh",
-      overflowY: "auto",
-      zIndex: 300
-    }}>
-      {buttons.map(btn => (
-        <button
-          key={btn.path}
-          className="home-btn"
-          onClick={() => {
-            setMenuOpen(false)
-            navigate(btn.path)
-          }}
-        >
-          {btn.label}
-        </button>
-      ))}
-    </div>
-  )
-
-  // Card style
-  const cardStyle = {
-    background: "#fff",
-    color: "#232323",
-    borderRadius: 16,
-    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-    padding: "2.5rem 2rem",
-    maxWidth: 1100,
-    margin: isMobile ? "110px auto 0 auto" : "140px auto 0 auto",
-    textAlign: "center"
-  }
-
-  const bgImgStyle = isMobile
-    ? { width: "100vw", height: 210, objectFit: "cover", display: "block" }
-    : { width: "100vw", height: 310, objectFit: "cover", display: "block" }
 
   const handleSchoolSelect = (schoolId) => {
     setSelectedSchools(schools =>
@@ -195,7 +166,7 @@ export default function Emails() {
         email: "", 
         phone: "", 
         address: "",
-        school_type: "preschool"  // Reset to default
+        school_type: "preschool"
       })
       setShowAddSchool(false)
       setStatus("School added successfully!")
@@ -228,7 +199,7 @@ export default function Emails() {
       setStatus(`${data.sent_count} email${data.sent_count === 1 ? "" : "s"} sent!`)
       setSelectedSchools([])
       fetchEmailStatuses()
-      fetchMySchools() // Refresh to show updated status
+      fetchMySchools()
     } else {
       setStatus(data.error || "Failed to send emails")
     }
@@ -300,7 +271,6 @@ export default function Emails() {
       
       if (data.status) {
         setStatus("Email reply check completed! Refreshing email statuses...")
-        // Refresh the email statuses
         fetchEmailStatuses()
       } else {
         setStatus(data.error || "Failed to check email replies")
@@ -314,383 +284,739 @@ export default function Emails() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
-      {/* Header */}
-      <div className={isMobile ? "mobile-header-container" : "header-container"}>
-        <img src="/PSA_logo.png" alt="PSA logo" className="logo" />
-        {!isNarrow ? (
-          buttons.map(btn => (
-            <button
-              key={btn.path}
-              className="home-btn"
-              onClick={() => navigate(btn.path)}
-            >
-              {btn.label}
-            </button>
-          ))
-        ) : (
-          <div style={{ marginLeft: "auto" }}>
-            <button
-              className="home-btn"
-              onClick={() => setMenuOpen(open => !open)}
-              aria-label="Open menu"
-            >
-              <span style={{ display: "inline-block", verticalAlign: "middle" }}>
-                <svg width="32" height="32" viewBox="0 0 32 32">
-                  <rect y="7" width="32" height="4" rx="2" fill="white"/>
-                  <rect y="14" width="32" height="4" rx="2" fill="white"/>
-                  <rect y="21" width="32" height="4" rx="2" fill="white"/>
-                </svg>
-              </span>
-            </button>
+    <div className="dashboard-container">
+      {/* Mobile Navigation Toggle Button */}
+      {isMobile && (
+        <button
+          className="mobile-nav-toggle"
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          style={{
+            position: 'fixed',
+            top: '1rem',
+            left: '1rem',
+            zIndex: 1001,
+            background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+            border: '1px solid #475569',
+            borderRadius: '12px',
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+              width: '20px',
+              height: '16px'
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                transform: mobileNavOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none'
+              }}
+            />
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                opacity: mobileNavOpen ? 0 : 1
+              }}
+            />
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                transform: mobileNavOpen ? 'rotate(-45deg) translate(7px, -6px)' : 'none'
+              }}
+            />
           </div>
-        )}
-      </div>
-      {(menuOpen && (isMobile || isNarrow)) && <DropdownMenu />}
+        </button>
+      )}
+
+      {/* Mobile Navigation Overlay */}
+      {isMobile && mobileNavOpen && (
+        <div
+          onClick={() => setMobileNavOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+      )}
+
+      {/* Mobile Navigation Sidebar - Only visible on mobile when open */}
+      {isMobile && (
+        <div
+          className="mobile-nav-sidebar"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '280px',
+            height: '100vh',
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            borderRight: '1px solid #334155',
+            padding: '2rem',
+            transform: mobileNavOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.3s ease',
+            zIndex: 1000,
+            overflowY: 'auto'
+          }}
+        >
+          <NavigationCard />
+        </div>
+      )}
+
+      {/* Desktop Navigation Sidebar - Only visible on desktop */}
+      {!isMobile && (
+        <div
+          className="nav-sidebar"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '280px',
+            height: '100vh',
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            borderRight: '1px solid #334155',
+            padding: '2rem',
+            zIndex: 1000,
+            overflowY: 'auto'
+          }}
+        >
+          <NavigationCard />
+        </div>
+      )}
       
-      {/* Background image */}
-      <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
-        <img src={images[bgIndex]} alt="" style={bgImgStyle} />
-      </div>
-      
-      {/* Section header */}
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: isMobile ? 130 : 140,
-          transform: "translateX(-50%)",
-          zIndex: 210,
-          fontWeight: 900,
-          fontSize: isMobile ? "7vw" : "3vw",
-          color: "#fff",
-          letterSpacing: 1,
-          textShadow: "2px 4px 8px rgba(0,0,0,1)",
-          maxWidth: "90vw",
-          minWidth: "200px",
-          wordBreak: "break-word",
-          lineHeight: 1.1,
-          textAlign: "center",
-          pointerEvents: "none"
-        }}
-      >
-        EMAIL SCHOOLS
-      </div>
-      
-      {/* Main card */}
-      <div style={cardStyle}>
-        <h2 style={{ color: "#c40c0c", marginBottom: 24 }}>Email Schools</h2>
-        
+      <main className="modern-main-content" style={{ 
+        marginLeft: isMobile ? 0 : 280,
+        paddingTop: isMobile ? "4rem" : "2rem",
+        paddingLeft: isMobile ? "1rem" : "2rem",
+        paddingRight: isMobile ? "1rem" : "2rem",
+        paddingBottom: "2rem",
+        width: isMobile ? "100vw" : "calc(100vw - 280px)"
+      }}>
+        {/* Header Section */}
+        <div className="modern-page-header" style={{ 
+          marginBottom: isMobile ? "1rem" : "2rem",
+          textAlign: "left"
+        }}>
+          <h1 className="modern-page-title" style={{
+            fontSize: isMobile ? "2rem" : "3rem",
+            marginBottom: isMobile ? "0.25rem" : "0.5rem",
+            textAlign: "left"
+          }}>
+            EMAIL CENTER
+          </h1>
+          <p className="modern-page-subtitle" style={{
+            textAlign: "left"
+          }}>
+            Manage School Communications & Email Campaigns
+          </p>
+        </div>
+
         {user ? (
           <>
             {/* Status Message */}
             {status && (
-              <div style={{ 
-                marginBottom: 24, 
-                padding: "12px", 
-                borderRadius: "8px",
-                background: status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#e8f5e8" : "#ffebee",
-                color: status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#2e7d32" : "#c62828",
-                border: `1px solid ${status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#4caf50" : "#f44336"}`
+              <div className="modern-dashboard-card" style={{ 
+                marginBottom: isMobile ? "1rem" : "2rem",
+                borderLeft: status.includes("success") || status.includes("sent") || status.includes("deleted") ? "4px solid #10b981" : "4px solid #ef4444"
               }}>
-                {status}
+                <div className="modern-card-content" style={{ 
+                  color: status.includes("success") || status.includes("sent") || status.includes("deleted") ? "#10b981" : "#ef4444",
+                  fontWeight: "600",
+                  textAlign: "center"
+                }}>
+                  {status}
+                </div>
               </div>
             )}
 
-            {/* Add School Section */}
-            <div style={{ marginBottom: 32 }}>
-              <button
-                className="home-btn"
-                onClick={() => setShowAddSchool(!showAddSchool)}
-                style={{ marginBottom: 16 }}
-              >
-                {showAddSchool ? "Cancel" : "Add New School"}
-              </button>
-              
-              {showAddSchool && (
-                <form onSubmit={handleAddSchool} style={{ marginBottom: 24 }}>
-                  <input
-                    placeholder="School Name *"
-                    value={newSchool.school_name}
-                    onChange={(e) => setNewSchool({...newSchool, school_name: e.target.value})}
-                    required
-                    style={{ marginBottom: 12, width: "100%" }}
-                  />
-                  <input
-                    placeholder="Contact Name"
-                    value={newSchool.contact_name}
-                    onChange={(e) => setNewSchool({...newSchool, contact_name: e.target.value})}
-                    style={{ marginBottom: 12, width: "100%" }}
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email *"
-                    value={newSchool.email}
-                    onChange={(e) => setNewSchool({...newSchool, email: e.target.value})}
-                    required
-                    style={{ marginBottom: 12, width: "100%" }}
-                  />
-                  <input
-                    placeholder="Phone"
-                    value={newSchool.phone}
-                    onChange={(e) => setNewSchool({...newSchool, phone: e.target.value})}
-                    style={{ marginBottom: 12, width: "100%" }}
-                  />
-                  <input
-                    placeholder="Address"
-                    value={newSchool.address}
-                    onChange={(e) => setNewSchool({...newSchool, address: e.target.value})}
-                    style={{ marginBottom: 12, width: "100%" }}
-                  />
-                  {/* NEW SCHOOL TYPE SELECTOR */}
-                  <select
-                    value={newSchool.school_type}
-                    onChange={(e) => setNewSchool({...newSchool, school_type: e.target.value})}
-                    style={{ 
-                      marginBottom: 12, 
-                      width: "100%", 
-                      padding: "8px 12px",
-                      borderRadius: "4px",
-                      border: "1px solid #ccc"
-                    }}
-                  >
-                    <option value="preschool">Preschool</option>
-                    <option value="elementary">Elementary School</option>
-                  </select>
-                  <button type="submit" className="home-btn">Add School</button>
-                </form>
-              )}
+            {/* Add School Card */}
+            <div className="modern-dashboard-card" style={{ marginBottom: isMobile ? "1rem" : "2rem" }}>
+              <div className="modern-card-header">
+                <div className="modern-card-title">Add New School</div>
+                <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
+                  🏫
+                </div>
+              </div>
+              <div className="modern-card-content">
+                <button
+                  className="modern-btn-primary"
+                  onClick={() => setShowAddSchool(!showAddSchool)}
+                  style={{ 
+                    width: "100%",
+                    marginBottom: showAddSchool ? "1.5rem" : "0",
+                    background: showAddSchool ? "#ef4444" : "#10b981"
+                  }}
+                >
+                  {showAddSchool ? "❌ Cancel" : "➕ Add New School"}
+                </button>
+                
+                {showAddSchool && (
+                  <form onSubmit={handleAddSchool}>
+                    <div style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                      gap: "1rem",
+                      marginBottom: "1rem"
+                    }}>
+                      <input
+                        placeholder="School Name *"
+                        value={newSchool.school_name}
+                        onChange={(e) => setNewSchool({...newSchool, school_name: e.target.value})}
+                        required
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #475569",
+                          borderRadius: "8px",
+                          background: "#334155",
+                          color: "#f1f5f9",
+                          fontSize: "1rem"
+                        }}
+                      />
+                      <input
+                        placeholder="Contact Name"
+                        value={newSchool.contact_name}
+                        onChange={(e) => setNewSchool({...newSchool, contact_name: e.target.value})}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #475569",
+                          borderRadius: "8px",
+                          background: "#334155",
+                          color: "#f1f5f9",
+                          fontSize: "1rem"
+                        }}
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email *"
+                        value={newSchool.email}
+                        onChange={(e) => setNewSchool({...newSchool, email: e.target.value})}
+                        required
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #475569",
+                          borderRadius: "8px",
+                          background: "#334155",
+                          color: "#f1f5f9",
+                          fontSize: "1rem"
+                        }}
+                      />
+                      <input
+                        placeholder="Phone"
+                        value={newSchool.phone}
+                        onChange={(e) => setNewSchool({...newSchool, phone: e.target.value})}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #475569",
+                          borderRadius: "8px",
+                          background: "#334155",
+                          color: "#f1f5f9",
+                          fontSize: "1rem"
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                      gap: "1rem",
+                      marginBottom: "1rem"
+                    }}>
+                      <input
+                        placeholder="Address"
+                        value={newSchool.address}
+                        onChange={(e) => setNewSchool({...newSchool, address: e.target.value})}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #475569",
+                          borderRadius: "8px",
+                          background: "#334155",
+                          color: "#f1f5f9",
+                          fontSize: "1rem"
+                        }}
+                      />
+                      <select
+                        value={newSchool.school_type}
+                        onChange={(e) => setNewSchool({...newSchool, school_type: e.target.value})}
+                        style={{ 
+                          padding: "0.75rem 1rem",
+                          border: "1px solid #475569",
+                          borderRadius: "8px",
+                          background: "#334155",
+                          color: "#f1f5f9",
+                          fontSize: "1rem"
+                        }}
+                      >
+                        <option value="preschool">🧸 Preschool</option>
+                        <option value="elementary">🎒 Elementary School</option>
+                      </select>
+                    </div>
+                    
+                    <button 
+                      type="submit" 
+                      className="modern-btn-primary"
+                      style={{ width: "100%", background: "#10b981" }}
+                    >
+                      ✅ Add School
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
 
-            {/* School Selection */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h3 style={{ margin: 0 }}>Select Schools to Email:</h3>
+            {/* Schools Selection Card */}
+            <div className="modern-dashboard-card" style={{ marginBottom: isMobile ? "1rem" : "2rem" }}>
+              <div className="modern-card-header">
+                <div className="modern-card-title">Select Schools to Email ({selectedSchools.length} selected)</div>
+                <div className="modern-card-icon" style={{ background: "#3b82f620", color: "#3b82f6" }}>
+                  📧
+                </div>
+              </div>
+              <div className="modern-card-content">
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center", 
+                  marginBottom: "1rem" 
+                }}>
+                  <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                    {mySchools.length} schools available
+                  </div>
+                  <button
+                    className="modern-btn-primary"
+                    onClick={handleSelectAllSchools}
+                    style={{ 
+                      padding: "0.5rem 1rem", 
+                      fontSize: "0.85rem",
+                      background: selectedSchools.length === mySchools.length ? "#ef4444" : "#3b82f6"
+                    }}
+                  >
+                    {selectedSchools.length === mySchools.length ? "Deselect All" : "Select All"}
+                  </button>
+                </div>
+                
+                <div style={{ 
+                  maxHeight: "400px", 
+                  overflowY: "auto",
+                  border: "1px solid #475569",
+                  borderRadius: "8px",
+                  marginBottom: "1rem"
+                }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#475569", position: "sticky", top: 0, zIndex: 1 }}>
+                        <th style={{ padding: "0.75rem", textAlign: "left", width: "50px" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Select</span>
+                        </th>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>School</span>
+                        </th>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Type</span>
+                        </th>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Contact</span>
+                        </th>
+                        {!isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Email</span>
+                          </th>
+                        )}
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Status</span>
+                        </th>
+                        {user.admin && !isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Added By</span>
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mySchools.map((school, index) => (
+                        <tr 
+                          key={school.id}
+                          style={{ 
+                            background: index % 2 === 0 ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 41, 59, 0.3)",
+                            borderBottom: "1px solid #475569"
+                          }}
+                        >
+                          <td style={{ padding: "0.75rem" }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedSchools.includes(school.id)}
+                              onChange={() => handleSchoolSelect(school.id)}
+                              style={{ accentColor: "#3b82f6" }}
+                            />
+                          </td>
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ color: "#f1f5f9", fontWeight: "500", fontSize: "0.9rem" }}>
+                              {school.school_name}
+                            </div>
+                            {isMobile && (
+                              <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                                📧 {school.email}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "0.75rem" }}>
+                            <span style={{
+                              background: school.school_type === 'preschool' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)',
+                              color: school.school_type === 'preschool' ? '#3b82f6' : '#8b5cf6',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: '500'
+                            }}>
+                              {school.school_type === 'preschool' ? '🧸 Preschool' : '🎒 Elementary'}
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.9rem" }}>
+                            {school.contact_name || "—"}
+                          </td>
+                          {!isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {school.email}
+                            </td>
+                          )}
+                          <td style={{ padding: "0.75rem" }}>
+                            <span style={{
+                              background: school.status === 'contacted' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+                              color: school.status === 'contacted' ? '#10b981' : '#64748b',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: '500'
+                            }}>
+                              {school.status === 'contacted' ? '✅ Contacted' : '⏳ Pending'}
+                            </span>
+                          </td>
+                          {user.admin && !isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {school.user_name || "Unknown"}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {mySchools.length === 0 && (
+                    <div style={{ 
+                      textAlign: "center", 
+                      padding: "2rem", 
+                      color: "#64748b",
+                      fontSize: "0.9rem"
+                    }}>
+                      No schools added yet. Add some schools to get started!
+                    </div>
+                  )}
+                </div>
+
                 <button
-                  className="home-btn"
-                  onClick={handleSelectAllSchools}
-                  style={{ padding: "6px 12px", fontSize: "0.9rem" }}
+                  onClick={handleSendEmails}
+                  className="modern-btn-primary"
+                  style={{ 
+                    width: "100%",
+                    opacity: selectedSchools.length === 0 || loading ? 0.6 : 1,
+                    cursor: selectedSchools.length === 0 || loading ? "not-allowed" : "pointer",
+                    background: "#3b82f6"
+                  }}
+                  disabled={selectedSchools.length === 0 || loading}
                 >
-                  {selectedSchools.length === mySchools.length ? "Deselect All" : "Select All"}
+                  {loading ? 
+                    "📧 Sending..." : 
+                    `📧 Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`
+                  }
                 </button>
               </div>
-              
-              <div className="schools-table-scroll-container" style={{ maxHeight: 500, marginBottom: 24 }}>
-                <table className="schools-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "50px" }}>Select</th>
-                      <th>School Name</th>
-                      <th>Type</th>  {/* NEW COLUMN */}
-                      <th>Contact</th>
-                      <th>Email</th>
-                      <th>Status</th>
-                      {user.admin && <th>Added By</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mySchools.map(school => (
-                      <tr key={school.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedSchools.includes(school.id)}
-                            onChange={() => handleSchoolSelect(school.id)}
-                          />
-                        </td>
-                        <td>{school.school_name}</td>
-                        <td>
-                          <span style={{
-                            background: school.school_type === 'preschool' ? '#e3f2fd' : '#f3e5f5',
-                            color: '#000000',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}>
-                            {school.school_type === 'preschool' ? '🧸 Preschool' : '🎒 Elementary'}
-                          </span>
-                        </td>
-                        <td>{school.contact_name || "—"}</td>
-                        <td>{school.email}</td>
-                        <td>
-                          <span style={{
-                            background: school.status === 'contacted' ? '#e8f5e8' : '#f0f0f0',
-                            color: '#000000',  // Add black text color
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}>
-                            {school.status}
-                          </span>
-                        </td>
-                        {user.admin && <td>{school.user_name || "Unknown"}</td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <button
-                onClick={handleSendEmails}
-                className="home-btn"
-                style={{ width: "100%", marginBottom: 16 }}
-                disabled={selectedSchools.length === 0 || loading}
-              >
-                {loading ? "Sending..." : `Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`}
-              </button>
             </div>
 
-            {/* Email Status Table */}
-            <div style={{ marginTop: 40 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h2 style={{ margin: 0 }}>Email History ({emailStatuses.length})</h2>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    className="home-btn"
-                    onClick={handleSelectAllEmails}
-                    style={{ padding: "6px 12px", fontSize: "0.9rem" }}
-                  >
-                    {selectedEmailsToDelete.length === emailStatuses.length ? "Deselect All" : "Select All"}
-                  </button>
-                  <button
-                    className="home-btn"
-                    onClick={handleCheckEmailReplies}
-                    style={{ 
-                      padding: "6px 12px", 
-                      fontSize: "0.9rem", 
-                      background: "#2196f3",
-                      border: "1px solid #1976d2"
-                    }}
-                    disabled={loading}
-                  >
-                    {loading ? "Checking..." : "Check Replies"}
-                  </button>
-                  {selectedEmailsToDelete.length > 0 && (
+            {/* Email History Card */}
+            <div className="modern-dashboard-card">
+              <div className="modern-card-header">
+                <div className="modern-card-title">Email History ({emailStatuses.length} emails sent)</div>
+                <div className="modern-card-icon" style={{ background: "#f59e0b20", color: "#f59e0b" }}>
+                  📋
+                </div>
+              </div>
+              <div className="modern-card-content">
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center", 
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                  gap: "0.5rem"
+                }}>
+                  <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                    Manage your sent emails and track responses
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                     <button
-                      className="home-btn"
-                      onClick={handleDeleteSelectedEmails}
+                      className="modern-btn-primary"
+                      onClick={handleSelectAllEmails}
                       style={{ 
-                        padding: "6px 12px", 
-                        fontSize: "0.9rem", 
-                        background: "#f44336",
-                        border: "1px solid #d32f2f"
+                        padding: "0.5rem 1rem", 
+                        fontSize: "0.85rem",
+                        background: selectedEmailsToDelete.length === emailStatuses.length ? "#ef4444" : "#64748b"
+                      }}
+                    >
+                      {selectedEmailsToDelete.length === emailStatuses.length ? "Deselect All" : "Select All"}
+                    </button>
+                    <button
+                      className="modern-btn-primary"
+                      onClick={handleCheckEmailReplies}
+                      style={{ 
+                        padding: "0.5rem 1rem", 
+                        fontSize: "0.85rem",
+                        background: "#3b82f6"
                       }}
                       disabled={loading}
                     >
-                      {loading ? "Deleting..." : `Delete ${selectedEmailsToDelete.length}`}
+                      {loading ? "🔄 Checking..." : "🔄 Check Replies"}
                     </button>
+                    {selectedEmailsToDelete.length > 0 && (
+                      <button
+                        className="modern-btn-primary"
+                        onClick={handleDeleteSelectedEmails}
+                        style={{ 
+                          padding: "0.5rem 1rem", 
+                          fontSize: "0.85rem",
+                          background: "#ef4444"
+                        }}
+                        disabled={loading}
+                      >
+                        {loading ? "🗑️ Deleting..." : `🗑️ Delete ${selectedEmailsToDelete.length}`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  maxHeight: "500px", 
+                  overflowY: "auto",
+                  border: "1px solid #475569",
+                  borderRadius: "8px"
+                }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#475569", position: "sticky", top: 0, zIndex: 1 }}>
+                        <th style={{ padding: "0.75rem", textAlign: "left", width: "50px" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Select</span>
+                        </th>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>School</span>
+                        </th>
+                        {!isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Email</span>
+                          </th>
+                        )}
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Date</span>
+                        </th>
+                        {user.admin && !isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>User</span>
+                          </th>
+                        )}
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Status</span>
+                        </th>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {emailStatuses.map((email, index) => (
+                        <tr 
+                          key={email.id}
+                          style={{ 
+                            background: index % 2 === 0 ? "rgba(51, 65, 85, 0.3)" : "rgba(30, 41, 59, 0.3)",
+                            borderBottom: "1px solid #475569"
+                          }}
+                        >
+                          <td style={{ padding: "0.75rem" }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedEmailsToDelete.includes(email.id)}
+                              onChange={() => handleEmailSelectToDelete(email.id)}
+                              style={{ accentColor: "#ef4444" }}
+                            />
+                          </td>
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ color: "#f1f5f9", fontWeight: "500", fontSize: "0.9rem" }}>
+                              {email.school_name}
+                            </div>
+                            {isMobile && (
+                              <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                                📧 {email.school_email}
+                              </div>
+                            )}
+                          </td>
+                          {!isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {email.school_email}
+                            </td>
+                          )}
+                          <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.85rem" }}>
+                            {new Date(email.sent_at).toLocaleDateString()}
+                          </td>
+                          {user.admin && !isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {email.user_name || "Unknown"}
+                            </td>
+                          )}
+                          <td style={{ padding: "0.75rem" }}>
+                            <span style={{
+                              background: email.responded ? 'rgba(16, 185, 129, 0.2)' : email.followup_sent ? 'rgba(245, 158, 11, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+                              color: email.responded ? '#10b981' : email.followup_sent ? '#f59e0b' : '#64748b',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: '500'
+                            }}>
+                              {email.responded
+                                ? "✅ Responded"
+                                : email.followup_sent
+                                ? "📧 Follow-Up Sent"
+                                : "⏳ Pending"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                              {!email.responded && !email.followup_sent && (
+                                <button
+                                  className="modern-btn-primary"
+                                  style={{ 
+                                    padding: "0.35rem 0.75rem", 
+                                    fontSize: "0.8rem",
+                                    background: "#f59e0b"
+                                  }}
+                                  onClick={async () => {
+                                    const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                        "Authorization": `Bearer ${accessToken}`
+                                      },
+                                      body: JSON.stringify({ email_id: email.id })
+                                    })
+                                    const data = await res.json()
+                                    if (data.status === "follow-up sent") {
+                                      fetchEmailStatuses()
+                                    } else {
+                                      alert(data.error || "Failed to send follow-up")
+                                    }
+                                  }}
+                                >
+                                  Follow-Up
+                                </button>
+                              )}
+                              {!email.responded && (
+                                <button
+                                  className="modern-btn-primary"
+                                  style={{ 
+                                    padding: "0.35rem 0.75rem", 
+                                    fontSize: "0.8rem",
+                                    background: "#10b981"
+                                  }}
+                                  onClick={async () => {
+                                    const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                        "Authorization": `Bearer ${accessToken}`
+                                      },
+                                      body: JSON.stringify({ email_id: email.id, responded: true })
+                                    })
+                                    if (res.ok) {
+                                      fetchEmailStatuses()
+                                    }
+                                  }}
+                                >
+                                  Mark Replied
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {emailStatuses.length === 0 && (
+                    <div style={{ 
+                      textAlign: "center", 
+                      padding: "3rem 2rem",
+                      color: "#64748b"
+                    }}>
+                      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📧</div>
+                      <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem", fontSize: "1.2rem" }}>No Emails Sent Yet</h3>
+                      <p style={{ marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+                        Start by adding schools and sending your first email campaign!
+                      </p>
+                      <button 
+                        className="modern-btn-primary"
+                        onClick={() => setShowAddSchool(true)}
+                        style={{ background: "#10b981" }}
+                      >
+                        🏫 Add Your First School
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
-              
-              <div className="schools-table-scroll-container" style={{ maxHeight: 500 }}>
-                <table className="schools-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "50px" }}>Select</th>
-                      <th>School Name</th>
-                      <th>Email</th>
-                      <th>Sent Date</th>
-                      {user.admin && <th>User</th>}
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {emailStatuses.map(email => (
-                      <tr key={email.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedEmailsToDelete.includes(email.id)}
-                            onChange={() => handleEmailSelectToDelete(email.id)}
-                          />
-                        </td>
-                        <td>{email.school_name}</td>
-                        <td>{email.school_email}</td>
-                        <td>{new Date(email.sent_at).toLocaleDateString()}</td>
-                        {user.admin && <td>{email.user_name || "Unknown"}</td>}
-                        <td>
-                          <span style={{
-                            background: email.responded ? '#e8f5e8' : email.followup_sent ? '#fff3cd' : '#ffebee',
-                            color: '#000000',  // Add black text color
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem'
-                          }}>
-                            {email.responded
-                              ? "✅ Responded"
-                              : email.followup_sent
-                              ? "📧 Follow-Up Sent"
-                              : "⏳ Pending"}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                            {!email.responded && !email.followup_sent && (
-                              <button
-                                className="home-btn"
-                                style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                                onClick={async () => {
-                                  const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
-                                    method: "POST",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                      "Authorization": `Bearer ${accessToken}`
-                                    },
-                                    body: JSON.stringify({ email_id: email.id })
-                                  })
-                                  const data = await res.json()
-                                  if (data.status === "follow-up sent") {
-                                    fetchEmailStatuses()
-                                  } else {
-                                    alert(data.error || "Failed to send follow-up")
-                                  }
-                                }}
-                              >
-                                Follow-Up
-                              </button>
-                            )}
-                            {!email.responded && (
-                              <button
-                                className="home-btn"
-                                style={{ padding: "4px 8px", fontSize: "0.75rem", background: "#4caf50" }}
-                                onClick={async () => {
-                                  const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
-                                    method: "POST",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                      "Authorization": `Bearer ${accessToken}`
-                                    },
-                                    body: JSON.stringify({ email_id: email.id, responded: true })
-                                  })
-                                  if (res.ok) {
-                                    fetchEmailStatuses()
-                                  }
-                                }}
-                              >
-                                Mark Responded
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {emailStatuses.length === 0 && (
-                <div style={{ textAlign: "center", padding: "2rem", color: "#666" }}>
-                  No emails sent yet. Send some emails to see them here!
-                </div>
-              )}
             </div>
           </>
         ) : (
-          <div>Please log in to send emails.</div>
+          <div className="modern-dashboard-card">
+            <div className="modern-card-content" style={{ textAlign: "center", padding: "3rem 2rem" }}>
+              <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🔐</div>
+              <h2 style={{ color: "#f1f5f9", marginBottom: "1rem" }}>Authentication Required</h2>
+              <p style={{ color: "#94a3b8", marginBottom: "2rem", fontSize: "1.1rem" }}>
+                Please log in to access the Email Center and manage your school communications.
+              </p>
+              <button 
+                className="modern-btn-primary"
+                onClick={() => window.location.href = '/account'}
+                style={{ fontSize: "1rem", padding: "1rem 2rem" }}
+              >
+                🔐 Login to Continue
+              </button>
+            </div>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

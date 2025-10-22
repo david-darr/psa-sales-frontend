@@ -9,7 +9,7 @@ export default function NavigationCard() {
   const navigationItems = [
     {
       label: "Home",
-      path: "/home",
+      path: "/",
       icon: "🏠",
       protected: false
     },

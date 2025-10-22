@@ -2,16 +2,14 @@ import { useEffect, useState } from "react"
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
-import { useNavigate } from "react-router-dom"
+import NavigationCard from './NavigationCard'
 
-const buttons = [
-  { label: "Home +", path: "/" },
-  { label: "Schools List +", path: "/schools" },
-  { label: "School Finder +", path: "/finder" },
-  { label: "Emails +", path: "/emails" },
-  { label: "Team +", path: "/team" },
-  { label: "Account +", path: "/account" }
-]
+// Configure Leaflet icons
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: '/map/marker-icon-2x.png',
+  iconUrl: '/map/marker-icon.png',
+  shadowUrl: '/map/marker-shadow.png',
+});
 
 const markerIcons = {
   happyfeet: new L.Icon({ iconUrl: "/map/marker-red.png", iconSize: [32, 32] }),
@@ -21,261 +19,605 @@ const markerIcons = {
 }
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 770)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 770)
+    const onResize = () => setIsMobile(window.innerWidth <= 768)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
   return isMobile
 }
 
-function useIsNarrow() {
-  const [isNarrow, setIsNarrow] = useState(window.innerWidth <= 1285)
+function useIsTablet() {
+  const [isTablet, setIsTablet] = useState(window.innerWidth <= 1024 && window.innerWidth > 768)
   useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth <= 1285)
+    const onResize = () => setIsTablet(window.innerWidth <= 1024 && window.innerWidth > 768)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-  return isNarrow
+  return isTablet
 }
 
 export default function PSAMap() {
-  const navigate = useNavigate()
   const isMobile = useIsMobile()
-  const isNarrow = useIsNarrow()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const isTablet = useIsTablet()
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [schools, setSchools] = useState({
     happyfeet: [],
     psa: [],
-    reached_out: []
+    reached_out: [],
+    rec: []
   })
-
-  // Rotating background images
-  const images = [
-    "/psa pics/bg1.jpg",
-    "/psa pics/bg2.jpg",
-    "/psa pics/bg3.jpg",
-    "/psa pics/bg4.jpg",
-    "/psa pics/bg5.jpg"
-  ]
-  const [bgIndex, setBgIndex] = useState(0)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBgIndex(i => (i + 1) % images.length)
-    }, 6000)
-    return () => clearInterval(interval)
-  }, [images.length])
-
-  useEffect(() => {
-    fetch("https://psa-sales-backend.onrender.com/api/map-schools")
-      .then(res => res.json())
-      .then(setSchools)
-  }, [])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   // Example center (Northern Virginia)
   const mapCenter = [38.9, -77.25]
-  const mapZoom = 10
+  const mapZoom = isMobile ? 9 : 10
 
-  // Card style for consistency
-  const cardStyle = {
-    background: "#fff",
-    color: "#232323",
-    borderRadius: 16,
-    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-    padding: "1.5rem 1rem",
-    maxWidth: 1200,
-    margin: isMobile ? "90px auto 40px auto" : "120px auto 60px auto", // changed
-    textAlign: "center"
+  // Load schools data
+  useEffect(() => {
+    fetchSchools()
+  }, [])
+
+  // Ensure full viewport coverage
+  useEffect(() => {
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.documentElement.style.margin = '0';
+    document.documentElement.style.padding = '0';
+    
+    return () => {
+      if (!document.querySelector('.dashboard-container')) {
+        document.body.style.display = 'flex';
+        document.body.style.alignItems = 'center';
+        document.body.style.justifyContent = 'center';
+        document.body.style.background = '#f5f5f5';
+      }
+    };
+  }, []);
+
+  // Close mobile nav when clicking outside or on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (!isMobile && mobileNavOpen) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    const handleClickOutside = (event) => {
+      if (mobileNavOpen && !event.target.closest('.mobile-nav-sidebar') && !event.target.closest('.mobile-nav-toggle')) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('click', handleClickOutside)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isMobile, mobileNavOpen])
+
+  const fetchSchools = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("https://psa-sales-backend.onrender.com/api/map-schools")
+      const data = await response.json()
+      setSchools(data)
+    } catch (error) {
+      console.error('Error fetching schools:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Background image style
-  const bgImgStyle = isMobile
-    ? { width: "100vw", height: 210, objectFit: "cover", display: "block" }
-    : { width: "100vw", height: 310, objectFit: "cover", display: "block" }
-
-  // Dropdown menu overlay
-  const DropdownMenu = () => (
-    <div style={{
-      position: isMobile ? "absolute" : "fixed",
-      top: isMobile ? 80 : 110,
-      right: "12%",
-      background: "#c40c0c",
-      borderRadius: 12,
-      boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-      padding: "12px 0",
-      minWidth: 180,
-      maxHeight: "60vh",
-      overflowY: "auto",
-      zIndex: 300
-    }}>
-      {buttons.map(btn => (
-        <button
-          key={btn.path}
-          className="home-btn"
-          onClick={() => {
-            setMenuOpen(false)
-            navigate(btn.path)
-          }}
-        >
-          {btn.label}
-        </button>
-      ))}
-    </div>
-  )
-
-  // HEADER
-  function Header() {
-    if (isMobile) {
-      return (
-        <div className="mobile-header-container">
-          <img src="/PSA_logo.png" alt="PSA logo" className="logo" />
-          <div style={{ marginLeft: "auto" }}>
-            <button
-              className="home-btn"
-              onClick={() => setMenuOpen(open => !open)}
-              aria-label="Open menu"
-            >
-              <span style={{ display: "inline-block", verticalAlign: "middle" }}>
-                <svg width="32" height="32" viewBox="0 0 32 32">
-                  <rect y="7" width="32" height="4" rx="2" fill="white"/>
-                  <rect y="14" width="32" height="4" rx="2" fill="white"/>
-                  <rect y="21" width="32" height="4" rx="2" fill="white"/>
-                </svg>
-              </span>
-            </button>
-          </div>
-        </div>
-      )
+  const handleRefreshMap = async () => {
+    try {
+      setRefreshing(true)
+      await fetch("https://psa-sales-backend.onrender.com/api/refresh-map-schools", { method: "POST" })
+      await fetchSchools()
+    } catch (error) {
+      console.error('Error refreshing map:', error)
+    } finally {
+      setRefreshing(false)
     }
-    // Desktop header
-    return (
-      <div className="header-container">
-        <img src="/PSA_logo.png" alt="PSA logo" className="logo" />
-        {!isNarrow ? (
-          buttons.map(btn => (
-            <button
-              key={btn.path}
-              className="home-btn"
-              onClick={() => navigate(btn.path)}
-            >
-              {btn.label}
-            </button>
-          ))
-        ) : (
-          <div style={{ marginLeft: "auto" }}>
-            <button
-              className="home-btn"
-              onClick={() => setMenuOpen(open => !open)}
-              aria-label="Open menu"
-            >
-              <span style={{ display: "inline-block", verticalAlign: "middle" }}>
-                <svg width="32" height="32" viewBox="0 0 32 32">
-                  <rect y="7" width="32" height="4" rx="2" fill="white"/>
-                  <rect y="14" width="32" height="4" rx="2" fill="white"/>
-                  <rect y="21" width="32" height="4" rx="2" fill="white"/>
-                </svg>
-              </span>
-            </button>
-          </div>
-        )}
-      </div>
-    )
+  }
+
+  // Calculate statistics
+  const mapStats = {
+    happyfeet: schools.happyfeet?.length || 0,
+    psa: schools.psa?.length || 0,
+    reached_out: schools.reached_out?.length || 0,
+    rec: schools.rec?.length || 0,
+    total: (schools.happyfeet?.length || 0) + (schools.psa?.length || 0) + (schools.reached_out?.length || 0) + (schools.rec?.length || 0)
   }
 
   return (
-    <div style={{ minHeight: "100vh", width: "100vw", background: "#f5f5f5", position: "relative" }}>
-      <Header />
-      {(menuOpen && (isMobile || isNarrow)) && <DropdownMenu />}
-      {/* Rotating background image */}
-      <div style={{ width: "100vw", height: isMobile ? 210 : 310, overflow: "hidden", marginTop: isMobile ? 70 : 0 }}>
-        <img src={images[bgIndex]} alt="" style={bgImgStyle} />
-      </div>
-      {/* Big Title */}
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: isMobile ? 130 : 140,
-          transform: "translateX(-50%)",
-          zIndex: 210,
-          fontWeight: 900,
-          fontSize: isMobile ? "7vw" : "3vw",
-          color: "#fff",
-          letterSpacing: 1,
-          textShadow: "2px 4px 8px rgba(0,0,0,1)",
-          maxWidth: "90vw",
-          minWidth: "200px",
-          wordBreak: "break-word",
-          lineHeight: 1.1,
-          textAlign: "center",
-          pointerEvents: "none"
-        }}
-      >
-        MAP
-      </div>
-      {/* Map Card */}
-      <div style={cardStyle}>
-        <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: "70vh", width: "100%" }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
-          />
-          {Array.isArray(schools.happyfeet) && schools.happyfeet.map((s, i) => (
-            s.lat && s.lng &&
-            <Marker key={`hf-${i}`} position={[s.lat, s.lng]} icon={markerIcons.happyfeet}>
-              <Popup>
-                <b>{s.name}</b><br />Already In (HappyFeet)
-              </Popup>
-            </Marker>
-          ))}
-          {Array.isArray(schools.psa) && schools.psa.map((s, i) => (
-            s.lat && s.lng &&
-            <Marker key={`psa-${i}`} position={[s.lat, s.lng]} icon={markerIcons.psa}>
-              <Popup>
-                <b>{s.name}</b><br />Already In (PSA)
-              </Popup>
-            </Marker>
-          ))}
-          {Array.isArray(schools.reached_out) && schools.reached_out.map((s, i) => (
-            s.lat && s.lng &&
-            <Marker key={`sheet-${i}`} position={[s.lat, s.lng]} icon={markerIcons.sheet}>
-              <Popup>
-                <b>{s.name}</b><br />Reached Out
-              </Popup>
-            </Marker>
-          ))}
-          {Array.isArray(schools.rec) && schools.rec.map((s, i) => (
-            s.lat && s.lng &&
-            <Marker key={`rec-${i}`} position={[s.lat, s.lng]} icon={markerIcons.rec}>
-              <Popup>
-                <b>{s.name}</b><br />Rec Site
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-        <div style={{ marginTop: 24, color: "#232323", fontWeight: 700 }}>
-          <span style={{ color: "#c40c0c" }}>Red:</span> HappyFeet School &nbsp;
-          <span style={{ color: "#1976d2" }}>Blue:</span> PSA School &nbsp;
-          <span style={{ color: "#0f4404ff" }}>Green:</span> Rec &nbsp;
-          <span style={{ color: "#fbc02d" }}>Yellow:</span> Reached Out (Sales)
-
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <button
-            className="home-btn"
-            style={{ padding: "8px 24px", fontWeight: 700 }}
-            onClick={async () => {
-              await fetch("https://psa-sales-backend.onrender.com/api/refresh-map-schools", { method: "POST" });
-              fetch("https://psa-sales-backend.onrender.com/api/map-schools")
-                .then(res => res.json())
-                .then(setSchools);
+    <div className="dashboard-container">
+      {/* Mobile Navigation Toggle Button */}
+      {isMobile && (
+        <button
+          className="mobile-nav-toggle"
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          style={{
+            position: 'fixed',
+            top: '1rem',
+            left: '1rem',
+            zIndex: 1001,
+            background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+            border: '1px solid #475569',
+            borderRadius: '12px',
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+              width: '20px',
+              height: '16px'
             }}
           >
-            Refresh Map
-          </button>
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                transform: mobileNavOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none'
+              }}
+            />
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                opacity: mobileNavOpen ? 0 : 1
+              }}
+            />
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                transform: mobileNavOpen ? 'rotate(-45deg) translate(7px, -6px)' : 'none'
+              }}
+            />
+          </div>
+        </button>
+      )}
+
+      {/* Mobile Navigation Overlay */}
+      {isMobile && mobileNavOpen && (
+        <div
+          onClick={() => setMobileNavOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+      )}
+
+      {/* Mobile Navigation Sidebar - Only visible on mobile when open */}
+      {isMobile && (
+        <div
+          className="mobile-nav-sidebar"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '280px',
+            height: '100vh',
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            borderRight: '1px solid #334155',
+            padding: '2rem',
+            transform: mobileNavOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.3s ease',
+            zIndex: 1000,
+            overflowY: 'auto'
+          }}
+        >
+          <NavigationCard />
         </div>
-      </div>
+      )}
+
+      {/* Desktop Navigation Sidebar - Only visible on desktop */}
+      {!isMobile && (
+        <div
+          className="nav-sidebar"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '280px',
+            height: '100vh',
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            borderRight: '1px solid #334155',
+            padding: '2rem',
+            zIndex: 1000,
+            overflowY: 'auto'
+          }}
+        >
+          <NavigationCard />
+        </div>
+      )}
+      
+      <main className="modern-main-content" style={{ 
+        marginLeft: isMobile ? 0 : 280,
+        paddingTop: isMobile ? "4rem" : "2rem",
+        paddingLeft: isMobile ? "1rem" : "2rem",
+        paddingRight: isMobile ? "1rem" : "2rem",
+        paddingBottom: "2rem",
+        width: isMobile ? "100vw" : "calc(100vw - 280px)"
+      }}>
+        {/* Header Section */}
+        <div className="modern-page-header" style={{ 
+          marginBottom: isMobile ? "1rem" : "2rem",
+          textAlign: "left"
+        }}>
+          <h1 className="modern-page-title" style={{
+            fontSize: isMobile ? "2rem" : "3rem",
+            marginBottom: isMobile ? "0.25rem" : "0.5rem",
+            textAlign: "left"
+          }}>
+            MAP
+          </h1>
+          <p className="modern-page-subtitle" style={{
+            textAlign: "left"
+          }}>
+            School Locations & Distribution
+          </p>
+        </div>
+
+        {/* Statistics Row */}
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr 1fr 1fr" : "repeat(5, 1fr)",
+          gap: isMobile ? "0.75rem" : "1rem",
+          marginBottom: isMobile ? "1rem" : "2rem"
+        }}>
+          {/* Total Schools */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Total</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(59, 130, 246, 0.2)", 
+                color: "#3b82f6",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🏫
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#3b82f6",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.total}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Schools
+              </div>
+            </div>
+          </div>
+
+          {/* HappyFeet Schools */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>HappyFeet</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(239, 68, 68, 0.2)", 
+                color: "#ef4444",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🔴
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#ef4444",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.happyfeet}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Schools
+              </div>
+            </div>
+          </div>
+
+          {/* PSA Schools */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>PSA</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(59, 130, 246, 0.2)", 
+                color: "#3b82f6",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🔵
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#3b82f6",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.psa}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Schools
+              </div>
+            </div>
+          </div>
+
+          {/* Contacted Schools */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Contacted</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(234, 179, 8, 0.2)", 
+                color: "#eab308",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🟡
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#eab308",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.reached_out}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Schools
+              </div>
+            </div>
+          </div>
+
+          {/* Recreation Sites */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Rec Sites</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(16, 185, 129, 0.2)", 
+                color: "#10b981",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🟢
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#10b981",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.rec}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Sites
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Map Card */}
+        <div className="modern-dashboard-card" style={{ minHeight: isMobile ? "60vh" : "70vh" }}>
+          <div className="modern-card-header">
+            <div className="modern-card-title">School Distribution Map</div>
+            <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
+              🗺️
+            </div>
+          </div>
+          <div className="modern-card-content">
+            {loading ? (
+              <div style={{ 
+                height: isMobile ? "50vh" : "60vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#94a3b8",
+                fontSize: "1.1rem"
+              }}>
+                Loading map data...
+              </div>
+            ) : (
+              <>
+                <div style={{ 
+                  height: isMobile ? "50vh" : "60vh", 
+                  borderRadius: "12px", 
+                  overflow: "hidden",
+                  marginBottom: "1rem"
+                }}>
+                  <MapContainer 
+                    center={mapCenter} 
+                    zoom={mapZoom} 
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution="&copy; OpenStreetMap contributors"
+                    />
+                    
+                    {/* HappyFeet Schools - Red markers */}
+                    {Array.isArray(schools.happyfeet) && schools.happyfeet.map((s, i) => (
+                      s.lat && s.lng && (
+                        <Marker key={`hf-${i}`} position={[s.lat, s.lng]} icon={markerIcons.happyfeet}>
+                          <Popup>
+                            <b>{s.name}</b><br />
+                            HappyFeet School<br />
+                            {s.address}
+                          </Popup>
+                        </Marker>
+                      )
+                    ))}
+                    
+                    {/* PSA Schools - Blue markers */}
+                    {Array.isArray(schools.psa) && schools.psa.map((s, i) => (
+                      s.lat && s.lng && (
+                        <Marker key={`psa-${i}`} position={[s.lat, s.lng]} icon={markerIcons.psa}>
+                          <Popup>
+                            <b>{s.name}</b><br />
+                            PSA School<br />
+                            {s.address}
+                          </Popup>
+                        </Marker>
+                      )
+                    ))}
+                    
+                    {/* Contacted Schools - Yellow markers */}
+                    {Array.isArray(schools.reached_out) && schools.reached_out.map((s, i) => (
+                      s.lat && s.lng && (
+                        <Marker key={`sheet-${i}`} position={[s.lat, s.lng]} icon={markerIcons.sheet}>
+                          <Popup>
+                            <b>{s.name}</b><br />
+                            Contacted School<br />
+                            {s.address}
+                          </Popup>
+                        </Marker>
+                      )
+                    ))}
+                    
+                    {/* Recreation Sites - Green markers */}
+                    {Array.isArray(schools.rec) && schools.rec.map((s, i) => (
+                      s.lat && s.lng && (
+                        <Marker key={`rec-${i}`} position={[s.lat, s.lng]} icon={markerIcons.rec}>
+                          <Popup>
+                            <b>{s.name}</b><br />
+                            Recreation Site<br />
+                            {s.address}
+                          </Popup>
+                        </Marker>
+                      )
+                    ))}
+                  </MapContainer>
+                </div>
+
+                {/* Legend */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+                  gap: "1rem",
+                  marginBottom: "1rem",
+                  padding: "1rem",
+                  background: "rgba(59, 130, 246, 0.05)",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(59, 130, 246, 0.1)"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ 
+                      width: "16px", 
+                      height: "16px", 
+                      background: "#ef4444", 
+                      borderRadius: "50%",
+                      flexShrink: 0
+                    }}></div>
+                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
+                      HappyFeet Schools
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ 
+                      width: "16px", 
+                      height: "16px", 
+                      background: "#3b82f6", 
+                      borderRadius: "50%",
+                      flexShrink: 0
+                    }}></div>
+                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
+                      PSA Schools
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ 
+                      width: "16px", 
+                      height: "16px", 
+                      background: "#eab308", 
+                      borderRadius: "50%",
+                      flexShrink: 0
+                    }}></div>
+                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
+                      Contacted
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ 
+                      width: "16px", 
+                      height: "16px", 
+                      background: "#10b981", 
+                      borderRadius: "50%",
+                      flexShrink: 0
+                    }}></div>
+                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
+                      Recreation Sites
+                    </span>
+                  </div>
+                </div>
+
+                {/* Refresh Button */}
+                <div style={{ textAlign: "center" }}>
+                  <button 
+                    className="modern-btn-primary"
+                    onClick={handleRefreshMap}
+                    disabled={refreshing}
+                    style={{ 
+                      padding: "0.75rem 2rem",
+                      fontSize: "0.9rem",
+                      fontWeight: "600",
+                      opacity: refreshing ? 0.7 : 1,
+                      cursor: refreshing ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {refreshing ? "🔄 Refreshing..." : "Refresh Map Data"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

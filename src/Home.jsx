@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from "./AuthContext"
-import NavigationCard from './NavigationCard'
+import NavigationCard from './NavigationCard'  // ADD THIS LINE
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -12,9 +12,24 @@ function useIsMobile() {
   return isMobile;
 }
 
+// Add a tablet breakpoint to prevent cards from getting too small
+function useIsTablet() {
+  const [isTablet, setIsTablet] = useState(window.innerWidth <= 1024 && window.innerWidth > 768);
+  useEffect(() => {
+    const onResize = () => setIsTablet(window.innerWidth <= 1024 && window.innerWidth > 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isTablet;
+}
+
 export default function Home() {
   const { user, accessToken } = useAuth()
   const isMobile = useIsMobile()
+  const isTablet = useIsTablet()
+
+  // Mobile navigation state
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // State for user statistics
   const [userStats, setUserStats] = useState({
@@ -179,14 +194,189 @@ export default function Home() {
     };
   }, []);
 
+  // Close mobile nav when clicking outside or on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (!isMobile && mobileNavOpen) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    const handleClickOutside = (event) => {
+      if (mobileNavOpen && !event.target.closest('.mobile-nav-sidebar') && !event.target.closest('.mobile-nav-toggle')) {
+        setMobileNavOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('click', handleClickOutside)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isMobile, mobileNavOpen])
+
+  // Determine grid layout based on screen size
+  const getGridColumns = () => {
+    if (isMobile) return "1fr"
+    if (isTablet) return "1fr 1fr" // 2 columns on tablet to prevent cards from getting too small
+    return "1fr 1fr 1fr" // 3 columns on desktop
+  }
+
+  const getSecondRowColumns = () => {
+    if (isMobile) return "1fr"
+    return "1fr 1fr" // Always equal width on non-mobile
+  }
+
+  // Navigation handler for mobile
   return (
     <div className="dashboard-container">
-      <NavigationCard />
+      {/* Mobile Navigation Toggle Button */}
+      {isMobile && (
+        <button
+          className="mobile-nav-toggle"
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          style={{
+            position: 'fixed',
+            top: '1rem',
+            left: '1rem',
+            zIndex: 1001,
+            background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+            border: '1px solid #475569',
+            borderRadius: '12px',
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+              width: '20px',
+              height: '16px'
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                transform: mobileNavOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none'
+              }}
+            />
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                opacity: mobileNavOpen ? 0 : 1
+              }}
+            />
+            <div
+              style={{
+                width: '100%',
+                height: '2px',
+                background: '#f1f5f9',
+                borderRadius: '1px',
+                transition: 'all 0.3s ease',
+                transform: mobileNavOpen ? 'rotate(-45deg) translate(7px, -6px)' : 'none'
+              }}
+            />
+          </div>
+        </button>
+      )}
+
+      {/* Mobile Navigation Overlay */}
+      {isMobile && mobileNavOpen && (
+        <div
+          onClick={() => setMobileNavOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+      )}
+
+      {/* Mobile Navigation Sidebar - Only visible on mobile when open */}
+      {isMobile && (
+        <div
+          className="mobile-nav-sidebar"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '280px',
+            height: '100vh',
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            borderRight: '1px solid #334155',
+            padding: '2rem',
+            transform: mobileNavOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.3s ease',
+            zIndex: 1000,
+            overflowY: 'auto'
+          }}
+        >
+          <NavigationCard />
+        </div>
+      )}
+
+      {/* Desktop Navigation Sidebar - Only visible on desktop */}
+      {!isMobile && (
+        <div
+          className="nav-sidebar"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            width: '280px',
+            height: '100vh',
+            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+            borderRight: '1px solid #334155',
+            padding: '2rem',
+            zIndex: 1000,
+            overflowY: 'auto'
+          }}
+        >
+          <NavigationCard />
+        </div>
+      )}
       
-      <main className="modern-main-content">
+      <main className="modern-main-content" style={{ 
+        // Fixed mobile layout with no sidebar
+        marginLeft: isMobile ? 0 : 280,
+        paddingTop: isMobile ? "4rem" : "2rem", // Reduced from 5rem to 4rem
+        paddingLeft: isMobile ? "1rem" : "2rem",
+        paddingRight: isMobile ? "1rem" : "2rem",
+        paddingBottom: "2rem",
+        width: isMobile ? "100vw" : "calc(100vw - 280px)"
+      }}>
         {/* Header Section */}
-        <div className="modern-page-header">
-          <h1 className="modern-page-title">
+        <div className="modern-page-header" style={{ 
+          marginBottom: isMobile ? "1rem" : "2rem"
+        }}>
+          <h1 className="modern-page-title" style={{
+            fontSize: isMobile ? "2rem" : "3rem",
+            marginBottom: isMobile ? "0.25rem" : "0.5rem",
+            textAlign: "left"
+          }}>
             HOME
           </h1>
           <p className="modern-page-subtitle">
@@ -194,25 +384,27 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Custom Grid Layout - Row 1: Welcome + Updates + Map */}
+        {/* First Row - Responsive Grid */}
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", 
-          gap: "1.5rem",
-          marginBottom: "2rem"
+          gridTemplateColumns: getGridColumns(),
+          gap: isMobile ? "1rem" : "1.5rem",
+          marginBottom: isMobile ? "1rem" : "2rem"
         }}>
           
           {/* Welcome Card - Simplified */}
-          <div className="modern-dashboard-card">
+          <div className="modern-dashboard-card" style={{
+            minHeight: isMobile ? "200px" : "250px" // Prevent cards from getting too small
+          }}>
             <div className="modern-card-header">
               <div className="modern-card-title">Welcome{user ? `, ${user.name}!` : '!'}</div>
               <div className="modern-card-icon">👋</div>
             </div>
             <div className="modern-card-content">
               {user ? (
-                <div style={{ textAlign: "center", padding: "2rem 0" }}>
+                <div style={{ textAlign: "center", padding: isMobile ? "1rem 0" : "2rem 0" }}>
                   <div style={{ 
-                    fontSize: "1.5rem", 
+                    fontSize: isMobile ? "1.2rem" : "1.5rem", 
                     fontWeight: "700", 
                     color: "#f1f5f9", 
                     marginBottom: "1rem" 
@@ -220,7 +412,7 @@ export default function Home() {
                     {user.name}
                   </div>
                   <div style={{ 
-                    fontSize: "1rem", 
+                    fontSize: isMobile ? "0.9rem" : "1rem", 
                     fontWeight: "600",
                     color: user.admin ? "#f59e0b" : "#8b5cf6",
                     background: user.admin ? "rgba(245, 158, 11, 0.1)" : "rgba(139, 92, 246, 0.1)",
@@ -232,8 +424,8 @@ export default function Home() {
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: "center", padding: "2rem 0" }}>
-                  <p style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#94a3b8" }}>
+                <div style={{ textAlign: "center", padding: isMobile ? "1rem 0" : "2rem 0" }}>
+                  <p style={{ fontSize: isMobile ? "1rem" : "1.1rem", marginBottom: "1rem", color: "#94a3b8" }}>
                     Welcome to PSA Sales Platform!
                   </p>
                   <button 
@@ -249,7 +441,9 @@ export default function Home() {
           </div>
 
           {/* Updates Card - Real User Statistics */}
-          <div className="modern-dashboard-card">
+          <div className="modern-dashboard-card" style={{
+            minHeight: isMobile ? "200px" : "250px"
+          }}>
             <div className="modern-card-header">
               <div className="modern-card-title">Your Statistics</div>
               <div className="modern-card-icon">📊</div>
@@ -263,7 +457,7 @@ export default function Home() {
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", color: "#3b82f6", fontWeight: "800" }}>
+                      <div style={{ fontSize: isMobile ? "1.5rem" : "2rem", color: "#3b82f6", fontWeight: "800" }}>
                         {userStats.totalSchools}
                       </div>
                       <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
@@ -271,7 +465,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", color: "#10b981", fontWeight: "800" }}>
+                      <div style={{ fontSize: isMobile ? "1.5rem" : "2rem", color: "#10b981", fontWeight: "800" }}>
                         {userStats.totalEmails}
                       </div>
                       <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
@@ -279,7 +473,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", color: "#f59e0b", fontWeight: "800" }}>
+                      <div style={{ fontSize: isMobile ? "1.5rem" : "2rem", color: "#f59e0b", fontWeight: "800" }}>
                         {userStats.pendingEmails}
                       </div>
                       <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
@@ -287,7 +481,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "2rem", color: "#8b5cf6", fontWeight: "800" }}>
+                      <div style={{ fontSize: isMobile ? "1.5rem" : "2rem", color: "#8b5cf6", fontWeight: "800" }}>
                         {userStats.respondedEmails}
                       </div>
                       <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
@@ -311,56 +505,105 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Map Card */}
-          <div className="modern-dashboard-card">
-            <div className="modern-card-header">
-              <div className="modern-card-title">Map</div>
-              <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
-                🗺️
+          {/* Map Card - Only show on desktop/tablet, hidden on mobile */}
+          {!isMobile && (
+            <div className="modern-dashboard-card" style={{
+              minHeight: "250px"
+            }}>
+              <div className="modern-card-header">
+                <div className="modern-card-title">Map</div>
+                <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
+                  🗺️
+                </div>
+              </div>
+              <div className="modern-card-content">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
+                  {mapLocations.map((location, index) => (
+                    <div key={index} style={{
+                      background: "rgba(16, 185, 129, 0.1)",
+                      padding: "0.8rem",
+                      borderRadius: "8px",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontWeight: "600", color: "#f1f5f9", fontSize: "0.9rem" }}>
+                        {location.area}
+                      </div>
+                      <div style={{ color: "#10b981", fontWeight: "700", fontSize: "1.2rem" }}>
+                        {location.schools}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                        schools
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  className="modern-btn-primary"
+                  onClick={() => window.location.href = '/map'}
+                  style={{ width: "100%", marginTop: "1rem", background: "#10b981" }}
+                >
+                  View Full Map →
+                </button>
               </div>
             </div>
-            <div className="modern-card-content">
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
-                {mapLocations.map((location, index) => (
-                  <div key={index} style={{
-                    background: "rgba(16, 185, 129, 0.1)",
-                    padding: "0.8rem",
-                    borderRadius: "8px",
-                    textAlign: "center"
-                  }}>
-                    <div style={{ fontWeight: "600", color: "#f1f5f9", fontSize: "0.9rem" }}>
-                      {location.area}
-                    </div>
-                    <div style={{ color: "#10b981", fontWeight: "700", fontSize: "1.2rem" }}>
-                      {location.schools}
-                    </div>
-                    <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                      schools
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button 
-                className="modern-btn-primary"
-                onClick={() => window.location.href = '/map'}
-                style={{ width: "100%", marginTop: "1rem", background: "#10b981" }}
-              >
-                View Full Map →
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Custom Grid Layout - Row 2: Email Status + Team (EQUAL WIDTH) */}
+        {/* Mobile Map Card - Show only on mobile after first row */}
+        {isMobile && (
+          <div style={{ marginBottom: "1rem" }}>
+            <div className="modern-dashboard-card" style={{ minHeight: "200px" }}>
+              <div className="modern-card-header">
+                <div className="modern-card-title">Map</div>
+                <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
+                  🗺️
+                </div>
+              </div>
+              <div className="modern-card-content">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
+                  {mapLocations.map((location, index) => (
+                    <div key={index} style={{
+                      background: "rgba(16, 185, 129, 0.1)",
+                      padding: "0.8rem",
+                      borderRadius: "8px",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontWeight: "600", color: "#f1f5f9", fontSize: "0.9rem" }}>
+                        {location.area}
+                      </div>
+                      <div style={{ color: "#10b981", fontWeight: "700", fontSize: "1.2rem" }}>
+                        {location.schools}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                        schools
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  className="modern-btn-primary"
+                  onClick={() => window.location.href = '/map'}
+                  style={{ width: "100%", marginTop: "1rem", background: "#10b981" }}
+                >
+                  View Full Map →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Second Row - Email Status + Team (Equal Width) */}
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", 
-          gap: "1.5rem",
-          marginBottom: "2rem"
+          gridTemplateColumns: getSecondRowColumns(),
+          gap: isMobile ? "1rem" : "1.5rem",
+          marginBottom: isMobile ? "1rem" : "2rem"
         }}>
           
           {/* Email Status Card - Recent Emails List */}
-          <div className="modern-dashboard-card">
+          <div className="modern-dashboard-card" style={{
+            minHeight: isMobile ? "250px" : "300px"
+          }}>
             <div className="modern-card-header">
               <div className="modern-card-title">Recent Emails</div>
               <div className="modern-card-icon" style={{ background: "#3b82f620", color: "#3b82f6" }}>
@@ -442,14 +685,26 @@ export default function Home() {
                           </div>
                         </div>
                       ))}
+
+                      <div style={{ 
+                        textAlign: "center", 
+                        marginTop: "1rem", 
+                        fontSize: "0.9rem", 
+                        color: "#94a3b8" 
+                      }}>
+                        Showing last {recentEmails.length} emails. 
+                        <span 
+                          onClick={() => window.location.href = '/emails'} 
+                          style={{ 
+                            color: "#3b82f6", 
+                            cursor: "pointer", 
+                            textDecoration: "underline" 
+                          }}
+                        >
+                          View all emails
+                        </span>
+                      </div>
                     </div>
-                    <button 
-                      className="modern-btn-primary"
-                      onClick={() => window.location.href = '/emails'}
-                      style={{ width: "100%" }}
-                    >
-                      View All Emails →
-                    </button>
                   </>
                 ) : (
                   <div style={{ textAlign: "center", padding: "2rem 0", color: "#94a3b8" }}>
@@ -466,7 +721,7 @@ export default function Home() {
                 )
               ) : (
                 <div style={{ textAlign: "center", padding: "2rem 0", color: "#94a3b8" }}>
-                  <p style={{ marginBottom: "1rem" }}>Login to view recent emails</p>
+                  <p style={{ marginBottom: "1rem" }}>Login to view your statistics</p>
                   <button 
                     className="modern-btn-primary"
                     onClick={() => window.location.href = '/account'}
@@ -479,8 +734,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Team Card - Now takes equal space */}
-          <div className="modern-dashboard-card">
+          {/* Team Card */}
+          <div className="modern-dashboard-card" style={{
+            minHeight: isMobile ? "250px" : "300px"
+          }}>
             <div className="modern-card-header">
               <div className="modern-card-title">Team</div>
               <div className="modern-card-icon" style={{ background: "#f59e0b20", color: "#f59e0b" }}>

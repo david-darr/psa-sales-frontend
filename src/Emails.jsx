@@ -695,7 +695,10 @@ export default function Emails() {
                               fontSize: '0.8rem',
                               fontWeight: '500'
                             }}>
-                              {school.school_type === 'preschool' ? '🧸 Preschool' : '🎒 Elementary'}
+                              {school.school_type === 'preschool' ? 
+                                '🧸 Preschool (3 PDFs: Flyers + Recommendation)' : 
+                                '🎒 Elementary (2 PDFs: Program Info + Recommendation)'
+                              }
                             </span>
                           </td>
                           <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.9rem" }}>

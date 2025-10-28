@@ -44,6 +44,10 @@ export default function Emails() {
     address: "",
     school_type: "preschool"
   })
+  const [showCsvUpload, setShowCsvUpload] = useState(false)
+  const [csvFile, setCsvFile] = useState(null)
+  const [csvUploading, setCsvUploading] = useState(false)
+  const [csvResult, setCsvResult] = useState(null)
 
   // Ensure full viewport coverage
   useEffect(() => {
@@ -283,6 +287,61 @@ export default function Emails() {
     setTimeout(() => setStatus(""), 5000)
   }
 
+  const handleCsvUpload = async (e) => {
+    e.preventDefault()
+    if (!csvFile) {
+      setStatus("Please select a CSV file")
+      setTimeout(() => setStatus(""), 3000)
+      return
+    }
+
+    setCsvUploading(true)
+    setStatus("Uploading CSV file...")
+
+    try {
+      const formData = new FormData()
+      formData.append('file', csvFile)
+
+      const res = await fetch("https://psa-sales-backend.onrender.com/api/upload-schools-csv", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: formData
+      })
+
+      const data = await res.json()
+
+      if (data.status === "success") {
+        setCsvResult(data)
+        setStatus(`Success! Added ${data.schools_added} schools. ${data.schools_skipped} were skipped.`)
+        fetchMySchools() // Refresh the schools list
+        setCsvFile(null)
+        setShowCsvUpload(false)
+      } else {
+        setStatus(data.error || "Failed to upload CSV")
+      }
+    } catch (error) {
+      setStatus("Error uploading CSV file")
+      console.error('CSV upload error:', error)
+    } finally {
+      setCsvUploading(false)
+      setTimeout(() => setStatus(""), 5000)
+    }
+  }
+
+  const handleCsvFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        setCsvFile(file)
+      } else {
+        setStatus("Please select a CSV file")
+        setTimeout(() => setStatus(""), 3000)
+      }
+    }
+  }
+
   return (
     <div className="dashboard-container">
       {/* Mobile Navigation Toggle Button */}
@@ -457,27 +516,50 @@ export default function Emails() {
               </div>
             )}
 
-            {/* Add School Card */}
+            {/* Updated Add School Card with CSV Upload */}
             <div className="modern-dashboard-card" style={{ marginBottom: isMobile ? "1rem" : "2rem" }}>
               <div className="modern-card-header">
-                <div className="modern-card-title">Add New School</div>
+                <div className="modern-card-title">Add Schools</div>
                 <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
                   🏫
                 </div>
               </div>
               <div className="modern-card-content">
-                <button
-                  className="modern-btn-primary"
-                  onClick={() => setShowAddSchool(!showAddSchool)}
-                  style={{ 
-                    width: "100%",
-                    marginBottom: showAddSchool ? "1.5rem" : "0",
-                    background: showAddSchool ? "#ef4444" : "#10b981"
-                  }}
-                >
-                  {showAddSchool ? "❌ Cancel" : "➕ Add New School"}
-                </button>
-                
+                {/* Toggle Buttons */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  gap: "0.5rem",
+                  marginBottom: "1.5rem"
+                }}>
+                  <button
+                    className="modern-btn-primary"
+                    onClick={() => {
+                      setShowAddSchool(!showAddSchool)
+                      setShowCsvUpload(false)
+                    }}
+                    style={{ 
+                      background: showAddSchool ? "#ef4444" : "#10b981"
+                    }}
+                  >
+                    {showAddSchool ? "❌ Cancel Manual Entry" : "➕ Add Single School"}
+                  </button>
+                  
+                  <button
+                    className="modern-btn-primary"
+                    onClick={() => {
+                      setShowCsvUpload(!showCsvUpload)
+                      setShowAddSchool(false)
+                    }}
+                    style={{ 
+                      background: showCsvUpload ? "#ef4444" : "#3b82f6"
+                    }}
+                  >
+                    {showCsvUpload ? "❌ Cancel CSV Upload" : "📄 Upload CSV File"}
+                  </button>
+                </div>
+
+                {/* Manual School Entry Form */}
                 {showAddSchool && (
                   <form onSubmit={handleAddSchool}>
                     <div style={{ 
@@ -587,6 +669,169 @@ export default function Emails() {
                       ✅ Add School
                     </button>
                   </form>
+                )}
+
+                {/* CSV Upload Form */}
+                {showCsvUpload && (
+                  <div>
+                    {/* CSV Format Instructions */}
+                    <div style={{ 
+                      background: "rgba(59, 130, 246, 0.1)",
+                      border: "1px solid rgba(59, 130, 246, 0.2)",
+                      borderRadius: "8px",
+                      padding: "1rem",
+                      marginBottom: "1.5rem"
+                    }}>
+                      <h4 style={{ 
+                        color: "#3b82f6", 
+                        marginBottom: "0.75rem",
+                        fontSize: "1rem",
+                        fontWeight: "600"
+                      }}>
+                        📋 CSV Format Requirements
+                      </h4>
+                      <div style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: "1.5" }}>
+                        <p style={{ marginBottom: "0.5rem" }}>
+                          <strong>Required columns:</strong> school_name, email
+                        </p>
+                        <p style={{ marginBottom: "0.5rem" }}>
+                          <strong>Optional columns:</strong> contact_name, phone, address, school_type
+                        </p>
+                        <p style={{ marginBottom: "0.5rem" }}>
+                          <strong>School type:</strong> Use "preschool" or "elementary" (defaults to preschool)
+                        </p>
+                        <p style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                          Column names are flexible - we'll match variations like "School Name", "Contact Name", etc.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Sample CSV Download */}
+                    <div style={{ 
+                      background: "rgba(16, 185, 129, 0.1)",
+                      border: "1px solid rgba(16, 185, 129, 0.2)",
+                      borderRadius: "8px",
+                      padding: "1rem",
+                      marginBottom: "1.5rem"
+                    }}>
+                      <h4 style={{ 
+                        color: "#10b981", 
+                        marginBottom: "0.75rem",
+                        fontSize: "1rem",
+                        fontWeight: "600"
+                      }}>
+                        📥 Sample CSV Template
+                      </h4>
+                      <div style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+                        Download a sample CSV file to see the correct format:
+                      </div>
+                      <button
+                        className="modern-btn-primary"
+                        onClick={() => {
+                          const csvContent = "school_name,contact_name,email,phone,address,school_type\nSunshine Preschool,Jane Smith,jane@sunshine.edu,555-0123,123 Main St,preschool\nElementary Academy,John Doe,contact@elementary.edu,555-0456,456 Oak Ave,elementary"
+                          const blob = new Blob([csvContent], { type: 'text/csv' })
+                          const url = window.URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = 'schools_template.csv'
+                          a.click()
+                          window.URL.revokeObjectURL(url)
+                        }}
+                        style={{ 
+                          background: "#10b981",
+                          fontSize: "0.85rem",
+                          padding: "0.5rem 1rem"
+                        }}
+                      >
+                        📄 Download Template
+                      </button>
+                    </div>
+
+                    {/* File Upload Form */}
+                    <form onSubmit={handleCsvUpload}>
+                      <div style={{ marginBottom: "1rem" }}>
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleCsvFileChange}
+                          style={{
+                            width: "100%",
+                            padding: "0.75rem 1rem",
+                            border: "1px solid #475569",
+                            borderRadius: "8px",
+                            background: "#334155",
+                            color: "#f1f5f9",
+                            fontSize: "1rem"
+                          }}
+                        />
+                      </div>
+
+                      {csvFile && (
+                        <div style={{ 
+                          background: "rgba(245, 158, 11, 0.1)",
+                          border: "1px solid rgba(245, 158, 11, 0.2)",
+                          borderRadius: "8px",
+                          padding: "0.75rem",
+                          marginBottom: "1rem",
+                          fontSize: "0.9rem",
+                          color: "#f59e0b"
+                        }}>
+                          📁 Selected file: {csvFile.name}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="modern-btn-primary"
+                        disabled={!csvFile || csvUploading}
+                        style={{ 
+                          width: "100%",
+                          background: "#3b82f6",
+                          opacity: !csvFile || csvUploading ? 0.6 : 1,
+                          cursor: !csvFile || csvUploading ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        {csvUploading ? "📤 Uploading..." : "📤 Upload CSV File"}
+                      </button>
+                    </form>
+
+                    {/* Upload Results */}
+                    {csvResult && (
+                      <div style={{ 
+                        marginTop: "1.5rem",
+                        background: "rgba(16, 185, 129, 0.1)",
+                        border: "1px solid rgba(16, 185, 129, 0.2)",
+                        borderRadius: "8px",
+                        padding: "1rem"
+                      }}>
+                        <h4 style={{ 
+                          color: "#10b981", 
+                          marginBottom: "0.75rem",
+                          fontSize: "1rem",
+                          fontWeight: "600"
+                        }}>
+                          ✅ Upload Results
+                        </h4>
+                        <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                          <p>✅ Schools added: <strong style={{ color: "#10b981" }}>{csvResult.schools_added}</strong></p>
+                          <p>⏭️ Schools skipped: <strong style={{ color: "#f59e0b" }}>{csvResult.schools_skipped}</strong></p>
+                          {csvResult.errors && csvResult.errors.length > 0 && (
+                            <div style={{ marginTop: "0.75rem" }}>
+                              <p style={{ color: "#ef4444", fontWeight: "600" }}>Errors:</p>
+                              <ul style={{ marginLeft: "1rem", color: "#ef4444", fontSize: "0.8rem" }}>
+                                {csvResult.errors.slice(0, 5).map((error, index) => (
+                                  <li key={index}>{error}</li>
+                                ))}
+                                {csvResult.errors.length > 5 && (
+                                  <li>... and {csvResult.errors.length - 5} more errors</li>
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -203,29 +203,66 @@ export default function Emails() {
     setStatus("")
     setLoading(true)
     
-    const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({
-        school_ids: selectedSchools,
-        subject: "Let's Connect! PSA Programs"
-      })
-    })
-    const data = await res.json()
-    
-    if (data.sent_count > 0) {
-      setStatus(`${data.sent_count} email${data.sent_count === 1 ? "" : "s"} sent!`)
-      setSelectedSchools([])
-      fetchEmailStatuses()
-      fetchMySchools()
-    } else {
-      setStatus(data.error || "Failed to send emails")
+    try {
+      let totalSent = 0
+      let totalErrors = []
+      
+      // Split large selections into chunks of 5
+      const chunkSize = 5
+      const chunks = []
+      for (let i = 0; i < selectedSchools.length; i += chunkSize) {
+        chunks.push(selectedSchools.slice(i, i + chunkSize))
+      }
+      
+      // Send each chunk separately
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]
+        setStatus(`Sending emails ${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, selectedSchools.length)} of ${selectedSchools.length}...`)
+        
+        const res = await fetch("/api/send-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            school_ids: chunk,
+            subject: "Let's Connect! PSA Programs"
+          })
+        })
+        
+        const data = await res.json()
+        totalSent += data.sent_count || 0
+        if (data.errors) {
+          totalErrors = [...totalErrors, ...data.errors]
+        }
+        
+        // Small delay between chunks
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      }
+      
+      if (totalSent > 0) {
+        setStatus(`✅ Successfully sent ${totalSent} emails!`)
+        setSelectedSchools([])
+        fetchEmailStatuses()
+        fetchMySchools()
+      } else {
+        setStatus("❌ Failed to send emails")
+      }
+      
+      if (totalErrors.length > 0) {
+        console.log("Email errors:", totalErrors)
+      }
+      
+    } catch (error) {
+      console.error('Email sending error:', error)
+      setStatus("❌ Error occurred while sending emails")
+    } finally {
+      setLoading(false)
+      setTimeout(() => setStatus(""), 5000)
     }
-    setLoading(false)
-    setTimeout(() => setStatus(""), 5000)
   }
 
   const handleDeleteSelectedEmails = async () => {

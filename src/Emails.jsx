@@ -36,6 +36,7 @@ export default function Emails() {
   const [status, setStatus] = useState("")
   const [emailStatuses, setEmailStatuses] = useState([])
   const [showAddSchool, setShowAddSchool] = useState(false)
+  const [schoolFilter, setSchoolFilter] = useState("all") // New filter state
   const [newSchool, setNewSchool] = useState({
     school_name: "",
     contact_name: "",
@@ -48,6 +49,22 @@ export default function Emails() {
   const [csvFile, setCsvFile] = useState(null)
   const [csvUploading, setCsvUploading] = useState(false)
   const [csvResult, setCsvResult] = useState(null)
+
+  // Filter schools based on selected filter
+  const filteredSchools = mySchools.filter(school => {
+    if (schoolFilter === "pending") {
+      return school.status !== "contacted"
+    } else if (schoolFilter === "contacted") {
+      return school.status === "contacted"
+    }
+    return true // "all" shows everything
+  })
+
+  // Update selected schools when filter changes
+  useEffect(() => {
+    // Clear selections when filter changes to avoid selecting schools not visible
+    setSelectedSchools([])
+  }, [schoolFilter])
 
   // Ensure full viewport coverage
   useEffect(() => {
@@ -136,10 +153,10 @@ export default function Emails() {
   }
 
   const handleSelectAllSchools = () => {
-    if (selectedSchools.length === mySchools.length) {
+    if (selectedSchools.length === filteredSchools.length) {
       setSelectedSchools([])
     } else {
-      setSelectedSchools(mySchools.map(school => school.id))
+      setSelectedSchools(filteredSchools.map(school => school.id))
     }
   }
 
@@ -341,6 +358,10 @@ export default function Emails() {
       }
     }
   }
+
+  // Get counts for filter labels
+  const pendingCount = mySchools.filter(school => school.status !== "contacted").length
+  const contactedCount = mySchools.filter(school => school.status === "contacted").length
 
   return (
     <div className="dashboard-container">
@@ -836,7 +857,7 @@ export default function Emails() {
               </div>
             </div>
 
-            {/* Schools Selection Card */}
+            {/* Schools Selection Card with Filter */}
             <div className="modern-dashboard-card" style={{ marginBottom: isMobile ? "1rem" : "2rem" }}>
               <div className="modern-card-header">
                 <div className="modern-card-title">Select Schools to Email ({selectedSchools.length} selected)</div>
@@ -845,26 +866,72 @@ export default function Emails() {
                 </div>
               </div>
               <div className="modern-card-content">
+                {/* Filter Controls */}
                 <div style={{ 
                   display: "flex", 
                   justifyContent: "space-between", 
                   alignItems: "center", 
-                  marginBottom: "1rem" 
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                  gap: "1rem"
                 }}>
-                  <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
-                    {mySchools.length} schools available
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                      Filter schools:
+                    </div>
+                    <select
+                      value={schoolFilter}
+                      onChange={(e) => setSchoolFilter(e.target.value)}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        border: "1px solid #475569",
+                        borderRadius: "8px",
+                        background: "#334155",
+                        color: "#f1f5f9",
+                        fontSize: "0.9rem",
+                        minWidth: "200px"
+                      }}
+                    >
+                      <option value="all">📋 All Schools ({mySchools.length})</option>
+                      <option value="pending">⏳ Pending ({pendingCount})</option>
+                      <option value="contacted">✅ Contacted ({contactedCount})</option>
+                    </select>
                   </div>
+                  
                   <button
                     className="modern-btn-primary"
                     onClick={handleSelectAllSchools}
                     style={{ 
                       padding: "0.5rem 1rem", 
                       fontSize: "0.85rem",
-                      background: selectedSchools.length === mySchools.length ? "#ef4444" : "#3b82f6"
+                      background: selectedSchools.length === filteredSchools.length ? "#ef4444" : "#3b82f6"
                     }}
                   >
-                    {selectedSchools.length === mySchools.length ? "Deselect All" : "Select All"}
+                    {selectedSchools.length === filteredSchools.length ? "Deselect All" : "Select All"}
                   </button>
+                </div>
+
+                {/* Filter Info */}
+                <div style={{ 
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  borderRadius: "8px",
+                  padding: "0.75rem",
+                  marginBottom: "1rem",
+                  fontSize: "0.9rem",
+                  color: "#94a3b8"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <span>
+                      Showing <strong style={{ color: "#3b82f6" }}>{filteredSchools.length}</strong> schools
+                      {schoolFilter !== "all" && (
+                        <span> (filtered from {mySchools.length} total)</span>
+                      )}
+                    </span>
+                    <span>
+                      ⏳ {pendingCount} pending • ✅ {contactedCount} contacted
+                    </span>
+                  </div>
                 </div>
                 
                 <div style={{ 
@@ -905,7 +972,7 @@ export default function Emails() {
                       </tr>
                     </thead>
                     <tbody>
-                      {mySchools.map((school, index) => (
+                      {filteredSchools.map((school, index) => (
                         <tr 
                           key={school.id}
                           style={{ 
@@ -975,6 +1042,17 @@ export default function Emails() {
                       ))}
                     </tbody>
                   </table>
+                  
+                  {filteredSchools.length === 0 && mySchools.length > 0 && (
+                    <div style={{ 
+                      textAlign: "center", 
+                      padding: "2rem", 
+                      color: "#64748b",
+                      fontSize: "0.9rem"
+                    }}>
+                      No schools match the current filter. Try selecting a different filter option.
+                    </div>
+                  )}
                   
                   {mySchools.length === 0 && (
                     <div style={{ 

@@ -219,7 +219,7 @@ export default function Emails() {
         const chunk = chunks[i]
         setStatus(`Sending emails ${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, selectedSchools.length)} of ${selectedSchools.length}...`)
         
-        const res = await fetch("/api/send-email", {
+        const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -48,6 +48,8 @@ export default function Emails() {
   const [csvFile, setCsvFile] = useState(null)
   const [csvUploading, setCsvUploading] = useState(false)
   const [csvResult, setCsvResult] = useState(null)
+  const [emailJobs, setEmailJobs] = useState([])
+  const [currentJobId, setCurrentJobId] = useState(null)
 
   // Ensure full viewport coverage
   useEffect(() => {
@@ -183,32 +185,78 @@ export default function Emails() {
 
   const handleSendEmails = async (e) => {
     e.preventDefault()
-    setStatus("")
-    setLoading(true)
-    
-    const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({
-        school_ids: selectedSchools,
-        subject: "Let's Connect! PSA Programs"
-      })
-    })
-    const data = await res.json()
-    
-    if (data.sent_count > 0) {
-      setStatus(`${data.sent_count} email${data.sent_count === 1 ? "" : "s"} sent!`)
-      setSelectedSchools([])
-      fetchEmailStatuses()
-      fetchMySchools()
-    } else {
-      setStatus(data.error || "Failed to send emails")
+    if (selectedSchools.length === 0) {
+      setStatus("Please select at least one school.")
+      return
     }
-    setLoading(false)
-    setTimeout(() => setStatus(""), 5000)
+
+    setLoading(true)
+    setStatus(`Sending emails to ${selectedSchools.length} schools...`)
+
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          school_ids: selectedSchools,
+          subject: "PSA Programs"
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.status === "job_queued") {
+        setCurrentJobId(result.job_id)
+        setStatus(`Email job started! Processing ${selectedSchools.length} schools...`)
+        
+        // Start polling for job status
+        pollJobStatus(result.job_id)
+      } else {
+        // Handle synchronous response for small batches
+        setStatus(result.status || "Emails sent!")
+        fetchEmailStatuses()
+      }
+    } catch (error) {
+      setStatus(`Error: ${error.message}`)
+    } finally {
+      setLoading(false)
+      setSelectedSchools([])
+    }
+  }
+
+  // Add job status polling
+  const pollJobStatus = async (jobId) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/email-job-status/${jobId}`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        })
+        
+        const jobStatus = await response.json()
+        
+        setStatus(`Progress: ${jobStatus.sent_count}/${jobStatus.total_schools} emails sent (${jobStatus.progress_percentage}%)`)
+        
+        if (jobStatus.status === "completed") {
+          clearInterval(pollInterval)
+          setStatus(`✅ Completed! Sent ${jobStatus.sent_count} emails in ${jobStatus.duration_seconds} seconds`)
+          fetchEmailStatuses()
+          setCurrentJobId(null)
+        } else if (jobStatus.status === "error") {
+          clearInterval(pollInterval)
+          setStatus(`❌ Job failed. Sent ${jobStatus.sent_count} emails. Check console for errors.`)
+          console.error("Job errors:", jobStatus.errors)
+          setCurrentJobId(null)
+        }
+      } catch (error) {
+        console.error("Error polling job status:", error)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    // Auto-clear polling after 10 minutes
+    setTimeout(() => clearInterval(pollInterval), 600000)
   }
 
   const handleDeleteSelectedEmails = async () => {

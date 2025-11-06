@@ -1657,7 +1657,7 @@ export default function Emails() {
                           From: <strong style={{ color: '#f1f5f9' }}>{selectedReply.school_name}</strong>
                         </div>
                       )}
-                    </div
+                    </div>
                     
                     <button
                       onClick={closeReplyModal}
@@ -1829,7 +1829,7 @@ export default function Emails() {
                   ) : null}
                 </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
           <div className="modern-dashboard-card">

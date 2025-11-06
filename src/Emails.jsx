@@ -49,6 +49,9 @@ export default function Emails() {
   const [csvFile, setCsvFile] = useState(null)
   const [csvUploading, setCsvUploading] = useState(false)
   const [csvResult, setCsvResult] = useState(null)
+  const [selectedReply, setSelectedReply] = useState(null)
+  const [showReplyModal, setShowReplyModal] = useState(false)
+  const [loadingReply, setLoadingReply] = useState(false)
 
   // Filter schools based on selected filter
   const filteredSchools = mySchools.filter(school => {
@@ -399,6 +402,40 @@ export default function Emails() {
   // Get counts for filter labels
   const pendingCount = mySchools.filter(school => school.status !== "contacted").length
   const contactedCount = mySchools.filter(school => school.status === "contacted").length
+
+  // Fetch and display reply content
+  const handleViewReply = async (emailId) => {
+    try {
+      setLoadingReply(true)
+      setShowReplyModal(true)
+      
+      const res = await fetch(`https://psa-sales-backend.onrender.com/api/email-reply/${emailId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+      
+      if (res.ok) {
+        const replyData = await res.json()
+        setSelectedReply(replyData)
+      } else {
+        const errorData = await res.json()
+        setSelectedReply({
+          error: errorData.error || "Failed to load reply"
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching reply:', error)
+      setSelectedReply({
+        error: "Network error while loading reply"
+      })
+    } finally {
+      setLoadingReply(false)
+    }
+  }
+
+  const closeReplyModal = () => {
+    setShowReplyModal(false)
+    setSelectedReply(null)
+  }
 
   return (
     <div className="dashboard-container">
@@ -1357,6 +1394,439 @@ export default function Emails() {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Responded Emails Card - NEW SECTION */}
+            <div className="modern-dashboard-card">
+              <div className="modern-card-header">
+                <div className="modern-card-title">
+                  Responded Emails ({emailStatuses.filter(email => email.responded).length} responses received)
+                </div>
+                <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
+                  ✅
+                </div>
+              </div>
+              <div className="modern-card-content">
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center", 
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                  gap: "0.5rem"
+                }}>
+                  <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                    Schools that have responded to your email campaigns
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  maxHeight: "400px", 
+                  overflowY: "auto",
+                  border: "1px solid #475569",
+                  borderRadius: "8px"
+                }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#475569", position: "sticky", top: 0, zIndex: 1 }}>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>School</span>
+                        </th>
+                        {!isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Email</span>
+                          </th>
+                        )}
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Original Email Date</span>
+                        </th>
+                        {user.admin && !isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Sent By</span>
+                          </th>
+                        )}
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Response Status</span>
+                        </th>
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {emailStatuses
+                        .filter(email => email.responded)
+                        .map((email, index) => (
+                        <tr 
+                          key={email.id}
+                          style={{ 
+                            background: index % 2 === 0 ? "rgba(16, 185, 129, 0.05)" : "rgba(16, 185, 129, 0.1)",
+                            borderBottom: "1px solid #475569"
+                          }}
+                        >
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ color: "#f1f5f9", fontWeight: "500", fontSize: "0.9rem" }}>
+                              {email.school_name}
+                            </div>
+                            {isMobile && (
+                              <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                                📧 {email.school_email}
+                              </div>
+                            )}
+                          </td>
+                          {!isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {email.school_email}
+                            </td>
+                          )}
+                          <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.85rem" }}>
+                            {new Date(email.sent_at).toLocaleDateString()}
+                          </td>
+                          {user.admin && !isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {email.user_name || "Unknown"}
+                            </td>
+                          )}
+                          <td style={{ padding: "0.75rem" }}>
+                            <span style={{
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              color: '#10b981',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: '500'
+                            }}>
+                              ✅ Responded
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                              <button
+                                className="modern-btn-primary"
+                                style={{ 
+                                  padding: "0.35rem 0.75rem", 
+                                  fontSize: "0.8rem",
+                                  background: "#3b82f6"
+                                }}
+                                onClick={() => {
+                                  // Copy email to clipboard for easy contact
+                                  navigator.clipboard.writeText(email.school_email).then(() => {
+                                    setStatus(`📋 Copied ${email.school_name}'s email to clipboard!`)
+                                    setTimeout(() => setStatus(""), 2000)
+                                  }).catch(() => {
+                                    setStatus("Failed to copy email")
+                                    setTimeout(() => setStatus(""), 2000)
+                                  })
+                                }}
+                              >
+                                📋 Copy Email
+                              </button>
+                              
+                              {email.has_reply_content && (
+                                <button
+                                  className="modern-btn-primary"
+                                  style={{ 
+                                    padding: "0.35rem 0.75rem", 
+                                    fontSize: "0.8rem",
+                                    background: "#10b981"
+                                  }}
+                                  onClick={() => handleViewReply(email.id)}
+                                >
+                                  👁️ View Reply
+                                </button>
+                              )}
+                              
+                              <button
+                                className="modern-btn-primary"
+                                style={{ 
+                                  padding: "0.35rem 0.75rem", 
+                                  fontSize: "0.8rem",
+                                  background: "#64748b"
+                                }}
+                                onClick={async () => {
+                                  if (confirm(`Mark ${email.school_name} as no longer responded?`)) {
+                                    const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                        "Authorization": `Bearer ${accessToken}`
+                                      },
+                                      body: JSON.stringify({ email_id: email.id, responded: false })
+                                    })
+                                    if (res.ok) {
+                                      fetchEmailStatuses()
+                                      setStatus(`${email.school_name} marked as not responded`)
+                                      setTimeout(() => setStatus(""), 3000)
+                                    }
+                                  }
+                                }}
+                              >
+                                ↩️ Unmark
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {emailStatuses.filter(email => email.responded).length === 0 && (
+                    <div style={{ 
+                      textAlign: "center", 
+                      padding: "3rem 2rem",
+                      color: "#64748b"
+                    }}>
+                      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📭</div>
+                      <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem", fontSize: "1.2rem" }}>No Responses Yet</h3>
+                      <p style={{ marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+                        When schools respond to your emails, they'll appear here for easy tracking and follow-up.
+                      </p>
+                      <div style={{ 
+                        background: "rgba(59, 130, 246, 0.1)",
+                        border: "1px solid rgba(59, 130, 246, 0.2)",
+                        borderRadius: "8px",
+                        padding: "1rem",
+                        fontSize: "0.85rem",
+                        color: "#94a3b8",
+                        textAlign: "left"
+                      }}>
+                        <div style={{ color: "#3b82f6", fontWeight: "600", marginBottom: "0.5rem" }}>
+                          💡 Tip: Check for replies automatically
+                        </div>
+                        <p style={{ marginBottom: "0.5rem" }}>
+                          Use the "🔄 Check Replies" button in the Email History section to automatically detect responses from schools.
+                        </p>
+                        <p>
+                          Or manually mark emails as responded when you receive replies directly.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Reply Viewing Modal */}
+            {showReplyModal && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(0, 0, 0, 0.8)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                  border: '1px solid #475569',
+                  borderRadius: '16px',
+                  padding: '2rem',
+                  maxWidth: '800px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  position: 'relative'
+                }}>
+                  {/* Modal Header */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '1.5rem',
+                    paddingBottom: '1rem',
+                    borderBottom: '1px solid #475569'
+                  }}>
+                    <div>
+                      <h2 style={{
+                        color: '#f1f5f9',
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        marginBottom: '0.5rem'
+                      }}>
+                        📧 School Reply
+                      </h2>
+                      {selectedReply && !selectedReply.error && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                          From: <strong style={{ color: '#f1f5f9' }}>{selectedReply.school_name}</strong>
+                        </div>
+                      )}
+                    </div
+                    
+                    <button
+                      onClick={closeReplyModal}
+                      style={{
+                        background: '#ef4444',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: 'white',
+                        width: '40px',
+                        height: '40px',
+                        cursor: 'pointer',
+                        fontSize: '1.2rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Modal Content */}
+                  {loadingReply ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '3rem 2rem',
+                      color: '#94a3b8'
+                    }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+                      <h3 style={{ color: '#f1f5f9', marginBottom: '0.5rem' }}>Loading Reply...</h3>
+                      <p>Fetching the school's response...</p>
+                    </div>
+                  ) : selectedReply?.error ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '3rem 2rem',
+                      color: '#ef4444'
+                    }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</div>
+                      <h3 style={{ color: '#f1f5f9', marginBottom: '0.5rem' }}>Error Loading Reply</h3>
+                      <p>{selectedReply.error}</p>
+                    </div>
+                  ) : selectedReply ? (
+                    <div>
+                      {/* Reply Details */}
+                      <div style={{
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        marginBottom: '1.5rem',
+                        fontSize: '0.9rem'
+                      }}>
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                          gap: '0.75rem',
+                          color: '#94a3b8'
+                        }}>
+                          <div>
+                            <strong style={{ color: '#f1f5f9' }}>From:</strong> {selectedReply.reply_sender || selectedReply.school_email}
+                          </div>
+                          <div>
+                            <strong style={{ color: '#f1f5f9' }}>Reply Date:</strong> {selectedReply.reply_date ? new Date(selectedReply.reply_date).toLocaleString() : 'Unknown'}
+                          </div>
+                          <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
+                            <strong style={{ color: '#f1f5f9' }}>Subject:</strong> {selectedReply.reply_subject || 'No subject'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Reply Content */}
+                      <div>
+                        <h4 style={{
+                          color: '#f1f5f9',
+                          marginBottom: '1rem',
+                          fontSize: '1.1rem',
+                          fontWeight: '600'
+                        }}>
+                          📄 Reply Message:
+                        </h4>
+                        <div style={{
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          padding: '1.5rem',
+                          maxHeight: '400px',
+                          overflowY: 'auto',
+                          fontFamily: 'monospace',
+                          fontSize: '0.9rem',
+                          lineHeight: '1.6',
+                          color: '#e2e8f0',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word'
+                        }}>
+                          {selectedReply.reply_content || 'No content available'}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        marginTop: '1.5rem',
+                        paddingTop: '1rem',
+                        borderTop: '1px solid #475569',
+                        flexWrap: 'wrap'
+                      }}>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedReply.reply_content || '').then(() => {
+                              setStatus('📋 Reply content copied to clipboard!')
+                              setTimeout(() => setStatus(""), 2000)
+                            }).catch(() => {
+                              setStatus('Failed to copy content')
+                              setTimeout(() => setStatus(""), 2000)
+                            })
+                          }}
+                          style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.75rem 1.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          📋 Copy Reply
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            const mailtoLink = `mailto:${selectedReply.school_email}?subject=Re: ${selectedReply.reply_subject || 'PSA Programs'}`
+                            window.location.href = mailtoLink
+                          }}
+                          style={{
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.75rem 1.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          ↩️ Reply to Email
+                        </button>
+                        
+                        <button
+                          onClick={closeReplyModal}
+                          style={{
+                            background: '#64748b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.75rem 1.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

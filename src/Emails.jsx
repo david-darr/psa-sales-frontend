@@ -444,6 +444,7 @@ export default function Emails() {
   const closeReplyModal = () => {
     setShowReplyModal(false)
     setSelectedReply(null)
+    setLoadingReply(false)
   }
 
   const handleOpenCustomReply = (email) => {
@@ -812,9 +813,12 @@ export default function Emails() {
                         }}
                       />
                       <select
+                        name="school_type"
                         value={newSchool.school_type}
                         onChange={(e) => setNewSchool({...newSchool, school_type: e.target.value})}
-                        style={{ 
+                        required
+                        style={{
+                          width: "100%",
                           padding: "0.75rem 1rem",
                           border: "1px solid #475569",
                           borderRadius: "8px",
@@ -823,8 +827,9 @@ export default function Emails() {
                           fontSize: "1rem"
                         }}
                       >
-                        <option value="preschool">🧸 Preschool</option>
-                        <option value="elementary">🎒 Elementary School</option>
+                        <option value="preschool">Preschool</option>
+                        <option value="elementary">Elementary School</option>
+                        <option value="private">Private School</option>
                       </select>
                     </div>
                     
@@ -1145,19 +1150,16 @@ export default function Emails() {
                             )}
                           </td>
                           <td style={{ padding: "0.75rem" }}>
-                            <span style={{
-                              background: school.school_type === 'preschool' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)',
-                              color: school.school_type === 'preschool' ? '#3b82f6' : '#8b5cf6',
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.8rem',
-                              fontWeight: '500'
+                            <div style={{ 
+                              fontSize: "0.8rem", 
+                              color: school.school_type === 'preschool' ? "#f59e0b" : 
+                                     school.school_type === 'private' ? "#8b5cf6" : "#10b981",
+                              fontWeight: "600",
+                              marginBottom: "0.5rem"
                             }}>
-                              {school.school_type === 'preschool' ? 
-                                '🧸 Preschool (3 PDFs: Flyers + Recommendation)' : 
-                                '🎒 Elementary (2 PDFs: Program Info + Recommendation)'
-                              }
-                            </span>
+                              {school.school_type === 'preschool' ? '👶 Preschool' : 
+                               school.school_type === 'private' ? '🏫 Private School' : '📚 Elementary'}
+                            </div>
                           </td>
                           <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.9rem" }}>
                             {school.contact_name || "—"}
@@ -1891,9 +1893,8 @@ export default function Emails() {
                 top: 0,
                 left: 0,
                 width: '100vw',
-                height: '100vh',
                 background: 'rgba(0, 0, 0, 0.8)',
-                zIndex: 9999,
+                zIndex:  9999,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

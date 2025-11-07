@@ -458,9 +458,16 @@ export default function Emails() {
   }
 
   const handleSendCustomReply = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
+    
+    if (!customReplyData.message.trim()) {
+      setStatus("Please enter a reply message")
+      setTimeout(() => setStatus(""), 3000)
+      return
+    }
+
     setSendingCustomReply(true)
-    setStatus("")
+    setStatus("Sending custom reply...")
 
     try {
       const res = await fetch("https://psa-sales-backend.onrender.com/api/send-custom-reply", {
@@ -469,20 +476,32 @@ export default function Emails() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`
         },
-        body: JSON.stringify(customReplyData)
+        body: JSON.stringify({
+          email_id: customReplyData.email_id,
+          to_email: customReplyData.school_email,
+          subject: customReplyData.subject,
+          message: customReplyData.message
+        })
       })
 
       const data = await res.json()
 
-      if (data.status === "success") {
+      if (res.ok) {
         setStatus("✅ Custom reply sent successfully!")
         setShowCustomReplyModal(false)
-        fetchEmailStatuses()
+        setCustomReplyData({
+          email_id: null,
+          school_email: '',
+          school_name: '',
+          subject: '',
+          message: ''
+        })
+        fetchEmailStatuses() // Refresh to show updated status
       } else {
-        setStatus(data.error || "Failed to send reply")
+        setStatus(data.error || "Failed to send custom reply")
       }
     } catch (error) {
-      setStatus("❌ Error occurred while sending reply")
+      setStatus("Error sending custom reply")
       console.error('Custom reply error:', error)
     } finally {
       setSendingCustomReply(false)
@@ -1642,228 +1661,116 @@ export default function Emails() {
               </div>
             </div>
 
-            {/* Reply Chain Modal - ADD THIS */}
-            {showReplyModal && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                background: 'rgba(0, 0, 0, 0.8)',
-                zIndex: 9999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1rem'
-              }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                  border: '1px solid #475569',
-                  borderRadius: '16px',
-                  padding: '2rem',
-                  maxWidth: '800px',
-                  width: '100%',
-                  maxHeight: '90vh',
-                  overflowY: 'auto',
-                  position: 'relative'
+            {/* Custom Reply Modal - Update the form section */}
+            <form onSubmit={handleSendCustomReply} style={{ marginBottom: "1.5rem" }}>
+              {/* Subject Field */}
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{
+                  color: '#f1f5f9',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  display: 'block',
+                  marginBottom: '0.5rem'
                 }}>
-                  {/* Modal Header */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '1.5rem',
-                    paddingBottom: '1rem',
-                    borderBottom: '1px solid #475569'
-                  }}>
-                    <h2 style={{
-                      color: '#f1f5f9',
-                      fontSize: '1.5rem',
-                      fontWeight: '700'
-                    }}>
-                      💬 Email Reply Chain
-                    </h2>
-                    
-                    <button
-                      onClick={closeReplyModal}
-                      style={{
-                        background: '#ef4444',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white',
-                        width: '40px',
-                        height: '40px',
-                        cursor: 'pointer',
-                        fontSize: '1.2rem'
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Modal Content */}
-                  {loadingReply ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                      🔄 Loading reply chain...
-                    </div>
-                  ) : selectedReply && !selectedReply.error ? (
-                    <div>
-                      {/* Reply Chain Header */}
-                      <div style={{
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        border: '1px solid rgba(59, 130, 246, 0.2)',
-                        borderRadius: '8px',
-                        padding: '1rem',
-                        marginBottom: '1.5rem',
-                        fontSize: '0.9rem'
-                      }}>
-                        <div style={{ 
-                          display: 'grid', 
-                          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                          gap: '0.75rem',
-                          color: '#94a3b8'
-                        }}>
-                          <div>
-                            <strong style={{ color: '#f1f5f9' }}>School:</strong> {selectedReply.school_name}
-                          </div>
-                          <div>
-                            <strong style={{ color: '#f1f5f9' }}>Email:</strong> {selectedReply.school_email}
-                          </div>
-                          <div>
-                            <strong style={{ color: '#f1f5f9' }}>Total Replies:</strong> {selectedReply.reply_count || 0}
-                          </div>
-                          <div>
-                            <strong style={{ color: '#f1f5f9' }}>Last Reply:</strong> {selectedReply.last_reply_date ? new Date(selectedReply.last_reply_date).toLocaleDateString() : 'None'}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Show replies or old format */}
-                      {selectedReply.replies && selectedReply.replies.length > 0 ? (
-                        <div>
-                          <h4 style={{ color: '#f1f5f9', marginBottom: '1rem' }}>
-                            💬 Conversation Chain ({selectedReply.replies.length} replies):
-                          </h4>
-                          
-                          {selectedReply.replies.map((reply, index) => (
-                            <div key={reply.id} style={{
-                              background: index % 2 === 0 ? '#1e293b' : '#0f172a',
-                              border: '1px solid #334155',
-                              borderRadius: '8px',
-                              padding: '1.5rem',
-                              marginBottom: '1rem'
-                            }}>
-                              <div style={{ marginBottom: '1rem', color: '#94a3b8', fontSize: '0.85rem' }}>
-                                <strong>Reply #{index + 1}</strong> • {new Date(reply.reply_date).toLocaleString()}
-                              </div>
-                              
-                              <div style={{
-                                background: '#0f172a',
-                                border: '1px solid #475569',
-                                borderRadius: '6px',
-                                padding: '1rem',
-                                fontFamily: 'monospace',
-                                fontSize: '0.85rem',
-                                lineHeight: '1.5',
-                                color: '#e2e8f0',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                maxHeight: '200px',
-                                overflowY: 'auto'
-                              }}>
-                                {reply.reply_content || 'No content available'}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        // Fallback to old single reply format
-                        <div style={{
-                          background: '#0f172a',
-                          border: '1px solid #475569',
-                          borderRadius: '8px',
-                          padding: '1.5rem',
-                          fontFamily: 'monospace',
-                          fontSize: '0.85rem',
-                          lineHeight: '1.5',
-                          color: '#e2e8f0',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          maxHeight: '300px',
-                          overflowY: 'auto'
-                        }}>
-                          {selectedReply.reply_content || selectedReply.content || 'No reply content available'}
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      <div style={{
-                        display: 'flex',
-                        gap: '1rem',
-                        marginTop: '1.5rem',
-                        flexWrap: 'wrap'
-                      }}>
-                        <button
-                          onClick={() => {
-                            setCustomReplyData({
-                              email_id: selectedReply.id,
-                              school_email: selectedReply.school_email,
-                              school_name: selectedReply.school_name,
-                              subject: `Re: PSA Programs`,
-                              message: ''
-                            })
-                            setShowCustomReplyModal(true)
-                            setShowReplyModal(false)
-                          }}
-                          style={{
-                            background: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.75rem 1.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600'
-                          }}
-                        >
-                          ✍️ Send Custom Reply
-                        </button>
-                        
-                        <button
-                          onClick={closeReplyModal}
-                          style={{
-                            background: '#64748b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.75rem 1.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600'
-                          }}
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  ) : selectedReply && selectedReply.error ? (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '2rem',
-                      color: '#ef4444',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                      borderRadius: '8px'
-                    }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
-                      <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Error Loading Reply</div>
-                      <div style={{ fontSize: '0.9rem' }}>{selectedReply.error}</div>
-                    </div>
-                  ) : null}
-                </div>
+                  Subject:
+                </label>
+                <input
+                  type="text"
+                  value={customReplyData.subject}
+                  onChange={(e) => setCustomReplyData(prev => ({
+                    ...prev,
+                    subject: e.target.value
+                  }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #475569',
+                    borderRadius: '8px',
+                    background: '#334155',
+                    color: '#f1f5f9',
+                    fontSize: '0.9rem'
+                  }}
+                  placeholder="Reply subject..."
+                />
               </div>
-            )}
+
+              {/* Message Field */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{
+                  color: '#f1f5f9',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  display: 'block',
+                  marginBottom: '0.5rem'
+                }}>
+                  Message:
+                </label>
+                <textarea
+                  value={customReplyData.message}
+                  onChange={(e) => setCustomReplyData(prev => ({
+                    ...prev,
+                    message: e.target.value
+                  }))}
+                  rows={10}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #475569',
+                    borderRadius: '8px',
+                    background: '#334155',
+                    color: '#f1f5f9',
+                    fontSize: '0.9rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    minHeight: '200px'
+                  }}
+                  placeholder="Type your reply message here..."
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'flex-end',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomReplyModal(false)}
+                  style={{
+                    background: '#64748b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  type="submit"
+                  disabled={sendingCustomReply || !customReplyData.message.trim()}
+                  style={{
+                    background: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1.5rem',
+                    cursor: sendingCustomReply || !customReplyData.message.trim() ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    opacity: sendingCustomReply || !customReplyData.message.trim() ? 0.6 : 1
+                  }}
+                >
+                  {sendingCustomReply ? '📤 Sending...' : '📤 Send Reply'}
+                </button>
+              </div>
+            </form>
           </>
         ) : (
           <div className="modern-dashboard-card">

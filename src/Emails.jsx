@@ -409,7 +409,7 @@ export default function Emails() {
       setLoadingReply(true)
       setShowReplyModal(true)
       
-      const res = await fetch(`https://psa-sales-backend.onrender.com/api/email-reply/${emailId}`, {
+      const res = await fetch(`https://psa-sales-backend.onrender.com/api/email-reply-chain/${emailId}`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       })
       
@@ -419,13 +419,13 @@ export default function Emails() {
       } else {
         const errorData = await res.json()
         setSelectedReply({
-          error: errorData.error || "Failed to load reply"
+          error: errorData.error || "Failed to load reply chain"
         })
       }
     } catch (error) {
-      console.error('Error fetching reply:', error)
+      console.error('Error fetching reply chain:', error)
       setSelectedReply({
-        error: "Network error while loading reply"
+        error: "Network error while loading reply chain"
       })
     } finally {
       setLoadingReply(false)
@@ -1700,9 +1700,9 @@ export default function Emails() {
                       <h3 style={{ color: '#f1f5f9', marginBottom: '0.5rem' }}>Error Loading Reply</h3>
                       <p>{selectedReply.error}</p>
                     </div>
-                  ) : selectedReply ? (
+                  ) : selectedReply && !selectedReply.error ? (
                     <div>
-                      {/* Reply Details */}
+                      {/* Reply Chain Header */}
                       <div style={{
                         background: 'rgba(59, 130, 246, 0.1)',
                         border: '1px solid rgba(59, 130, 246, 0.2)',
@@ -1718,18 +1718,21 @@ export default function Emails() {
                           color: '#94a3b8'
                         }}>
                           <div>
-                            <strong style={{ color: '#f1f5f9' }}>From:</strong> {selectedReply.reply_sender || selectedReply.school_email}
+                            <strong style={{ color: '#f1f5f9' }}>School Email:</strong> {selectedReply.school_email}
                           </div>
                           <div>
-                            <strong style={{ color: '#f1f5f9' }}>Reply Date:</strong> {selectedReply.reply_date ? new Date(selectedReply.reply_date).toLocaleString() : 'Unknown'}
+                            <strong style={{ color: '#f1f5f9' }}>Total Replies:</strong> {selectedReply.reply_count}
                           </div>
-                          <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
-                            <strong style={{ color: '#f1f5f9' }}>Subject:</strong> {selectedReply.reply_subject || 'No subject'}
+                          <div>
+                            <strong style={{ color: '#f1f5f9' }}>Original Email:</strong> {new Date(selectedReply.sent_at).toLocaleDateString()}
+                          </div>
+                          <div>
+                            <strong style={{ color: '#f1f5f9' }}>Last Reply:</strong> {selectedReply.last_reply_date ? new Date(selectedReply.last_reply_date).toLocaleDateString() : 'None'}
                           </div>
                         </div>
                       </div>
 
-                      {/* Reply Content */}
+                      {/* Conversation Chain */}
                       <div>
                         <h4 style={{
                           color: '#f1f5f9',
@@ -1737,28 +1740,134 @@ export default function Emails() {
                           fontSize: '1.1rem',
                           fontWeight: '600'
                         }}>
-                          📄 Reply Message:
+                          💬 Conversation Chain ({selectedReply.replies.length} {selectedReply.replies.length === 1 ? 'reply' : 'replies'}):
                         </h4>
+                        
                         <div style={{
-                          background: '#0f172a',
-                          border: '1px solid #334155',
-                          borderRadius: '8px',
-                          padding: '1.5rem',
                           maxHeight: '400px',
                           overflowY: 'auto',
-                          fontFamily: 'monospace',
-                          fontSize: '0.9rem',
-                          lineHeight: '1.6',
-                          color: '#e2e8f0',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word'
+                          border: '1px solid #334155',
+                          borderRadius: '8px'
                         }}>
-                          {selectedReply.reply_content || 'No content available'}
+                          {selectedReply.replies.map((reply, index) => (
+                            <div key={reply.id} style={{
+                              background: index % 2 === 0 ? '#1e293b' : '#0f172a',
+                              borderBottom: index < selectedReply.replies.length - 1 ? '1px solid #334155' : 'none',
+                              padding: '1.5rem'
+                            }}>
+                              {/* Reply Header */}
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                marginBottom: '1rem',
+                                flexWrap: 'wrap',
+                                gap: '0.5rem'
+                              }}>
+                                <div style={{
+                                  background: 'rgba(16, 185, 129, 0.1)',
+                                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                                  borderRadius: '6px',
+                                  padding: '0.5rem 0.75rem',
+                                  fontSize: '0.8rem',
+                                  color: '#10b981',
+                                  fontWeight: '600'
+                                }}>
+                                  Reply #{index + 1}
+                                </div>
+                                <div style={{
+                                  color: '#94a3b8',
+                                  fontSize: '0.8rem',
+                                  textAlign: 'right'
+                                }}>
+                                  {new Date(reply.reply_date).toLocaleString()}
+                                </div>
+                              </div>
+                              
+                              {/* Reply Details */}
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                                gap: '0.5rem',
+                                marginBottom: '1rem',
+                                fontSize: '0.85rem',
+                                color: '#94a3b8'
+                              }}>
+                                <div>
+                                  <strong style={{ color: '#f1f5f9' }}>From:</strong> {reply.reply_sender}
+                                </div>
+                                <div>
+                                  <strong style={{ color: '#f1f5f9' }}>Subject:</strong> {reply.reply_subject || 'No subject'}
+                                </div>
+                              </div>
+                              
+                              {/* Reply Content */}
+                              <div style={{
+                                background: '#0f172a',
+                                border: '1px solid #475569',
+                                borderRadius: '6px',
+                                padding: '1rem',
+                                fontFamily: 'monospace',
+                                fontSize: '0.85rem',
+                                lineHeight: '1.5',
+                                color: '#e2e8f0',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                maxHeight: '200px',
+                                overflowY: 'auto'
+                              }}>
+                                {reply.reply_content || 'No content available'}
+                              </div>
+                              
+                              {/* Individual Reply Actions */}
+                              <div style={{
+                                marginTop: '1rem',
+                                display: 'flex',
+                                gap: '0.5rem',
+                                flexWrap: 'wrap'
+                              }}>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(reply.reply_content || '').then(() => {
+                                      setStatus(`📋 Reply #${index + 1} copied to clipboard!`)
+                                      setTimeout(() => setStatus(""), 2000)
+                                    }).catch(() => {
+                                      setStatus('Failed to copy content')
+                                      setTimeout(() => setStatus(""), 2000)
+                                    })
+                                  }}
+                                  style={{
+                                    background: '#3b82f6',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '0.5rem 1rem',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: '500'
+                                  }}
+                                >
+                                  📋 Copy This Reply
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {selectedReply.replies.length === 0 && (
+                            <div style={{
+                              textAlign: 'center',
+                              padding: '2rem',
+                              color: '#64748b'
+                            }}>
+                              No replies found for this email.
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Actions */}
+                      {/* Overall Actions */}
                       <div style={{
+                        
                         display: 'flex',
                         gap: '1rem',
                         marginTop: '1.5rem',
@@ -1768,8 +1877,16 @@ export default function Emails() {
                       }}>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(selectedReply.reply_content || '').then(() => {
-                              setStatus('📋 Reply content copied to clipboard!')
+                            // Copy all replies as one text
+                            const allReplies = selectedReply.replies.map((reply, index) => 
+                              `=== Reply #${index + 1} (${new Date(reply.reply_date).toLocaleString()}) ===\n` +
+                              `From: ${reply.reply_sender}\n` +
+                              `Subject: ${reply.reply_subject || 'No subject'}\n\n` +
+                              `${reply.reply_content}\n\n`
+                            ).join('')
+                            
+                            navigator.clipboard.writeText(allReplies).then(() => {
+                              setStatus('📋 All replies copied to clipboard!')
                               setTimeout(() => setStatus(""), 2000)
                             }).catch(() => {
                               setStatus('Failed to copy content')
@@ -1787,12 +1904,13 @@ export default function Emails() {
                             fontWeight: '600'
                           }}
                         >
-                          📋 Copy Reply
+                          📋 Copy All Replies
                         </button>
                         
                         <button
                           onClick={() => {
-                            const mailtoLink = `mailto:${selectedReply.school_email}?subject=Re: ${selectedReply.reply_subject || 'PSA Programs'}`
+                            const latestReply = selectedReply.replies[selectedReply.replies.length - 1]
+                            const mailtoLink = `mailto:${selectedReply.school_email}?subject=Re: ${latestReply?.reply_subject || 'PSA Programs'}`
                             window.location.href = mailtoLink
                           }}
                           style={{

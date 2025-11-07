@@ -52,6 +52,15 @@ export default function Emails() {
   const [selectedReply, setSelectedReply] = useState(null)
   const [showReplyModal, setShowReplyModal] = useState(false)
   const [loadingReply, setLoadingReply] = useState(false)
+  const [showCustomReplyModal, setShowCustomReplyModal] = useState(false)
+  const [customReplyData, setCustomReplyData] = useState({
+    email_id: null,
+    school_email: '',
+    school_name: '',
+    subject: '',
+    message: ''
+  })
+  const [sendingCustomReply, setSendingCustomReply] = useState(false)
 
   // Filter schools based on selected filter
   const filteredSchools = mySchools.filter(school => {
@@ -435,6 +444,50 @@ export default function Emails() {
   const closeReplyModal = () => {
     setShowReplyModal(false)
     setSelectedReply(null)
+  }
+
+  const handleOpenCustomReply = (email) => {
+    setCustomReplyData({
+      email_id: email.id,
+      school_email: email.school_email,
+      school_name: email.school_name,
+      subject: `Re: ${email.subject || 'PSA Programs'}`,
+      message: ''
+    })
+    setShowCustomReplyModal(true)
+  }
+
+  const handleSendCustomReply = async (e) => {
+    e.preventDefault()
+    setSendingCustomReply(true)
+    setStatus("")
+
+    try {
+      const res = await fetch("https://psa-sales-backend.onrender.com/api/send-custom-reply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(customReplyData)
+      })
+
+      const data = await res.json()
+
+      if (data.status === "success") {
+        setStatus("✅ Custom reply sent successfully!")
+        setShowCustomReplyModal(false)
+        fetchEmailStatuses()
+      } else {
+        setStatus(data.error || "Failed to send reply")
+      }
+    } catch (error) {
+      setStatus("❌ Error occurred while sending reply")
+      console.error('Custom reply error:', error)
+    } finally {
+      setSendingCustomReply(false)
+      setTimeout(() => setStatus(""), 5000)
+    }
   }
 
   return (
@@ -1572,43 +1625,24 @@ export default function Emails() {
                     </tbody>
                   </table>
                   
-                  {emailStatuses.filter(email => email.responded).length === 0 && (
+                  {emailStatuses.length === 0 && emailStatuses.filter(email => email.responded).length === 0 && (
                     <div style={{ 
                       textAlign: "center", 
                       padding: "3rem 2rem",
                       color: "#64748b"
                     }}>
-                      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📭</div>
+                      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>💬</div>
                       <h3 style={{ color: "#f1f5f9", marginBottom: "0.5rem", fontSize: "1.2rem" }}>No Responses Yet</h3>
                       <p style={{ marginBottom: "1.5rem", fontSize: "0.9rem" }}>
                         When schools respond to your emails, they'll appear here for easy tracking and follow-up.
                       </p>
-                      <div style={{ 
-                        background: "rgba(59, 130, 246, 0.1)",
-                        border: "1px solid rgba(59, 130, 246, 0.2)",
-                        borderRadius: "8px",
-                        padding: "1rem",
-                        fontSize: "0.85rem",
-                        color: "#94a3b8",
-                        textAlign: "left"
-                      }}>
-                        <div style={{ color: "#3b82f6", fontWeight: "600", marginBottom: "0.5rem" }}>
-                          💡 Tip: Check for replies automatically
-                        </div>
-                        <p style={{ marginBottom: "0.5rem" }}>
-                          Use the "🔄 Check Replies" button in the Email History section to automatically detect responses from schools.
-                        </p>
-                        <p>
-                          Or manually mark emails as responded when you receive replies directly.
-                        </p>
-                      </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Reply Viewing Modal */}
+            {/* Reply Chain Modal - ADD THIS */}
             {showReplyModal && (
               <div style={{
                 position: 'fixed',
@@ -1638,26 +1672,18 @@ export default function Emails() {
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
                     marginBottom: '1.5rem',
                     paddingBottom: '1rem',
                     borderBottom: '1px solid #475569'
                   }}>
-                    <div>
-                      <h2 style={{
-                        color: '#f1f5f9',
-                        fontSize: '1.5rem',
-                        fontWeight: '700',
-                        marginBottom: '0.5rem'
-                      }}>
-                        📧 School Reply
-                      </h2>
-                      {selectedReply && !selectedReply.error && (
-                        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-                          From: <strong style={{ color: '#f1f5f9' }}>{selectedReply.school_name}</strong>
-                        </div>
-                      )}
-                    </div>
+                    <h2 style={{
+                      color: '#f1f5f9',
+                      fontSize: '1.5rem',
+                      fontWeight: '700'
+                    }}>
+                      💬 Email Reply Chain
+                    </h2>
                     
                     <button
                       onClick={closeReplyModal}
@@ -1669,10 +1695,7 @@ export default function Emails() {
                         width: '40px',
                         height: '40px',
                         cursor: 'pointer',
-                        fontSize: '1.2rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        fontSize: '1.2rem'
                       }}
                     >
                       ✕
@@ -1681,24 +1704,8 @@ export default function Emails() {
 
                   {/* Modal Content */}
                   {loadingReply ? (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '3rem 2rem',
-                      color: '#94a3b8'
-                    }}>
-                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
-                      <h3 style={{ color: '#f1f5f9', marginBottom: '0.5rem' }}>Loading Reply...</h3>
-                      <p>Fetching the school's response...</p>
-                    </div>
-                  ) : selectedReply?.error ? (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '3rem 2rem',
-                      color: '#ef4444'
-                    }}>
-                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>❌</div>
-                      <h3 style={{ color: '#f1f5f9', marginBottom: '0.5rem' }}>Error Loading Reply</h3>
-                      <p>{selectedReply.error}</p>
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      🔄 Loading reply chain...
                     </div>
                   ) : selectedReply && !selectedReply.error ? (
                     <div>
@@ -1718,13 +1725,13 @@ export default function Emails() {
                           color: '#94a3b8'
                         }}>
                           <div>
-                            <strong style={{ color: '#f1f5f9' }}>School Email:</strong> {selectedReply.school_email}
+                            <strong style={{ color: '#f1f5f9' }}>School:</strong> {selectedReply.school_name}
                           </div>
                           <div>
-                            <strong style={{ color: '#f1f5f9' }}>Total Replies:</strong> {selectedReply.reply_count}
+                            <strong style={{ color: '#f1f5f9' }}>Email:</strong> {selectedReply.school_email}
                           </div>
                           <div>
-                            <strong style={{ color: '#f1f5f9' }}>Original Email:</strong> {new Date(selectedReply.sent_at).toLocaleDateString()}
+                            <strong style={{ color: '#f1f5f9' }}>Total Replies:</strong> {selectedReply.reply_count || 0}
                           </div>
                           <div>
                             <strong style={{ color: '#f1f5f9' }}>Last Reply:</strong> {selectedReply.last_reply_date ? new Date(selectedReply.last_reply_date).toLocaleDateString() : 'None'}
@@ -1732,76 +1739,25 @@ export default function Emails() {
                         </div>
                       </div>
 
-                      {/* Conversation Chain */}
-                      <div>
-                        <h4 style={{
-                          color: '#f1f5f9',
-                          marginBottom: '1rem',
-                          fontSize: '1.1rem',
-                          fontWeight: '600'
-                        }}>
-                          💬 Conversation Chain ({selectedReply.replies.length} {selectedReply.replies.length === 1 ? 'reply' : 'replies'}):
-                        </h4>
-                        
-                        <div style={{
-                          maxHeight: '400px',
-                          overflowY: 'auto',
-                          border: '1px solid #334155',
-                          borderRadius: '8px'
-                        }}>
+                      {/* Show replies or old format */}
+                      {selectedReply.replies && selectedReply.replies.length > 0 ? (
+                        <div>
+                          <h4 style={{ color: '#f1f5f9', marginBottom: '1rem' }}>
+                            💬 Conversation Chain ({selectedReply.replies.length} replies):
+                          </h4>
+                          
                           {selectedReply.replies.map((reply, index) => (
                             <div key={reply.id} style={{
                               background: index % 2 === 0 ? '#1e293b' : '#0f172a',
-                              borderBottom: index < selectedReply.replies.length - 1 ? '1px solid #334155' : 'none',
-                              padding: '1.5rem'
+                              border: '1px solid #334155',
+                              borderRadius: '8px',
+                              padding: '1.5rem',
+                              marginBottom: '1rem'
                             }}>
-                              {/* Reply Header */}
-                              <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                marginBottom: '1rem',
-                                flexWrap: 'wrap',
-                                gap: '0.5rem'
-                              }}>
-                                <div style={{
-                                  background: 'rgba(16, 185, 129, 0.1)',
-                                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                                  borderRadius: '6px',
-                                  padding: '0.5rem 0.75rem',
-                                  fontSize: '0.8rem',
-                                  color: '#10b981',
-                                  fontWeight: '600'
-                                }}>
-                                  Reply #{index + 1}
-                                </div>
-                                <div style={{
-                                  color: '#94a3b8',
-                                  fontSize: '0.8rem',
-                                  textAlign: 'right'
-                                }}>
-                                  {new Date(reply.reply_date).toLocaleString()}
-                                </div>
+                              <div style={{ marginBottom: '1rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                <strong>Reply #{index + 1}</strong> • {new Date(reply.reply_date).toLocaleString()}
                               </div>
                               
-                              {/* Reply Details */}
-                              <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                                gap: '0.5rem',
-                                marginBottom: '1rem',
-                                fontSize: '0.85rem',
-                                color: '#94a3b8'
-                              }}>
-                                <div>
-                                  <strong style={{ color: '#f1f5f9' }}>From:</strong> {reply.reply_sender}
-                                </div>
-                                <div>
-                                  <strong style={{ color: '#f1f5f9' }}>Subject:</strong> {reply.reply_subject || 'No subject'}
-                                </div>
-                              </div>
-                              
-                              {/* Reply Content */}
                               <div style={{
                                 background: '#0f172a',
                                 border: '1px solid #475569',
@@ -1818,100 +1774,47 @@ export default function Emails() {
                               }}>
                                 {reply.reply_content || 'No content available'}
                               </div>
-                              
-                              {/* Individual Reply Actions */}
-                              <div style={{
-                                marginTop: '1rem',
-                                display: 'flex',
-                                gap: '0.5rem',
-                                flexWrap: 'wrap'
-                              }}>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(reply.reply_content || '').then(() => {
-                                      setStatus(`📋 Reply #${index + 1} copied to clipboard!`)
-                                      setTimeout(() => setStatus(""), 2000)
-                                    }).catch(() => {
-                                      setStatus('Failed to copy content')
-                                      setTimeout(() => setStatus(""), 2000)
-                                    })
-                                  }}
-                                  style={{
-                                    background: '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    padding: '0.5rem 1rem',
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem',
-                                    fontWeight: '500'
-                                  }}
-                                >
-                                  📋 Copy This Reply
-                                </button>
-                              </div>
                             </div>
                           ))}
-                          
-                          {selectedReply.replies.length === 0 && (
-                            <div style={{
-                              textAlign: 'center',
-                              padding: '2rem',
-                              color: '#64748b'
-                            }}>
-                              No replies found for this email.
-                            </div>
-                          )}
                         </div>
-                      </div>
+                      ) : (
+                        // Fallback to old single reply format
+                        <div style={{
+                          background: '#0f172a',
+                          border: '1px solid #475569',
+                          borderRadius: '8px',
+                          padding: '1.5rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.85rem',
+                          lineHeight: '1.5',
+                          color: '#e2e8f0',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          maxHeight: '300px',
+                          overflowY: 'auto'
+                        }}>
+                          {selectedReply.reply_content || selectedReply.content || 'No reply content available'}
+                        </div>
+                      )}
 
-                      {/* Overall Actions */}
+                      {/* Action Buttons */}
                       <div style={{
-                        
                         display: 'flex',
                         gap: '1rem',
                         marginTop: '1.5rem',
-                        paddingTop: '1rem',
-                        borderTop: '1px solid #475569',
                         flexWrap: 'wrap'
                       }}>
                         <button
                           onClick={() => {
-                            // Copy all replies as one text
-                            const allReplies = selectedReply.replies.map((reply, index) => 
-                              `=== Reply #${index + 1} (${new Date(reply.reply_date).toLocaleString()}) ===\n` +
-                              `From: ${reply.reply_sender}\n` +
-                              `Subject: ${reply.reply_subject || 'No subject'}\n\n` +
-                              `${reply.reply_content}\n\n`
-                            ).join('')
-                            
-                            navigator.clipboard.writeText(allReplies).then(() => {
-                              setStatus('📋 All replies copied to clipboard!')
-                              setTimeout(() => setStatus(""), 2000)
-                            }).catch(() => {
-                              setStatus('Failed to copy content')
-                              setTimeout(() => setStatus(""), 2000)
+                            setCustomReplyData({
+                              email_id: selectedReply.id,
+                              school_email: selectedReply.school_email,
+                              school_name: selectedReply.school_name,
+                              subject: `Re: PSA Programs`,
+                              message: ''
                             })
-                          }}
-                          style={{
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.75rem 1.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600'
-                          }}
-                        >
-                          📋 Copy All Replies
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            const latestReply = selectedReply.replies[selectedReply.replies.length - 1]
-                            const mailtoLink = `mailto:${selectedReply.school_email}?subject=Re: ${latestReply?.reply_subject || 'PSA Programs'}`
-                            window.location.href = mailtoLink
+                            setShowCustomReplyModal(true)
+                            setShowReplyModal(false)
                           }}
                           style={{
                             background: '#10b981',
@@ -1924,7 +1827,7 @@ export default function Emails() {
                             fontWeight: '600'
                           }}
                         >
-                          ↩️ Reply to Email
+                          ✍️ Send Custom Reply
                         </button>
                         
                         <button
@@ -1943,6 +1846,19 @@ export default function Emails() {
                           Close
                         </button>
                       </div>
+                    </div>
+                  ) : selectedReply && selectedReply.error ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '2rem',
+                      color: '#ef4444',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      borderRadius: '8px'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>❌</div>
+                      <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Error Loading Reply</div>
+                      <div style={{ fontSize: '0.9rem' }}>{selectedReply.error}</div>
                     </div>
                   ) : null}
                 </div>

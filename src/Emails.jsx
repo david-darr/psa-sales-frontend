@@ -37,6 +37,7 @@ export default function Emails() {
   const [emailStatuses, setEmailStatuses] = useState([])
   const [showAddSchool, setShowAddSchool] = useState(false)
   const [schoolFilter, setSchoolFilter] = useState("all") // New filter state
+  const [emailFilter, setEmailFilter] = useState("all") // Add this new state
   const [newSchool, setNewSchool] = useState({
     school_name: "",
     contact_name: "",
@@ -173,10 +174,10 @@ export default function Emails() {
   }
 
   const handleSelectAllEmails = () => {
-    if (selectedEmailsToDelete.length === emailStatuses.length) {
+    if (selectedEmailsToDelete.length === filteredEmails.length) {
       setSelectedEmailsToDelete([])
     } else {
-      setSelectedEmailsToDelete(emailStatuses.map(email => email.id))
+      setSelectedEmailsToDelete(filteredEmails.map(email => email.id))
     }
   }
 
@@ -412,6 +413,23 @@ export default function Emails() {
   const pendingCount = mySchools.filter(school => school.status !== "contacted").length
   const contactedCount = mySchools.filter(school => school.status === "contacted").length
 
+  // Add these filter functions after your existing filteredSchools logic
+  const filteredEmails = emailStatuses.filter(email => {
+    if (emailFilter === "pending") {
+      return !email.responded && !email.followup_sent
+    } else if (emailFilter === "followup") {
+      return !email.responded && email.followup_sent
+    } else if (emailFilter === "responded") {
+      return email.responded
+    }
+    return true // "all" shows everything
+  })
+
+  // Get counts for filter labels
+  const pendingEmailsCount = emailStatuses.filter(email => !email.responded && !email.followup_sent).length
+  const followupEmailsCount = emailStatuses.filter(email => !email.responded && email.followup_sent).length
+  const respondedEmailsCount = emailStatuses.filter(email => email.responded).length
+
   // Fetch and display reply content
   const handleViewReply = async (emailId) => {
     try {
@@ -506,6 +524,99 @@ export default function Emails() {
       console.error('Custom reply error:', error)
     } finally {
       setSendingCustomReply(false)
+      setTimeout(() => setStatus(""), 5000)
+    }
+  }
+
+  const handleMassFollowup = async () => {
+    const pendingEmails = emailStatuses.filter(email => !email.responded && !email.followup_sent)
+    
+    if (pendingEmails.length === 0) {
+      setStatus("No pending emails to send follow-ups to")
+      setTimeout(() => setStatus(""), 3000)
+      return
+    }
+
+    if (!confirm(`Send follow-up emails to ${pendingEmails.length} pending school${pendingEmails.length === 1 ? '' : 's'}?`)) {
+      return
+    }
+
+    setLoading(true)
+    setStatus("Sending mass follow-ups...")
+    
+    try {
+      let totalSent = 0
+      let totalErrors = []
+      
+      // Split into chunks of 3 to prevent timeout (smaller than regular emails since follow-ups are simpler)
+      const chunkSize = 3
+      const chunks = []
+      for (let i = 0; i < pendingEmails.length; i += chunkSize) {
+        chunks.push(pendingEmails.slice(i, i + chunkSize))
+      }
+      
+      // Send each chunk separately
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]
+        setStatus(`Sending follow-ups ${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, pendingEmails.length)} of ${pendingEmails.length}...`)
+        
+        // Send follow-ups in parallel for each chunk
+        const chunkPromises = chunk.map(async (email) => {
+          try {
+            const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({ email_id: email.id })
+            })
+            
+            const data = await res.json()
+            if (data.status === "follow-up sent") {
+              return { success: true, school: email.school_name }
+            } else {
+              return { success: false, school: email.school_name, error: data.error }
+            }
+          } catch (error) {
+            return { success: false, school: email.school_name, error: "Network error" }
+          }
+        })
+        
+        const chunkResults = await Promise.all(chunkPromises)
+        
+        // Count successes and errors
+        chunkResults.forEach(result => {
+          if (result.success) {
+            totalSent++
+          } else {
+            totalErrors.push(`${result.school}: ${result.error}`)
+          }
+        })
+        
+        // Small delay between chunks
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      }
+      
+      // Refresh email statuses
+      fetchEmailStatuses()
+      
+      if (totalSent > 0) {
+        setStatus(`✅ Successfully sent ${totalSent} follow-up emails!`)
+      }
+      
+      if (totalErrors.length > 0) {
+        setStatus(prev => prev + ` ${totalErrors.length} failed to send.`)
+        console.log("Follow-up errors:", totalErrors)
+      }
+      
+    } catch (error) {
+      console.error('Mass follow-up error:', error)
+      setStatus("❌ Error occurred while sending follow-ups")
+    } finally {
+      setLoading(false)
       setTimeout(() => setStatus(""), 5000)
     }
   }
@@ -1161,8 +1272,10 @@ export default function Emails() {
                                school.school_type === 'private' ? '🏫 Private School' : '📚 Elementary'}
                             </div>
                           </td>
-                          <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.9rem" }}>
-                            {school.contact_name || "—"}
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ color: "#e2e8f0", fontSize: "0.9rem" }}>
+                              {school.contact_name || "—"}
+                            </div>
                           </td>
                           {!isMobile && (
                             <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
@@ -1773,7 +1886,7 @@ export default function Emails() {
                               border: '1px solid #334155',
                               borderRadius: '8px',
                               padding: '1.5rem',
-                              marginBottom: '1rem'
+                                                           marginBottom: '1rem'
                             }}>
                               <div style={{ marginBottom: '1rem', color: '#94a3b8', fontSize: '0.85rem' }}>
                                 <strong>Reply #{index + 1}</strong> • {new Date(reply.reply_date).toLocaleString()}

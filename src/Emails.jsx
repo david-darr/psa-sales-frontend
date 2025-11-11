@@ -1346,7 +1346,7 @@ export default function Emails() {
               </div>
             </div>
 
-            {/* Email History Card */}
+            {/* Updated Email History Card with Filters */}
             <div className="modern-dashboard-card">
               <div className="modern-card-header">
                 <div className="modern-card-title">Email History ({emailStatuses.length} emails sent)</div>
@@ -1355,28 +1355,66 @@ export default function Emails() {
                 </div>
               </div>
               <div className="modern-card-content">
+                {/* Filter Controls */}
                 <div style={{ 
                   display: "flex", 
                   justifyContent: "space-between", 
                   alignItems: "center", 
                   marginBottom: "1rem",
                   flexWrap: "wrap",
-                  gap: "0.5rem"
+                  gap: "1rem"
                 }}>
-                  <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
-                    Manage your sent emails and track responses
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                      Filter emails:
+                    </div>
+                    <select
+                      value={emailFilter}
+                      onChange={(e) => setEmailFilter(e.target.value)}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        border: "1px solid #475569",
+                        borderRadius: "8px",
+                        background: "#334155",
+                        color: "#f1f5f9",
+                        fontSize: "0.9rem",
+                        minWidth: "220px"
+                      }}
+                    >
+                      <option value="all">📋 All Emails ({emailStatuses.length})</option>
+                      <option value="pending">⏳ Pending ({pendingEmailsCount})</option>
+                      <option value="followup">📧 Follow-up Sent ({followupEmailsCount})</option>
+                      <option value="responded">✅ Responded ({respondedEmailsCount})</option>
+                    </select>
                   </div>
+                  
                   <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {/* Mass Follow-up Button */}
+                    {pendingEmailsCount > 0 && (
+                      <button
+                        className="modern-btn-primary"
+                        onClick={handleMassFollowup}
+                        style={{ 
+                          padding: "0.5rem 1rem", 
+                          fontSize: "0.85rem",
+                          background: "#f59e0b"
+                        }}
+                        disabled={loading}
+                      >
+                        {loading ? "📧 Sending..." : `📧 Mass Follow-up (${pendingEmailsCount})`}
+                      </button>
+                    )}
+                    
                     <button
                       className="modern-btn-primary"
                       onClick={handleSelectAllEmails}
                       style={{ 
                         padding: "0.5rem 1rem", 
                         fontSize: "0.85rem",
-                        background: selectedEmailsToDelete.length === emailStatuses.length ? "#ef4444" : "#64748b"
+                        background: selectedEmailsToDelete.length === filteredEmails.length ? "#ef4444" : "#64748b"
                       }}
                     >
-                      {selectedEmailsToDelete.length === emailStatuses.length ? "Deselect All" : "Select All"}
+                      {selectedEmailsToDelete.length === filteredEmails.length ? "Deselect All" : "Select All"}
                     </button>
                     <button
                       className="modern-btn-primary"
@@ -1404,6 +1442,29 @@ export default function Emails() {
                         {loading ? "🗑️ Deleting..." : `🗑️ Delete ${selectedEmailsToDelete.length}`}
                       </button>
                     )}
+                  </div>
+                </div>
+
+                {/* Filter Info */}
+                <div style={{ 
+                  background: "rgba(245, 158, 11, 0.1)",
+                  border: "1px solid rgba(245, 158, 11, 0.2)",
+                  borderRadius: "8px",
+                  padding: "0.75rem",
+                  marginBottom: "1rem",
+                  fontSize: "0.9rem",
+                  color: "#94a3b8"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <span>
+                      Showing <strong style={{ color: "#f59e0b" }}>{filteredEmails.length}</strong> emails
+                      {emailFilter !== "all" && (
+                        <span> (filtered from {emailStatuses.length} total)</span>
+                      )}
+                    </span>
+                    <span>
+                      ⏳ {pendingEmailsCount} pending • 📧 {followupEmailsCount} follow-up sent • ✅ {respondedEmailsCount} responded
+                    </span>
                   </div>
                 </div>
                 
@@ -1444,7 +1505,7 @@ export default function Emails() {
                       </tr>
                     </thead>
                     <tbody>
-                      {emailStatuses.map((email, index) => (
+                      {filteredEmails.map((email, index) => (
                         <tr 
                           key={email.id}
                           style={{ 
@@ -1554,12 +1615,36 @@ export default function Emails() {
                                   Mark Replied
                                 </button>
                               )}
+                              {email.responded && email.has_reply_content && (
+                                <button
+                                  className="modern-btn-primary"
+                                  style={{ 
+                                    padding: "0.35rem 0.75rem", 
+                                    fontSize: "0.8rem",
+                                    background: "#3b82f6"
+                                  }}
+                                  onClick={() => handleViewReply(email.id)}
+                                >
+                                  👁️ View Reply
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  
+                  {filteredEmails.length === 0 && emailStatuses.length > 0 && (
+                    <div style={{ 
+                      textAlign: "center", 
+                      padding: "2rem", 
+                      color: "#64748b",
+                      fontSize: "0.9rem"
+                    }}>
+                      No emails match the current filter. Try selecting a different filter option.
+                    </div>
+                  )}
                   
                   {emailStatuses.length === 0 && (
                     <div style={{ 
@@ -1759,7 +1844,7 @@ export default function Emails() {
                     </tbody>
                   </table>
                   
-                  {emailStatuses.length === 0 && emailStatuses.filter(email => email.responded).length === 0 && (
+                  {emailStatuses.length === 0 && (
                     <div style={{ 
                       textAlign: "center", 
                       padding: "3rem 2rem",
@@ -1802,7 +1887,7 @@ export default function Emails() {
                   overflowY: 'auto',
                   position: 'relative'
                 }}>
-                  {/* Modal Header */}
+                                   {/* Modal Header */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',

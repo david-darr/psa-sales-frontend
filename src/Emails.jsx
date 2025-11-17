@@ -483,6 +483,14 @@ export default function Emails() {
   const followupEmailsCount = emailStatuses.filter(email => !email.responded && email.followup_sent).length
   const respondedEmailsCount = emailStatuses.filter(email => email.responded).length
 
+  const urgentFollowups = emailStatuses.filter(email => 
+    !email.responded && !email.followup_sent && (email.days_ago || 0) >= 14
+  ).length
+
+  const dueFollowups = emailStatuses.filter(email => 
+    !email.responded && !email.followup_sent && (email.days_ago || 0) >= 7 && (email.days_ago || 0) < 14
+  ).length
+
   // Fetch and display reply content
   const handleViewReply = async (emailId) => {
     try {
@@ -692,34 +700,19 @@ export default function Emails() {
     document.body.removeChild(link)
   }
 
-  // Add this helper function around line 80
-  const getFollowupUrgency = (email) => {
-    if (email.responded) return null
-    if (email.followup_sent) return null
-    
-    const daysAgo = email.days_ago || 0
-    
-    if (daysAgo >= 14) {
-      return { 
-        text: "🚨 Urgent Follow-up", 
-        color: "#ef4444", 
-        bg: "rgba(239, 68, 68, 0.1)" 
-      }
-    } else if (daysAgo >= 7) {
-      return { 
-        text: "⚠️ Follow-up Due", 
-        color: "#f59e0b", 
-        bg: "rgba(245, 158, 11, 0.1)" 
-      }
-    } else if (daysAgo >= 3) {
-      return { 
-        text: "📅 Follow-up Soon", 
-        color: "#3b82f6", 
-        bg: "rgba(59, 130, 246, 0.1)" 
-      }
+  // Add this helper function around line 50 (after the getFollowupUrgency function)
+  const getTimeAgoDisplay = (sentAt, daysAgo) => {
+    if (daysAgo === 0) {
+      return { text: "Today", color: "#10b981", icon: "🆕" }
+    } else if (daysAgo === 1) {
+      return { text: "Yesterday", color: "#3b82f6", icon: "📅" }
+    } else if (daysAgo <= 7) {
+      return { text: `${daysAgo} days ago`, color: "#f59e0b", icon: "📆" }
+    } else if (daysAgo <= 30) {
+      return { text: `${daysAgo} days ago`, color: "#ef4444", icon: "⏰" }
+    } else {
+      return { text: `${daysAgo} days ago`, color: "#64748b", icon: "🕐" }
     }
-    
-    return null
   }
 
   return (
@@ -1452,33 +1445,9 @@ export default function Emails() {
                             {isMobile && (
                               <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                                 <div>📧 {school.email}</div>
-                                <div style={{ 
-                                  display: "flex", 
-                                  justifyContent: "space-between", 
-                                  alignItems: "center",
-                                  marginTop: "0.25rem" 
-                                }}>
-                                  <span>{email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}</span>
-                                  <span style={{ 
-                                    color: getTimeAgoDisplay(email.sent_at, email.days_ago).color,
-                                    fontSize: "0.75rem",
-                                    fontWeight: "600",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.25rem"
-                                  }}>
-                                    {getTimeAgoDisplay(email.sent_at, email.days_ago).icon}
-                                    {getTimeAgoDisplay(email.sent_at, email.days_ago).text}
-                                  </span>
-                                </div>
-                                {getFollowupUrgency(email) && (
-                                  <div style={{
-                                    fontSize: "0.7rem",
-                                    color: getFollowupUrgency(email).color,
-                                    fontWeight: "600",
-                                    marginTop: "0.25rem"
-                                  }}>
-                                    {getFollowupUrgency(email).text}
+                                {school.additional_emails && school.additional_emails.length > 0 && (
+                                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
+                                    +{school.additional_emails.length} more email{school.additional_emails.length === 1 ? '' : 's'}
                                   </div>
                                 )}
                               </div>
@@ -1497,7 +1466,7 @@ export default function Emails() {
                             </div>
                           </td>
                           <td style={{ padding: "0.75rem" }}>
-                            <div style={{ color: "#e2e8f0", fontSize: "0.9rem" }}>
+                            <div style={{ color: "#e2e8f0", fontSize: "0.85rem" }}>
                               {school.contact_name || "—"}
                             </div>
                           </td>
@@ -1512,22 +1481,8 @@ export default function Emails() {
                             </td>
                           )}
                           <td style={{ padding: "0.75rem" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                              <div>{email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}</div>
-                              <div style={{ 
-                                display: "flex", 
-                                alignItems: "center", 
-                                gap: "0.25rem",
-                                fontSize: "0.75rem"
-                              }}>
-                                <span>{getTimeAgoDisplay(email.sent_at, email.days_ago).icon}</span>
-                                <span style={{ 
-                                  color: getTimeAgoDisplay(email.sent_at, email.days_ago).color,
-                                  fontWeight: "600"
-                                }}>
-                                  {getTimeAgoDisplay(email.sent_at, email.days_ago).text}
-                                </span>
-                              </div>
+                            <div style={{ color: "#e2e8f0", fontSize: "0.85rem" }}>
+                              {school.status === 'contacted' ? 'Recently contacted' : 'Not contacted yet'}
                             </div>
                           </td>
                           {user.admin && !isMobile && (
@@ -1547,20 +1502,6 @@ export default function Emails() {
                               }}>
                                 {school.status === 'contacted' ? '✅ Contacted' : '⏳ Pending'}
                               </span>
-                              
-                              {/* Time-based urgency indicator */}
-                              {getFollowupUrgency(email) && (
-                                <span style={{
-                                  background: getFollowupUrgency(email).bg,
-                                  color: getFollowupUrgency(email).color,
-                                  padding: '0.2rem 0.4rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.7rem',
-                                  fontWeight: '600'
-                                }}>
-                                  {getFollowupUrgency(email).text}
-                                </span>
-                              )}
                             </div>
                           </td>
                           {user.admin && !isMobile && (
@@ -1896,7 +1837,6 @@ export default function Emails() {
                               <div style={{ 
                                 display: "flex", 
                                 alignItems: "center", 
-                                
                                 gap: "0.25rem",
                                 fontSize: "0.75rem"
                               }}>

@@ -674,6 +674,24 @@ export default function Emails() {
     }
   }
 
+  const downloadCsvTemplate = () => {
+    const csvContent = `school_name,email,contact_name,phone,address,school_type
+"ABC Preschool","director@abcpreschool.com","Jane Smith","555-0123","123 Main St, Fairfax VA","preschool"
+"ABC Preschool","admin@abcpreschool.com","John Doe","555-0123","123 Main St, Fairfax VA","preschool"
+"XYZ Elementary","principal@xyzelementary.edu","Mary Johnson","555-0456","456 Oak Ave, Reston VA","elementary"
+"St. Mary Catholic School","office@stmary.org","Father Mike","555-0789","789 Pine Rd, McLean VA","private"`
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'schools_template.csv')
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="dashboard-container">
       {/* Mobile Navigation Toggle Button */}
@@ -1099,7 +1117,7 @@ export default function Emails() {
                 {/* CSV Upload Form */}
                 {showCsvUpload && (
                   <div>
-                    {/* CSV Format Instructions */}
+                    {/* CSV Format Requirements */}
                     <div style={{ 
                       background: "rgba(59, 130, 246, 0.1)",
                       border: "1px solid rgba(59, 130, 246, 0.2)",
@@ -1123,10 +1141,14 @@ export default function Emails() {
                           <strong>Optional columns:</strong> contact_name, phone, address, school_type
                         </p>
                         <p style={{ marginBottom: "0.5rem" }}>
-                          <strong>School type:</strong> Use "preschool" or "elementary" (defaults to preschool)
+                          <strong>School types:</strong> "preschool", "elementary", or "private" (defaults to preschool)
+                        </p>
+                        <p style={{ marginBottom: "0.5rem" }}>
+                          <strong>Multiple emails:</strong> Use separate rows for the same school with different emails
                         </p>
                         <p style={{ fontSize: "0.8rem", color: "#64748b" }}>
                           Column names are flexible - we'll match variations like "School Name", "Contact Name", etc.
+                          Schools with the same name will be grouped together with all their email addresses.
                         </p>
                       </div>
                     </div>
@@ -1152,16 +1174,7 @@ export default function Emails() {
                       </div>
                       <button
                         className="modern-btn-primary"
-                        onClick={() => {
-                          const csvContent = "school_name,contact_name,email,phone,address,school_type\nSunshine Preschool,Jane Smith,jane@sunshine.edu,555-0123,123 Main St,preschool\nElementary Academy,John Doe,contact@elementary.edu,555-0456,456 Oak Ave,elementary"
-                          const blob = new Blob([csvContent], { type: 'text/csv' })
-                          const url = window.URL.createObjectURL(blob)
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = 'schools_template.csv'
-                          a.click()
-                          window.URL.revokeObjectURL(url)
-                        }}
+                        onClick={downloadCsvTemplate}
                         style={{ 
                           background: "#10b981",
                           fontSize: "0.85rem",
@@ -1909,7 +1922,7 @@ export default function Emails() {
                       </tr>
                     </thead>
                     <tbody>
-                      {emailStatuses
+                      {filteredEmails
                         .filter(email => email.responded)
                         .map((email, index) => (
                         <tr 

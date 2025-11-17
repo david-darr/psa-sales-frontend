@@ -42,10 +42,12 @@ export default function Emails() {
     school_name: "",
     contact_name: "",
     email: "",
+    additional_emails: [""], // New field
     phone: "",
     address: "",
     school_type: "preschool"
   })
+  const [sendToAllEmails, setSendToAllEmails] = useState(false) // New state
   const [showCsvUpload, setShowCsvUpload] = useState(false)
   const [csvFile, setCsvFile] = useState(null)
   const [csvUploading, setCsvUploading] = useState(false)
@@ -181,15 +183,45 @@ export default function Emails() {
     }
   }
 
+  const addEmailField = () => {
+    setNewSchool(prev => ({
+      ...prev,
+      additional_emails: [...prev.additional_emails, ""]
+    }))
+  }
+
+  const removeEmailField = (index) => {
+    setNewSchool(prev => ({
+      ...prev,
+      additional_emails: prev.additional_emails.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateAdditionalEmail = (index, value) => {
+    setNewSchool(prev => ({
+      ...prev,
+      additional_emails: prev.additional_emails.map((email, i) => 
+        i === index ? value : email
+      )
+    }))
+  }
+
   const handleAddSchool = async (e) => {
     e.preventDefault()
+    
+    // Filter out empty additional emails
+    const filteredAdditionalEmails = newSchool.additional_emails.filter(email => email.trim())
+    
     const res = await fetch("https://psa-sales-backend.onrender.com/api/add-school", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`
       },
-      body: JSON.stringify(newSchool)
+      body: JSON.stringify({
+        ...newSchool,
+        additional_emails: filteredAdditionalEmails
+      })
     })
     const data = await res.json()
     if (data.message) {
@@ -198,6 +230,7 @@ export default function Emails() {
         school_name: "", 
         contact_name: "", 
         email: "", 
+        additional_emails: [""],
         phone: "", 
         address: "",
         school_type: "preschool"
@@ -217,10 +250,28 @@ export default function Emails() {
     setLoading(true)
     
     try {
+      // Calculate total emails that will be sent
+      let totalEmailsToSend = 0
+      if (sendToAllEmails) {
+        const selectedSchoolsData = mySchools.filter(school => selectedSchools.includes(school.id))
+        totalEmailsToSend = selectedSchoolsData.reduce((total, school) => {
+          return total + (school.all_emails ? school.all_emails.length : 1)
+        }, 0)
+      } else {
+        totalEmailsToSend = selectedSchools.length
+      }
+      
+      if (totalEmailsToSend > 15) {
+        setStatus(`Too many emails to send (${totalEmailsToSend}). Maximum is 15 per batch. ${sendToAllEmails ? 'Try unchecking "Send to all emails"' : ''}`)
+        setLoading(false)
+        setTimeout(() => setStatus(""), 5000)
+        return
+      }
+      
       let totalSent = 0
       let totalErrors = []
       
-      // Split large selections into chunks of 5
+      // Split large selections into chunks of 5 schools (not emails)
       const chunkSize = 5
       const chunks = []
       for (let i = 0; i < selectedSchools.length; i += chunkSize) {
@@ -230,7 +281,7 @@ export default function Emails() {
       // Send each chunk separately
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i]
-        setStatus(`Sending emails ${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, selectedSchools.length)} of ${selectedSchools.length}...`)
+        setStatus(`Sending emails ${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, selectedSchools.length)} of ${selectedSchools.length} schools...`)
         
         const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
           method: "POST",
@@ -240,7 +291,8 @@ export default function Emails() {
           },
           body: JSON.stringify({
             school_ids: chunk,
-            subject: "Let's Connect! PSA Programs"
+            subject: "Let's Connect! PSA Programs",
+            send_to_all_emails: sendToAllEmails
           })
         })
         
@@ -259,6 +311,7 @@ export default function Emails() {
       if (totalSent > 0) {
         setStatus(`✅ Successfully sent ${totalSent} emails!`)
         setSelectedSchools([])
+        setSendToAllEmails(false)
         fetchEmailStatuses()
         fetchMySchools()
       } else {
@@ -874,13 +927,27 @@ export default function Emails() {
                           fontSize: "1rem"
                         }}
                       />
+                    </div>
+
+                    {/* Primary Email */}
+                    <div style={{ marginBottom: "1rem" }}>
+                      <label style={{
+                        color: "#f1f5f9",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        display: "block",
+                        marginBottom: "0.5rem"
+                      }}>
+                        Primary Email *
+                      </label>
                       <input
                         type="email"
-                        placeholder="Email *"
+                        placeholder="Primary Email *"
                         value={newSchool.email}
                         onChange={(e) => setNewSchool({...newSchool, email: e.target.value})}
                         required
                         style={{
+                          width: "100%",
                           padding: "0.75rem 1rem",
                           border: "1px solid #475569",
                           borderRadius: "8px",
@@ -889,6 +956,86 @@ export default function Emails() {
                           fontSize: "1rem"
                         }}
                       />
+                    </div>
+
+                    {/* Additional Emails */}
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.5rem"
+                      }}>
+                        <label style={{
+                          color: "#f1f5f9",
+                          fontSize: "0.9rem",
+                          fontWeight: "600"
+                        }}>
+                          Additional Emails (Optional)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={addEmailField}
+                          style={{
+                            background: "#3b82f6",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "6px",
+                            padding: "0.25rem 0.5rem",
+                            fontSize: "0.8rem",
+                            cursor: "pointer"
+                          }}
+                        >
+                          + Add Email
+                        </button>
+                      </div>
+                      
+                      {newSchool.additional_emails.map((email, index) => (
+                        <div key={index} style={{
+                          display: "flex",
+                          gap: "0.5rem",
+                          marginBottom: "0.5rem"
+                        }}>
+                          <input
+                            type="email"
+                            placeholder={`Additional Email ${index + 1}`}
+                            value={email}
+                            onChange={(e) => updateAdditionalEmail(index, e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: "0.5rem",
+                              border: "1px solid #475569",
+                              borderRadius: "6px",
+                              background: "#334155",
+                              color: "#f1f5f9",
+                              fontSize: "0.9rem"
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeEmailField(index)}
+                            style={{
+                              background: "#ef4444",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "6px",
+                              padding: "0.5rem",
+                              cursor: "pointer",
+                              fontSize: "0.8rem"
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div style={{ 
+                      display: "grid", 
+                      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                      gap: "1rem",
+                      marginBottom: "1rem"
+                    }}>
                       <input
                         placeholder="Phone"
                         value={newSchool.phone}
@@ -902,14 +1049,6 @@ export default function Emails() {
                           fontSize: "1rem"
                         }}
                       />
-                    </div>
-                    
-                    <div style={{ 
-                      display: "grid", 
-                      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                      gap: "1rem",
-                      marginBottom: "1rem"
-                    }}>
                       <input
                         placeholder="Address"
                         value={newSchool.address}
@@ -923,6 +1062,9 @@ export default function Emails() {
                           fontSize: "1rem"
                         }}
                       />
+                    </div>
+                    
+                    <div style={{ marginBottom: "1rem" }}>
                       <select
                         name="school_type"
                         value={newSchool.school_type}
@@ -1257,6 +1399,11 @@ export default function Emails() {
                             {isMobile && (
                               <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                                 📧 {school.email}
+                                {school.additional_emails && school.additional_emails.length > 0 && (
+                                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
+                                    +{school.additional_emails.length} more email{school.additional_emails.length === 1 ? '' : 's'}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </td>
@@ -1279,7 +1426,12 @@ export default function Emails() {
                           </td>
                           {!isMobile && (
                             <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
-                              {school.email}
+                              <div>{school.email}</div>
+                              {school.additional_emails && school.additional_emails.length > 0 && (
+                                <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
+                                  +{school.additional_emails.length} additional email{school.additional_emails.length === 1 ? '' : 's'}
+                                </div>
+                              )}
                             </td>
                           )}
                           <td style={{ padding: "0.75rem" }}>
@@ -1327,6 +1479,35 @@ export default function Emails() {
                   )}
                 </div>
 
+                {/* Add this before the Send Email button around line 900 */}
+                <div style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  borderRadius: "8px",
+                  padding: "1rem",
+                  marginBottom: "1rem"
+                }}>
+                  <label style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    color: "#f1f5f9",
+                    fontSize: "0.9rem",
+                    cursor: "pointer"
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={sendToAllEmails}
+                      onChange={(e) => setSendToAllEmails(e.target.checked)}
+                      style={{ accentColor: "#3b82f6" }}
+                    />
+                    📧 Send to all email addresses (including additional emails)
+                  </label>
+                  <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+                    When checked, emails will be sent to both primary and additional email addresses for each school.
+                  </div>
+                </div>
+
                 <button
                   onClick={handleSendEmails}
                   className="modern-btn-primary"
@@ -1340,7 +1521,7 @@ export default function Emails() {
                 >
                   {loading ? 
                     "📧 Sending..." : 
-                    `📧 Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`
+                    `📧 Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"} ${sendToAllEmails ? '(All Addresses)' : '(Primary Only)'}`
                   }
                 </button>
               </div>

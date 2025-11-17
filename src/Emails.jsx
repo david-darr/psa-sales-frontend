@@ -715,6 +715,36 @@ export default function Emails() {
     }
   }
 
+  // Add this function right after getTimeAgoDisplay
+  const getFollowupUrgency = (email) => {
+    if (email.responded) return null
+    if (email.followup_sent) return null
+    
+    const daysAgo = email.days_ago || 0
+    
+    if (daysAgo >= 14) {
+      return { 
+        text: "🚨 Urgent Follow-up", 
+        color: "#ef4444", 
+        bg: "rgba(239, 68, 68, 0.1)" 
+      }
+    } else if (daysAgo >= 7) {
+      return { 
+        text: "⚠️ Follow-up Due", 
+        color: "#f59e0b", 
+        bg: "rgba(245, 158, 11, 0.1)" 
+      }
+    } else if (daysAgo >= 3) {
+      return { 
+        text: "📅 Follow-up Soon", 
+        color: "#3b82f6", 
+        bg: "rgba(59, 130, 246, 0.1)" 
+      }
+    }
+    
+    return null
+  }
+
   return (
     <div className="dashboard-container">
       {/* Mobile Navigation Toggle Button */}

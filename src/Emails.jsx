@@ -692,6 +692,36 @@ export default function Emails() {
     document.body.removeChild(link)
   }
 
+  // Add this helper function around line 80
+  const getFollowupUrgency = (email) => {
+    if (email.responded) return null
+    if (email.followup_sent) return null
+    
+    const daysAgo = email.days_ago || 0
+    
+    if (daysAgo >= 14) {
+      return { 
+        text: "🚨 Urgent Follow-up", 
+        color: "#ef4444", 
+        bg: "rgba(239, 68, 68, 0.1)" 
+      }
+    } else if (daysAgo >= 7) {
+      return { 
+        text: "⚠️ Follow-up Due", 
+        color: "#f59e0b", 
+        bg: "rgba(245, 158, 11, 0.1)" 
+      }
+    } else if (daysAgo >= 3) {
+      return { 
+        text: "📅 Follow-up Soon", 
+        color: "#3b82f6", 
+        bg: "rgba(59, 130, 246, 0.1)" 
+      }
+    }
+    
+    return null
+  }
+
   return (
     <div className="dashboard-container">
       {/* Mobile Navigation Toggle Button */}
@@ -1379,11 +1409,21 @@ export default function Emails() {
                           </th>
                         )}
                         <th style={{ padding: "0.75rem", textAlign: "left" }}>
-                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Status</span>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>
+                            {isMobile ? "Date & Age" : "Date Sent"}
+                          </span>
                         </th>
                         {user.admin && !isMobile && (
                           <th style={{ padding: "0.75rem", textAlign: "left" }}>
                             <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Added By</span>
+                          </th>
+                        )}
+                        <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Status</span>
+                        </th>
+                        {user.admin && !isMobile && (
+                          <th style={{ padding: "0.75rem", textAlign: "left" }}>
+                            <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Actions</span>
                           </th>
                         )}
                       </tr>
@@ -1411,10 +1451,34 @@ export default function Emails() {
                             </div>
                             {isMobile && (
                               <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-                                📧 {school.email}
-                                {school.additional_emails && school.additional_emails.length > 0 && (
-                                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
-                                    +{school.additional_emails.length} more email{school.additional_emails.length === 1 ? '' : 's'}
+                                <div>📧 {school.email}</div>
+                                <div style={{ 
+                                  display: "flex", 
+                                  justifyContent: "space-between", 
+                                  alignItems: "center",
+                                  marginTop: "0.25rem" 
+                                }}>
+                                  <span>{email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}</span>
+                                  <span style={{ 
+                                    color: getTimeAgoDisplay(email.sent_at, email.days_ago).color,
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem"
+                                  }}>
+                                    {getTimeAgoDisplay(email.sent_at, email.days_ago).icon}
+                                    {getTimeAgoDisplay(email.sent_at, email.days_ago).text}
+                                  </span>
+                                </div>
+                                {getFollowupUrgency(email) && (
+                                  <div style={{
+                                    fontSize: "0.7rem",
+                                    color: getFollowupUrgency(email).color,
+                                    fontWeight: "600",
+                                    marginTop: "0.25rem"
+                                  }}>
+                                    {getFollowupUrgency(email).text}
                                   </div>
                                 )}
                               </div>
@@ -1448,16 +1512,56 @@ export default function Emails() {
                             </td>
                           )}
                           <td style={{ padding: "0.75rem" }}>
-                            <span style={{
-                              background: school.status === 'contacted' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-                              color: school.status === 'contacted' ? '#10b981' : '#64748b',
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.8rem',
-                              fontWeight: '500'
-                            }}>
-                              {school.status === 'contacted' ? '✅ Contacted' : '⏳ Pending'}
-                            </span>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                              <div>{email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}</div>
+                              <div style={{ 
+                                display: "flex", 
+                                alignItems: "center", 
+                                gap: "0.25rem",
+                                fontSize: "0.75rem"
+                              }}>
+                                <span>{getTimeAgoDisplay(email.sent_at, email.days_ago).icon}</span>
+                                <span style={{ 
+                                  color: getTimeAgoDisplay(email.sent_at, email.days_ago).color,
+                                  fontWeight: "600"
+                                }}>
+                                  {getTimeAgoDisplay(email.sent_at, email.days_ago).text}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          {user.admin && !isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {school.user_name || "Unknown"}
+                            </td>
+                          )}
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                              <span style={{
+                                background: school.status === 'contacted' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+                                color: school.status === 'contacted' ? '#10b981' : '#64748b',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '6px',
+                                fontSize: '0.8rem',
+                                fontWeight: '500'
+                              }}>
+                                {school.status === 'contacted' ? '✅ Contacted' : '⏳ Pending'}
+                              </span>
+                              
+                              {/* Time-based urgency indicator */}
+                              {getFollowupUrgency(email) && (
+                                <span style={{
+                                  background: getFollowupUrgency(email).bg,
+                                  color: getFollowupUrgency(email).color,
+                                  padding: '0.2rem 0.4rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '600'
+                                }}>
+                                  {getFollowupUrgency(email).text}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           {user.admin && !isMobile && (
                             <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
@@ -1660,6 +1764,29 @@ export default function Emails() {
                       ⏳ {pendingEmailsCount} pending • 📧 {followupEmailsCount} follow-up sent • ✅ {respondedEmailsCount} responded
                     </span>
                   </div>
+                  
+                  {/* Add time-based urgency summary */}
+                  {(urgentFollowups > 0 || dueFollowups > 0) && (
+                    <div style={{ 
+                      marginTop: "0.5rem", 
+                      paddingTop: "0.5rem", 
+                      borderTop: "1px solid rgba(245, 158, 11, 0.2)",
+                      fontSize: "0.8rem"
+                    }}>
+                      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                        {urgentFollowups > 0 && (
+                          <span style={{ color: "#ef4444" }}>
+                            🚨 {urgentFollowups} urgent follow-up{urgentFollowups === 1 ? '' : 's'} (14+ days)
+                          </span>
+                        )}
+                        {dueFollowups > 0 && (
+                          <span style={{ color: "#f59e0b" }}>
+                            ⚠️ {dueFollowups} follow-up{dueFollowups === 1 ? '' : 's'} due (7+ days)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div style={{ 
@@ -1683,7 +1810,9 @@ export default function Emails() {
                           </th>
                         )}
                         <th style={{ padding: "0.75rem", textAlign: "left" }}>
-                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Date</span>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>
+                            {isMobile ? "Date & Age" : "Date Sent"}
+                          </span>
                         </th>
                         {user.admin && !isMobile && (
                           <th style={{ padding: "0.75rem", textAlign: "left" }}>
@@ -1721,7 +1850,36 @@ export default function Emails() {
                             </div>
                             {isMobile && (
                               <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-                                📧 {email.school_email}
+                                <div>📧 {email.school_email}</div>
+                                <div style={{ 
+                                  display: "flex", 
+                                  justifyContent: "space-between", 
+                                  alignItems: "center",
+                                  marginTop: "0.25rem" 
+                                }}>
+                                  <span>{email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}</span>
+                                  <span style={{ 
+                                    color: getTimeAgoDisplay(email.sent_at, email.days_ago).color,
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem"
+                                  }}>
+                                    {getTimeAgoDisplay(email.sent_at, email.days_ago).icon}
+                                    {getTimeAgoDisplay(email.sent_at, email.days_ago).text}
+                                  </span>
+                                </div>
+                                {getFollowupUrgency(email) && (
+                                  <div style={{
+                                    fontSize: "0.7rem",
+                                    color: getFollowupUrgency(email).color,
+                                    fontWeight: "600",
+                                    marginTop: "0.25rem"
+                                  }}>
+                                    {getFollowupUrgency(email).text}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </td>
@@ -1731,7 +1889,26 @@ export default function Emails() {
                             </td>
                           )}
                           <td style={{ padding: "0.75rem", color: "#e2e8f0", fontSize: "0.85rem" }}>
-                            {new Date(email.sent_at).toLocaleDateString()}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                              <div style={{ fontWeight: "500" }}>
+                                {email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}
+                              </div>
+                              <div style={{ 
+                                display: "flex", 
+                                alignItems: "center", 
+                                
+                                gap: "0.25rem",
+                                fontSize: "0.75rem"
+                              }}>
+                                <span>{getTimeAgoDisplay(email.sent_at, email.days_ago).icon}</span>
+                                <span style={{ 
+                                  color: getTimeAgoDisplay(email.sent_at, email.days_ago).color,
+                                  fontWeight: "600"
+                                }}>
+                                  {getTimeAgoDisplay(email.sent_at, email.days_ago).text}
+                                </span>
+                              </div>
+                            </div>
                           </td>
                           {user.admin && !isMobile && (
                             <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
@@ -1739,91 +1916,42 @@ export default function Emails() {
                             </td>
                           )}
                           <td style={{ padding: "0.75rem" }}>
-                            <span style={{
-                              background: email.responded ? 'rgba(16, 185, 129, 0.2)' : email.followup_sent ? 'rgba(245, 158, 11, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-                              color: email.responded ? '#10b981' : email.followup_sent ? '#f59e0b' : '#64748b',
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.8rem',
-                              fontWeight: '500'
-                            }}>
-                              {email.responded
-                                ? "✅ Responded"
-                                : email.followup_sent
-                                ? "📧 Follow-Up Sent"
-                                : "⏳ Pending"}
-                            </span>
-                          </td>
-                          <td style={{ padding: "0.75rem" }}>
-                            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                              {!email.responded && !email.followup_sent && (
-                                <button
-                                  className="modern-btn-primary"
-                                  style={{ 
-                                    padding: "0.35rem 0.75rem", 
-                                    fontSize: "0.8rem",
-                                    background: "#f59e0b"
-                                  }}
-                                  onClick={async () => {
-                                    const res = await fetch("https://psa-sales-backend.onrender.com/api/send-followup", {
-                                      method: "POST",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                        "Authorization": `Bearer ${accessToken}`
-                                      },
-                                      body: JSON.stringify({ email_id: email.id })
-                                    })
-                                    const data = await res.json()
-                                    if (data.status === "follow-up sent") {
-                                      fetchEmailStatuses()
-                                    } else {
-                                      alert(data.error || "Failed to send follow-up")
-                                    }
-                                  }}
-                                >
-                                  Follow-Up
-                                </button>
-                              )}
-                              {!email.responded && (
-                                <button
-                                  className="modern-btn-primary"
-                                  style={{ 
-                                    padding: "0.35rem 0.75rem", 
-                                    fontSize: "0.8rem",
-                                    background: "#10b981"
-                                  }}
-                                  onClick={async () => {
-                                    const res = await fetch("https://psa-sales-backend.onrender.com/api/mark-responded", {
-                                      method: "POST",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                        "Authorization": `Bearer ${accessToken}`
-                                      },
-                                      body: JSON.stringify({ email_id: email.id, responded: true })
-                                    })
-                                    if (res.ok) {
-                                      fetchEmailStatuses()
-                                    }
-                                  }}
-                                >
-                                  Mark Replied
-                                </button>
-                              )}
-                              {email.responded && email.has_reply_content && (
-                                <button
-                                  className="modern-btn-primary"
-                                  style={{ 
-                                    padding: "0.35rem 0.75rem", 
-                                    fontSize: "0.8rem",
-                                    background: "#3b82f6"
-                                  }}
-                                  onClick={() => handleViewReply(email.id)}
-                                >
-                                  👁️ View Reply
-                                </button>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                              <span style={{
+                                background: email.responded ? 'rgba(16, 185, 129, 0.2)' : email.followup_sent ? 'rgba(245, 158, 11, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+                                color: email.responded ? '#10b981' : email.followup_sent ? '#f59e0b' : '#64748b',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '6px',
+                                fontSize: '0.8rem',
+                                fontWeight: '500'
+                              }}>
+                                {email.responded
+                                  ? "✅ Responded"
+                                  : email.followup_sent
+                                  ? "📧 Follow-Up Sent"
+                                  : "⏳ Pending"}
+                              </span>
+                              
+                              {/* Time-based urgency indicator */}
+                              {getFollowupUrgency(email) && (
+                                <span style={{
+                                  background: getFollowupUrgency(email).bg,
+                                  color: getFollowupUrgency(email).color,
+                                  padding: '0.2rem 0.4rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '600'
+                                }}>
+                                  {getFollowupUrgency(email).text}
+                                </span>
                               )}
                             </div>
                           </td>
+                          {user.admin && !isMobile && (
+                            <td style={{ padding: "0.75rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                              {email.user_name || "Unknown"}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -1840,7 +1968,7 @@ export default function Emails() {
                     </div>
                   )}
                   
-                  {emailStatuses.length === 0 && (
+                  {emailStatuses.length ===  0 && (
                     <div style={{ 
                       textAlign: "center", 
                       padding: "3rem 2rem",
@@ -1906,7 +2034,9 @@ export default function Emails() {
                           </th>
                         )}
                         <th style={{ padding: "0.75rem", textAlign: "left" }}>
-                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>Original Email Date</span>
+                          <span style={{ color: "#f1f5f9", fontSize: "0.9rem", fontWeight: "600" }}>
+                            Original Email Date
+                          </span>
                         </th>
                         {user.admin && !isMobile && (
                           <th style={{ padding: "0.75rem", textAlign: "left" }}>
@@ -2274,188 +2404,6 @@ export default function Emails() {
                       <div style={{ fontSize: '0.9rem' }}>{selectedReply.error}</div>
                     </div>
                   ) : null}
-                </div>
-              </div>
-            )}
-
-            {/* Custom Reply Modal */}
-            {showCustomReplyModal && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                background: 'rgba(0, 0, 0, 0.8)',
-                zIndex:  9999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1rem'
-              }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                  border: '1px solid #475569',
-                  borderRadius: '16px',
-                  padding: '2rem',
-                  maxWidth: '700px',
-                  width: '100%',
-                  maxHeight: '90vh',
-                  overflowY: 'auto',
-                  position: 'relative'
-                }}>
-                  {/* Modal Header */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '1.5rem',
-                    paddingBottom: '1rem',
-                    borderBottom: '1px solid #475569'
-                  }}>
-                    <div>
-                      <h2 style={{
-                        color: '#f1f5f9',
-                        fontSize: '1.5rem',
-                        fontWeight: '700',
-                        marginBottom: '0.5rem'
-                      }}>
-                        ✍️ Send Custom Reply
-                      </h2>
-                      <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-                        To: <strong style={{ color: '#f1f5f9' }}>{customReplyData.school_name}</strong> ({customReplyData.school_email})
-                      </div>
-                    </div>
-                    
-                    <button
-                      onClick={() => setShowCustomReplyModal(false)}
-                      style={{
-                        background: '#ef4444',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white',
-                        width: '40px',
-                        height: '40px',
-                        cursor: 'pointer',
-                        fontSize: '1.2rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Reply Form */}
-                  <form onSubmit={handleSendCustomReply}>
-                    {/* Subject Field */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{
-                        color: '#f1f5f9',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        display: 'block',
-                        marginBottom: '0.5rem'
-                      }}>
-                        Subject:
-                      </label>
-                      <input
-                        type="text"
-                        value={customReplyData.subject}
-                        onChange={(e) => setCustomReplyData(prev => ({
-                          ...prev,
-                          subject: e.target.value
-                        }))}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid #475569',
-                          borderRadius: '8px',
-                          background: '#334155',
-                          color: '#f1f5f9',
-                          fontSize: '0.9rem'
-                        }}
-                        placeholder="Reply subject..."
-                      />
-                    </div>
-
-                    {/* Message Field */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{
-                        color: '#f1f5f9',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        display: 'block',
-                        marginBottom: '0.5rem'
-                      }}>
-                        Message:
-                      </label>
-                      <textarea
-                        value={customReplyData.message}
-                        onChange={(e) => setCustomReplyData(prev => ({
-                          ...prev,
-                          message: e.target.value
-                        }))}
-                        rows={10}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          border: '1px solid #475569',
-                          borderRadius: '8px',
-                          background: '#334155',
-                          color: '#f1f5f9',
-                          fontSize: '0.9rem',
-                          fontFamily: 'inherit',
-                          resize: 'vertical',
-                          minHeight: '200px'
-                        }}
-                        placeholder="Type your reply message here..."
-                      />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '1rem',
-                      justifyContent: 'flex-end',
-                      flexWrap: 'wrap'
-                    }}>
-                      <button
-                        type="button"
-                        onClick={() => setShowCustomReplyModal(false)}
-                        style={{
-                          background: '#64748b',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '0.75rem 1.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.9rem',
-                          fontWeight: '600'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      
-                      <button
-                        type="submit"
-                        disabled={sendingCustomReply || !customReplyData.message.trim()}
-                        style={{
-                          background: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '0.75rem 1.5rem',
-                          cursor: sendingCustomReply || !customReplyData.message.trim() ? 'not-allowed' : 'pointer',
-                          fontSize: '0.9rem',
-                          fontWeight: '600',
-                          opacity: sendingCustomReply || !customReplyData.message.trim() ? 0.6 : 1
-                        }}
-                      >
-                        {sendingCustomReply ? '📤 Sending...' : '📤 Send Reply'}
-                      </button>
-                    </div>
-                  </form>
                 </div>
               </div>
             )}

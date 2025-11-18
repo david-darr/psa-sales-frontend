@@ -252,8 +252,9 @@ export default function Emails() {
     try {
       // Calculate total emails that will be sent
       let totalEmailsToSend = 0
+      const selectedSchoolsData = mySchools.filter(school => selectedSchools.includes(school.id))
+      
       if (sendToAllEmails) {
-        const selectedSchoolsData = mySchools.filter(school => selectedSchools.includes(school.id))
         totalEmailsToSend = selectedSchoolsData.reduce((total, school) => {
           return total + (school.all_emails ? school.all_emails.length : 1)
         }, 0)
@@ -261,22 +262,70 @@ export default function Emails() {
         totalEmailsToSend = selectedSchools.length
       }
       
-    
-      
       let totalSent = 0
       let totalErrors = []
+      let totalBatches = 0
       
-      // Split large selections into chunks of 5 schools (not emails)
-      const chunkSize = 5
-      const chunks = []
-      for (let i = 0; i < selectedSchools.length; i += chunkSize) {
-        chunks.push(selectedSchools.slice(i, i + chunkSize))
+      // NEW: Smart chunking based on email count, not just school count
+      const MAX_EMAILS_PER_FRONTEND_BATCH = 8  // Match backend limit
+      let currentChunk = []
+      let currentChunkEmailCount = 0
+      const emailAwareChunks = []
+      
+      for (const schoolId of selectedSchools) {
+        const schoolData = selectedSchoolsData.find(s => s.id === schoolId)
+        
+        // Calculate emails for this school
+        let schoolEmailCount = 1
+        if (sendToAllEmails && schoolData?.all_emails) {
+          schoolEmailCount = schoolData.all_emails.length
+        }
+        
+        // If adding this school would exceed the limit, start a new chunk
+        if (currentChunk.length > 0 && (currentChunkEmailCount + schoolEmailCount > MAX_EMAILS_PER_FRONTEND_BATCH)) {
+          emailAwareChunks.push(currentChunk)
+          currentChunk = [schoolId]
+          currentChunkEmailCount = schoolEmailCount
+        } else {
+          currentChunk.push(schoolId)
+          currentChunkEmailCount += schoolEmailCount
+        }
       }
       
+      // Add the last chunk if it has schools
+      if (currentChunk.length > 0) {
+        emailAwareChunks.push(currentChunk)
+      }
+      
+      console.log(`Created ${emailAwareChunks.length} email-aware chunks:`, emailAwareChunks.map((chunk, i) => {
+        let chunkEmailCount = 0
+        chunk.forEach(schoolId => {
+          const schoolData = selectedSchoolsData.find(s => s.id === schoolId)
+          if (sendToAllEmails && schoolData?.all_emails) {
+            chunkEmailCount += schoolData.all_emails.length
+          } else {
+            chunkEmailCount += 1
+          }
+        })
+        return `Chunk ${i + 1}: ${chunk.length} schools, ${chunkEmailCount} emails`
+      }))
+      
       // Send each chunk separately
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i]
-        setStatus(`Sending emails ${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, selectedSchools.length)} of ${selectedSchools.length} schools...`)
+      for (let i = 0; i < emailAwareChunks.length; i++) {
+        const chunk = emailAwareChunks[i]
+        
+        // Calculate emails for status display
+        let chunkEmailCount = 0
+        chunk.forEach(schoolId => {
+          const schoolData = selectedSchoolsData.find(s => s.id === schoolId)
+          if (sendToAllEmails && schoolData?.all_emails) {
+            chunkEmailCount += schoolData.all_emails.length
+          } else {
+            chunkEmailCount += 1
+          }
+        })
+        
+        setStatus(`Sending batch ${i + 1}/${emailAwareChunks.length}: ${chunk.length} schools (${chunkEmailCount} emails)...`)
         
         const res = await fetch("https://psa-sales-backend.onrender.com/api/send-email", {
           method: "POST",
@@ -293,18 +342,20 @@ export default function Emails() {
         
         const data = await res.json()
         totalSent += data.sent_count || 0
+        totalBatches += data.batches_processed || 1
         if (data.errors) {
           totalErrors = [...totalErrors, ...data.errors]
         }
         
-        // Small delay between chunks
-        if (i < chunks.length - 1) {
+        // Delay between frontend chunks (backend also has its own delays)
+        if (i < emailAwareChunks.length - 1) {
+          setStatus(`Batch ${i + 1} complete. Waiting before next batch...`)
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       }
       
       if (totalSent > 0) {
-        setStatus(`✅ Successfully sent ${totalSent} emails!`)
+        setStatus(`✅ Successfully sent ${totalSent} emails across ${totalBatches} batches!`)
         setSelectedSchools([])
         setSendToAllEmails(false)
         fetchEmailStatuses()
@@ -1562,34 +1613,51 @@ export default function Emails() {
                   )}
                 </div>
 
-                {/* Add this before the Send Email button around line 900 */}
-                <div style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid rgba(59, 130, 246, 0.2)",
-                  borderRadius: "8px",
-                  padding: "1rem",
-                  marginBottom: "1rem"
-                }}>
-                  <label style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    color: "#f1f5f9",
-                    fontSize: "0.9rem",
-                    cursor: "pointer"
+                {/* Email Count Preview */}
+                {selectedSchools.length > 0 && (
+                  <div style={{
+                    background: "rgba(59, 130, 246, 0.1)",
+                    border: "1px solid rgba(59, 130, 246, 0.2)",
+                    borderRadius: "8px",
+                    padding: "1rem",
+                    marginBottom: "1rem"
                   }}>
-                    <input
-                      type="checkbox"
-                      checked={sendToAllEmails}
-                      onChange={(e) => setSendToAllEmails(e.target.checked)}
-                      style={{ accentColor: "#3b82f6" }}
-                    />
-                    📧 Send to all email addresses (including additional emails)
-                  </label>
-                  <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-                    When checked, emails will be sent to both primary and additional email addresses for each school.
+                    <div style={{ color: "#f1f5f9", fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+                      📊 <strong>Email Sending Preview:</strong>
+                    </div>
+                    <div style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
+                      {(() => {
+                        const selectedSchoolsData = mySchools.filter(school => selectedSchools.includes(school.id))
+                        let totalEmails = 0
+                        
+                        if (sendToAllEmails) {
+                          totalEmails = selectedSchoolsData.reduce((total, school) => {
+                            return total + (school.all_emails ? school.all_emails.length : 1)
+                          }, 0)
+                        } else {
+                          totalEmails = selectedSchools.length
+                        }
+                        
+                        const estimatedBatches = Math.ceil(totalEmails / 8)
+                        const estimatedTime = estimatedBatches * 3 + (totalEmails * 2) // 3s between batches + 2s per email
+                        
+                        return (
+                          <>
+                            <div>• Selected Schools: <strong>{selectedSchools.length}</strong></div>
+                            <div>• Total Emails to Send: <strong>{totalEmails}</strong></div>
+                            <div>• Estimated Batches: <strong>{estimatedBatches}</strong></div>
+                            <div>• Estimated Time: <strong>~{Math.ceil(estimatedTime / 60)} minutes</strong></div>
+                            {totalEmails > 50 && (
+                              <div style={{ color: "#f59e0b", marginTop: "0.5rem", fontSize: "0.8rem" }}>
+                                ⚠️ Large batch detected. Consider sending in smaller groups for better reliability.
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <button
                   onClick={handleSendEmails}

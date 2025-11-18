@@ -1613,6 +1613,37 @@ export default function Emails() {
                   )}
                 </div>
 
+                {/* Send to All Emails Option - ADD THIS SECTION */}
+                {selectedSchools.length > 0 && (
+                  <div style={{
+                    background: "rgba(59, 130, 246, 0.1)",
+                    border: "1px solid rgba(59, 130, 246, 0.2)",
+                    borderRadius: "8px",
+                    padding: "1rem",
+                    marginBottom: "1rem"
+                  }}>
+                    <label style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      color: "#f1f5f9",
+                      fontSize: "0.9rem",
+                      cursor: "pointer"
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={sendToAllEmails}
+                        onChange={(e) => setSendToAllEmails(e.target.checked)}
+                        style={{ accentColor: "#3b82f6" }}
+                      />
+                      📧 Send to all email addresses (including additional emails)
+                    </label>
+                    <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.5rem" }}>
+                      When checked, emails will be sent to both primary and additional email addresses for each school.
+                    </div>
+                  </div>
+                )}
+
                 {/* Email Count Preview */}
                 {selectedSchools.length > 0 && (
                   <div style={{

@@ -261,12 +261,7 @@ export default function Emails() {
         totalEmailsToSend = selectedSchools.length
       }
       
-      if (totalEmailsToSend > 15) {
-        setStatus(`Too many emails to send (${totalEmailsToSend}). Maximum is 15 per batch. ${sendToAllEmails ? 'Try unchecking "Send to all emails"' : ''}`)
-        setLoading(false)
-        setTimeout(() => setStatus(""), 5000)
-        return
-      }
+    
       
       let totalSent = 0
       let totalErrors = []

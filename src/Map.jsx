@@ -14,6 +14,7 @@ L.Icon.Default.mergeOptions({
 const markerIcons = {
   happyfeet: new L.Icon({ iconUrl: "/map/marker-red.png", iconSize: [32, 32] }),
   psa: new L.Icon({ iconUrl: "/map/marker-blue.png", iconSize: [32, 32] }),
+  elementary: new L.Icon({ iconUrl: "/map/marker-purple.png", iconSize: [32, 32] }),  // NEW: Purple marker
   sheet: new L.Icon({ iconUrl: "/map/marker-yellow.png", iconSize: [32, 32] }),
   rec: new L.Icon({ iconUrl: "/map/marker-green.png", iconSize: [32, 32] })
 }
@@ -45,6 +46,7 @@ export default function PSAMap() {
   const [schools, setSchools] = useState({
     happyfeet: [],
     psa: [],
+    elementary: [],  // NEW
     reached_out: [],
     rec: []
   })
@@ -129,9 +131,14 @@ export default function PSAMap() {
   const mapStats = {
     happyfeet: schools.happyfeet?.length || 0,
     psa: schools.psa?.length || 0,
+    elementary: schools.elementary?.length || 0,  // NEW
     reached_out: schools.reached_out?.length || 0,
     rec: schools.rec?.length || 0,
-    total: (schools.happyfeet?.length || 0) + (schools.psa?.length || 0) + (schools.reached_out?.length || 0) + (schools.rec?.length || 0)
+    total: (schools.happyfeet?.length || 0) + 
+           (schools.psa?.length || 0) + 
+           (schools.elementary?.length || 0) +  // NEW
+           (schools.reached_out?.length || 0) + 
+           (schools.rec?.length || 0)
   }
 
   return (
@@ -384,6 +391,64 @@ export default function PSAMap() {
             </div>
           </div>
 
+          {/* Elementary Schools */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Elementary</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(126, 34, 206, 0.2)", 
+                color: "#7c3aed",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🟣
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#7c3aed",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.elementary}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Schools
+              </div>
+            </div>
+          </div>
+
+          {/* Elementary/Catholic Schools */}
+          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
+            <div className="modern-card-header">
+              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Elementary</div>
+              <div className="modern-card-icon" style={{ 
+                background: "rgba(139, 92, 246, 0.2)", 
+                color: "#8b5cf6",
+                width: "30px",
+                height: "30px",
+                fontSize: "1rem"
+              }}>
+                🟣
+              </div>
+            </div>
+            <div className="modern-card-content" style={{ textAlign: "center" }}>
+              <div style={{ 
+                fontSize: isMobile ? "1.5rem" : "2rem", 
+                fontWeight: "800", 
+                color: "#8b5cf6",
+                marginBottom: "0.25rem"
+              }}>
+                {mapStats.elementary}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
+                Schools
+              </div>
+            </div>
+          </div>
+
           {/* Contacted Schools */}
           <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
             <div className="modern-card-header">
@@ -507,6 +572,19 @@ export default function PSAMap() {
                       )
                     ))}
                     
+                    {/* Elementary Schools - Purple markers */}
+                    {Array.isArray(schools.elementary) && schools.elementary.map((s, i) => (
+                      s.lat && s.lng && (
+                        <Marker key={`elem-${i}`} position={[s.lat, s.lng]} icon={markerIcons.elementary}>
+                          <Popup>
+                            <b>{s.name}</b><br />
+                            Elementary/Catholic School<br />
+                            {s.address}
+                          </Popup>
+                        </Marker>
+                      )
+                    ))}
+                    
                     {/* Contacted Schools - Yellow markers */}
                     {Array.isArray(schools.reached_out) && schools.reached_out.map((s, i) => (
                       s.lat && s.lng && (
@@ -538,7 +616,7 @@ export default function PSAMap() {
                 {/* Legend */}
                 <div style={{ 
                   display: "grid", 
-                  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+                  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)",
                   gap: "1rem",
                   marginBottom: "1rem",
                   padding: "1rem",
@@ -568,6 +646,19 @@ export default function PSAMap() {
                     }}></div>
                     <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
                       PSA Schools
+                    </span>
+                  </div>
+                  {/* NEW: Elementary Legend Item */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ 
+                      width: "16px", 
+                      height: "16px", 
+                      background: "#8b5cf6", 
+                      borderRadius: "50%",
+                      flexShrink: 0
+                    }}></div>
+                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
+                      Elementary
                     </span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

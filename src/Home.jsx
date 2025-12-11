@@ -59,7 +59,8 @@ export default function Home() {
     happyfeet: [],
     psa: [],
     reached_out: [],
-    rec: []
+    rec: [],
+    elementary: [] // Add elementary schools state
   })
   const [mapLoading, setMapLoading] = useState(true)
 
@@ -654,6 +655,25 @@ export default function Home() {
                             </Marker>
                           )
                         ))}
+
+                        {/* Elementary Schools - Purple markers */}
+                        {Array.isArray(mapSchools.elementary) && mapSchools.elementary.map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`elem-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-purple.png", 
+                                iconSize: [20, 20] 
+                              })}
+                            >
+                              <Popup>
+                                <b>{school.name}</b><br />
+                                Elementary School
+                              </Popup>
+                            </Marker>
+                          )
+                        ))}
                       </MapContainer>
                     </div>
                     
@@ -699,6 +719,15 @@ export default function Home() {
                           borderRadius: "50%" 
                         }}></div>
                         <span style={{ color: "#94a3b8" }}>Rec Sites ({mapSchools.rec?.length || 0})</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ 
+                          width: "12px", 
+                          height: "12px", 
+                          background: "#8b5cf6", 
+                          borderRadius: "50%" 
+                        }}></div>
+                        <span style={{ color: "#94a3b8" }}>Elementary ({mapSchools.elementary?.length || 0})</span>
                       </div>
                     </div>
                   </>
@@ -782,6 +811,19 @@ export default function Home() {
                             />
                           )
                         ))}
+
+                        {Array.isArray(mapSchools.elementary) && mapSchools.elementary.slice(0, 10).map((school, index) => (
+                          school.lat && school.lng && (
+                            <Marker 
+                              key={`elem-${index}`} 
+                              position={[school.lat, school.lng]}
+                              icon={new L.Icon({ 
+                                iconUrl: "/map/marker-purple.png", 
+                                iconSize: [16, 16] 
+                              })}
+                            />
+                          )
+                        ))}
                       </MapContainer>
                     </div>
                     
@@ -803,6 +845,12 @@ export default function Home() {
                           {mapSchools.psa?.length || 0}
                         </div>
                         <div style={{ color: "#64748b" }}>PSA</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ color: "#8b5cf6", fontWeight: "700", fontSize: "1rem" }}>
+                          {mapSchools.elementary?.length || 0}
+                        </div>
+                        <div style={{ color: "#64748b" }}>Elementary</div>
                       </div>
                     </div>
                   </>

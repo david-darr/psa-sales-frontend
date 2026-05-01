@@ -733,43 +733,45 @@ export default function Emails() {
           setStatus(data.error || "Failed to send custom email")
         }
       } else {
-        // Bulk — same chunked parallel pattern as handleSendEmails
+        // Bulk — identical chunking logic to handleSendEmails
+        const MAX_EMAILS_PER_FRONTEND_BATCH = 8
         const schoolIds = customEmailData.school_ids
-        const chunkSize = 5
         const chunks = []
-        for (let i = 0; i < schoolIds.length; i += chunkSize) {
-          chunks.push(schoolIds.slice(i, i + chunkSize))
+        let currentChunk = []
+
+        for (const schoolId of schoolIds) {
+          if (currentChunk.length >= MAX_EMAILS_PER_FRONTEND_BATCH) {
+            chunks.push(currentChunk)
+            currentChunk = [schoolId]
+          } else {
+            currentChunk.push(schoolId)
+          }
         }
+        if (currentChunk.length > 0) chunks.push(currentChunk)
 
         let totalSent = 0
-        const errors = []
+        let totalBatches = 0
+        let totalErrors = []
 
         for (let i = 0; i < chunks.length; i++) {
           const chunk = chunks[i]
           setStatus(`Sending batch ${i + 1}/${chunks.length}: ${chunk.length} schools...`)
 
-          const results = await Promise.all(chunk.map(async (schoolId) => {
-            const school = mySchools.find(s => s.id === schoolId)
-            if (!school) return { success: false }
-            try {
-              const res = await fetch("https://psa-sales-backend.onrender.com/api/send-custom-email", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
-                body: JSON.stringify({
-                  school_id: schoolId,
-                  to_email: school.email,
-                  subject: customEmailData.subject,
-                  message: customEmailData.message,
-                  pdf_files: customEmailData.pdf_files
-                })
-              })
-              return { success: res.ok }
-            } catch {
-              return { success: false }
-            }
-          }))
+          const res = await fetch("https://psa-sales-backend.onrender.com/api/send-custom-email-bulk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+            body: JSON.stringify({
+              school_ids: chunk,
+              subject: customEmailData.subject,
+              message: customEmailData.message,
+              pdf_files: customEmailData.pdf_files
+            })
+          })
 
-          results.forEach(r => r.success ? totalSent++ : errors.push(r))
+          const data = await res.json()
+          totalSent += data.sent_count || 0
+          totalBatches += data.batches_processed || 1
+          if (data.errors) totalErrors = [...totalErrors, ...data.errors]
 
           if (i < chunks.length - 1) {
             setStatus(`Batch ${i + 1} complete. Waiting before next batch...`)
@@ -778,11 +780,11 @@ export default function Emails() {
         }
 
         if (totalSent > 0) {
-          setStatus(`✅ Custom email sent to ${totalSent} of ${schoolIds.length} schools!`)
+          setStatus(`✅ Custom email sent to ${totalSent} schools across ${totalBatches} batches!`)
         } else {
           setStatus("❌ Failed to send custom emails")
         }
-        if (errors.length > 0) console.log("Custom email errors:", errors)
+        if (totalErrors.length > 0) console.log("Custom email errors:", totalErrors)
 
         setShowCustomEmailModal(false)
         setCustomEmailData({ school_id: null, school_ids: [], school_name: '', school_email: '', all_emails: [], subject: '', message: '', pdf_files: [] })

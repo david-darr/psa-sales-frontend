@@ -37,6 +37,7 @@ export default function Emails() {
   const [emailStatuses, setEmailStatuses] = useState([])
   const [showAddSchool, setShowAddSchool] = useState(false)
   const [schoolFilter, setSchoolFilter] = useState("all") // New filter state
+  const [schoolSort, setSchoolSort] = useState("default")
   const [emailFilter, setEmailFilter] = useState("all") // Add this new state
   const [newSchool, setNewSchool] = useState({
     school_name: "",
@@ -64,6 +65,27 @@ export default function Emails() {
     message: ''
   })
   const [sendingCustomReply, setSendingCustomReply] = useState(false)
+  const [showCustomEmailModal, setShowCustomEmailModal] = useState(false)
+  const AVAILABLE_PDFS = [
+    { file: "PSA TOTS seasonal flyer.pdf",                      label: "PSA TOTS Seasonal Flyer" },
+    { file: "PSA TOTS year round flyer.pdf",                    label: "PSA TOTS Year Round Flyer" },
+    { file: "PSA TOTS Recommendation (Primrose School).pdf",    label: "Recommendation: Primrose School" },
+    { file: "PSA After School.pdf",                             label: "PSA After School Program" },
+    { file: "PSA Recommendation (St. Theresa).pdf",             label: "Recommendation: St. Theresa" },
+    { file: "PSA Recommendation Letter (Madison Trust ES).pdf", label: "Recommendation: Madison Trust ES" },
+  ]
+
+  const [customEmailData, setCustomEmailData] = useState({
+    school_id: null,
+    school_ids: [],
+    school_name: '',
+    school_email: '',
+    all_emails: [],
+    subject: '',
+    message: '',
+    pdf_files: []
+  })
+  const [sendingCustomEmail, setSendingCustomEmail] = useState(false)
 
   // Filter schools based on selected filter
   const filteredSchools = mySchools.filter(school => {
@@ -74,6 +96,18 @@ export default function Emails() {
     }
     return true // "all" shows everything
   })
+
+  const typeOrder = { preschool: 0, elementary: 1, private: 2 }
+  const sortedFilteredSchools = schoolSort === "default"
+    ? filteredSchools
+    : [...filteredSchools].sort((a, b) => {
+        if (schoolSort === "type") {
+          return (typeOrder[a.school_type] ?? 3) - (typeOrder[b.school_type] ?? 3)
+        }
+        if (a.school_type === schoolSort && b.school_type !== schoolSort) return -1
+        if (a.school_type !== schoolSort && b.school_type === schoolSort) return 1
+        return 0
+      })
 
   // Update selected schools when filter changes
   useEffect(() => {
@@ -631,6 +665,134 @@ export default function Emails() {
       console.error('Custom reply error:', error)
     } finally {
       setSendingCustomReply(false)
+      setTimeout(() => setStatus(""), 5000)
+    }
+  }
+
+  const handleOpenCustomEmail = (school) => {
+    setCustomEmailData({
+      school_id: school.id,
+      school_ids: [],
+      school_name: school.school_name,
+      school_email: school.email,
+      all_emails: school.all_emails || [school.email],
+      subject: '',
+      message: ''
+    })
+    setShowCustomEmailModal(true)
+  }
+
+  const handleOpenBulkCustomEmail = () => {
+    setCustomEmailData({
+      school_id: null,
+      school_ids: [...selectedSchools],
+      school_name: `${selectedSchools.length} Selected School${selectedSchools.length === 1 ? '' : 's'}`,
+      school_email: '',
+      all_emails: [],
+      subject: '',
+      message: ''
+    })
+    setShowCustomEmailModal(true)
+  }
+
+  const handleSendCustomEmail = async (e) => {
+    if (e) e.preventDefault()
+    if (!customEmailData.subject.trim() || !customEmailData.message.trim()) {
+      setStatus("Please enter a subject and message")
+      setTimeout(() => setStatus(""), 3000)
+      return
+    }
+    setSendingCustomEmail(true)
+
+    const isBulk = !customEmailData.school_id && customEmailData.school_ids.length > 0
+
+    try {
+      if (!isBulk) {
+        // Single school — existing behaviour
+        const res = await fetch("https://psa-sales-backend.onrender.com/api/send-custom-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            school_id: customEmailData.school_id,
+            to_email: customEmailData.school_email,
+            subject: customEmailData.subject,
+            message: customEmailData.message,
+            pdf_files: customEmailData.pdf_files
+          })
+        })
+        const data = await res.json()
+        if (res.ok) {
+          setStatus("✅ Custom email sent successfully!")
+          setShowCustomEmailModal(false)
+          setCustomEmailData({ school_id: null, school_ids: [], school_name: '', school_email: '', all_emails: [], subject: '', message: '', pdf_files: [] })
+          fetchEmailStatuses()
+          fetchMySchools()
+        } else {
+          setStatus(data.error || "Failed to send custom email")
+        }
+      } else {
+        // Bulk — same chunked parallel pattern as handleSendEmails
+        const schoolIds = customEmailData.school_ids
+        const chunkSize = 5
+        const chunks = []
+        for (let i = 0; i < schoolIds.length; i += chunkSize) {
+          chunks.push(schoolIds.slice(i, i + chunkSize))
+        }
+
+        let totalSent = 0
+        const errors = []
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i]
+          setStatus(`Sending batch ${i + 1}/${chunks.length}: ${chunk.length} schools...`)
+
+          const results = await Promise.all(chunk.map(async (schoolId) => {
+            const school = mySchools.find(s => s.id === schoolId)
+            if (!school) return { success: false }
+            try {
+              const res = await fetch("https://psa-sales-backend.onrender.com/api/send-custom-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+                body: JSON.stringify({
+                  school_id: schoolId,
+                  to_email: school.email,
+                  subject: customEmailData.subject,
+                  message: customEmailData.message,
+                  pdf_files: customEmailData.pdf_files
+                })
+              })
+              return { success: res.ok }
+            } catch {
+              return { success: false }
+            }
+          }))
+
+          results.forEach(r => r.success ? totalSent++ : errors.push(r))
+
+          if (i < chunks.length - 1) {
+            setStatus(`Batch ${i + 1} complete. Waiting before next batch...`)
+            await new Promise(resolve => setTimeout(resolve, 2000))
+          }
+        }
+
+        if (totalSent > 0) {
+          setStatus(`✅ Custom email sent to ${totalSent} of ${schoolIds.length} schools!`)
+        } else {
+          setStatus("❌ Failed to send custom emails")
+        }
+        if (errors.length > 0) console.log("Custom email errors:", errors)
+
+        setShowCustomEmailModal(false)
+        setCustomEmailData({ school_id: null, school_ids: [], school_name: '', school_email: '', all_emails: [], subject: '', message: '', pdf_files: [] })
+        setSelectedSchools([])
+        fetchEmailStatuses()
+        fetchMySchools()
+      }
+    } catch (error) {
+      setStatus("Error sending custom email")
+      console.error('Custom email error:', error)
+    } finally {
+      setSendingCustomEmail(false)
       setTimeout(() => setStatus(""), 5000)
     }
   }
@@ -1393,7 +1555,7 @@ export default function Emails() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                     <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
-                      Filter schools:
+                      Filter:
                     </div>
                     <select
                       value={schoolFilter}
@@ -1405,12 +1567,34 @@ export default function Emails() {
                         background: "#334155",
                         color: "#f1f5f9",
                         fontSize: "0.9rem",
-                        minWidth: "200px"
+                        minWidth: "180px"
                       }}
                     >
                       <option value="all">📋 All Schools ({mySchools.length})</option>
                       <option value="pending">⏳ Pending ({pendingCount})</option>
                       <option value="contacted">✅ Contacted ({contactedCount})</option>
+                    </select>
+                    <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                      Sort:
+                    </div>
+                    <select
+                      value={schoolSort}
+                      onChange={(e) => setSchoolSort(e.target.value)}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        border: "1px solid #475569",
+                        borderRadius: "8px",
+                        background: "#334155",
+                        color: "#f1f5f9",
+                        fontSize: "0.9rem",
+                        minWidth: "180px"
+                      }}
+                    >
+                      <option value="default">📋 Default Order</option>
+                      <option value="type">🔤 By Type (All)</option>
+                      <option value="preschool">👶 Preschool First</option>
+                      <option value="elementary">📚 Elementary First</option>
+                      <option value="private">🏫 Private First</option>
                     </select>
                   </div>
                   
@@ -1498,7 +1682,7 @@ export default function Emails() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredSchools.map((school, index) => (
+                      {sortedFilteredSchools.map((school, index) => (
                         <tr 
                           key={school.id}
                           style={{ 
@@ -1578,6 +1762,17 @@ export default function Emails() {
                               }}>
                                 {school.status === 'contacted' ? '✅ Contacted' : '⏳ Pending'}
                               </span>
+                              <button
+                                className="modern-btn-primary"
+                                style={{
+                                  padding: "0.25rem 0.6rem",
+                                  fontSize: "0.75rem",
+                                  background: "#8b5cf6"
+                                }}
+                                onClick={() => handleOpenCustomEmail(school)}
+                              >
+                                ✉️ Custom Email
+                              </button>
                             </div>
                           </td>
                           {user.admin && !isMobile && (
@@ -1690,22 +1885,35 @@ export default function Emails() {
                   </div>
                 )}
 
-                <button
-                  onClick={handleSendEmails}
-                  className="modern-btn-primary"
-                  style={{ 
-                    width: "100%",
-                    opacity: selectedSchools.length === 0 || loading ? 0.6 : 1,
-                    cursor: selectedSchools.length === 0 || loading ? "not-allowed" : "pointer",
-                    background: "#3b82f6"
-                  }}
-                  disabled={selectedSchools.length === 0 || loading}
-                >
-                  {loading ? 
-                    "📧 Sending..." : 
-                    `📧 Send Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"} ${sendToAllEmails ? '(All Addresses)' : '(Primary Only)'}`
-                  }
-                </button>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.75rem" }}>
+                  <button
+                    onClick={handleSendEmails}
+                    className="modern-btn-primary"
+                    style={{
+                      opacity: selectedSchools.length === 0 || loading ? 0.6 : 1,
+                      cursor: selectedSchools.length === 0 || loading ? "not-allowed" : "pointer",
+                      background: "#3b82f6"
+                    }}
+                    disabled={selectedSchools.length === 0 || loading}
+                  >
+                    {loading ?
+                      "📧 Sending..." :
+                      `📧 Template Email to ${selectedSchools.length} School${selectedSchools.length === 1 ? "" : "s"}`
+                    }
+                  </button>
+                  <button
+                    onClick={handleOpenBulkCustomEmail}
+                    className="modern-btn-primary"
+                    style={{
+                      opacity: selectedSchools.length === 0 || loading ? 0.6 : 1,
+                      cursor: selectedSchools.length === 0 || loading ? "not-allowed" : "pointer",
+                      background: "#8b5cf6"
+                    }}
+                    disabled={selectedSchools.length === 0 || loading}
+                  >
+                    ✉️ Custom Email to {selectedSchools.length} School{selectedSchools.length === 1 ? "" : "s"}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2468,6 +2676,235 @@ export default function Emails() {
                       <div style={{ fontSize: '0.9rem' }}>{selectedReply.error}</div>
                     </div>
                   ) : null}
+                </div>
+              </div>
+            )}
+
+            {/* Custom Email Compose Modal */}
+            {showCustomEmailModal && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(0, 0, 0, 0.8)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                  border: '1px solid #475569',
+                  borderRadius: '16px',
+                  padding: '2rem',
+                  maxWidth: '620px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '1.5rem',
+                    paddingBottom: '1rem',
+                    borderBottom: '1px solid #475569'
+                  }}>
+                    <h2 style={{ color: '#f1f5f9', fontSize: '1.3rem', fontWeight: '700' }}>
+                      ✉️ Custom Email — {customEmailData.school_name}
+                    </h2>
+                    <button
+                      onClick={() => setShowCustomEmailModal(false)}
+                      style={{
+                        background: '#ef4444',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: 'white',
+                        width: '36px',
+                        height: '36px',
+                        cursor: 'pointer',
+                        fontSize: '1.1rem',
+                        flexShrink: 0
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSendCustomEmail}>
+                    {/* To field */}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                        To:
+                      </label>
+                      {customEmailData.school_ids.length > 0 ? (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          border: '1px solid #8b5cf6',
+                          borderRadius: '8px',
+                          background: 'rgba(139, 92, 246, 0.1)',
+                          color: '#c4b5fd',
+                          fontSize: '0.9rem'
+                        }}>
+                          ✉️ {customEmailData.school_name} — primary email per school
+                        </div>
+                      ) : customEmailData.all_emails.length > 1 ? (
+                        <select
+                          value={customEmailData.school_email}
+                          onChange={(e) => setCustomEmailData(prev => ({ ...prev, school_email: e.target.value }))}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem 1rem',
+                            border: '1px solid #475569',
+                            borderRadius: '8px',
+                            background: '#334155',
+                            color: '#f1f5f9',
+                            fontSize: '0.9rem',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {customEmailData.all_emails.map(email => (
+                            <option key={email} value={email}>{email}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div style={{
+                          padding: '0.75rem 1rem',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          background: '#1e293b',
+                          color: '#94a3b8',
+                          fontSize: '0.9rem'
+                        }}>
+                          {customEmailData.school_email}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Subject */}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                        Subject:
+                      </label>
+                      <input
+                        type="text"
+                        value={customEmailData.subject}
+                        onChange={(e) => setCustomEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                        placeholder="Email subject..."
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '1px solid #475569',
+                          borderRadius: '8px',
+                          background: '#334155',
+                          color: '#f1f5f9',
+                          fontSize: '0.9rem',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    {/* Message */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                        Message:
+                      </label>
+                      <textarea
+                        value={customEmailData.message}
+                        onChange={(e) => setCustomEmailData(prev => ({ ...prev, message: e.target.value }))}
+                        placeholder="Write your message here..."
+                        required
+                        rows={10}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '1px solid #475569',
+                          borderRadius: '8px',
+                          background: '#334155',
+                          color: '#f1f5f9',
+                          fontSize: '0.9rem',
+                          lineHeight: '1.6',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <div style={{ marginTop: '0.5rem', color: '#64748b', fontSize: '0.78rem', lineHeight: '1.6' }}>
+                        Available placeholders — replaced per school before sending:&nbsp;
+                        <span style={{ color: '#94a3b8' }}>
+                          <code>[school_name]</code> &nbsp;
+                          <code>[contact_name]</code> &nbsp;
+                          <code>[user_name]</code> &nbsp;
+                          <code>[user_email]</code>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* PDF Attachments */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                        Attach PDFs (optional):
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {AVAILABLE_PDFS.map(({ file, label }) => (
+                          <label key={file} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', color: '#e2e8f0', fontSize: '0.875rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={customEmailData.pdf_files.includes(file)}
+                              onChange={(e) => setCustomEmailData(prev => ({
+                                ...prev,
+                                pdf_files: e.target.checked
+                                  ? [...prev.pdf_files, file]
+                                  : prev.pdf_files.filter(f => f !== file)
+                              }))}
+                              style={{ accentColor: '#8b5cf6', width: '15px', height: '15px' }}
+                            />
+                            📄 {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <button
+                        type="submit"
+                        disabled={sendingCustomEmail}
+                        style={{
+                          flex: 1,
+                          background: sendingCustomEmail ? '#64748b' : '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0.75rem 1.5rem',
+                          cursor: sendingCustomEmail ? 'not-allowed' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        {sendingCustomEmail ? '📧 Sending...' : '📧 Send Email'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomEmailModal(false)}
+                        style={{
+                          background: '#475569',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0.75rem 1.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}

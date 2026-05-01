@@ -396,35 +396,6 @@ export default function PSAMap() {
             <div className="modern-card-header">
               <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Elementary</div>
               <div className="modern-card-icon" style={{ 
-                background: "rgba(126, 34, 206, 0.2)", 
-                color: "#7c3aed",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🟣
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#7c3aed",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.elementary}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Schools
-              </div>
-            </div>
-          </div>
-
-          {/* Elementary/Catholic Schools */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Elementary</div>
-              <div className="modern-card-icon" style={{ 
                 background: "rgba(139, 92, 246, 0.2)", 
                 color: "#8b5cf6",
                 width: "30px",

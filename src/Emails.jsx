@@ -734,7 +734,7 @@ export default function Emails() {
         }
       } else {
         // Bulk — identical chunking logic to handleSendEmails
-        const MAX_EMAILS_PER_FRONTEND_BATCH = 8
+        const MAX_EMAILS_PER_FRONTEND_BATCH = 3
         const schoolIds = customEmailData.school_ids
         const chunks = []
         let currentChunk = []

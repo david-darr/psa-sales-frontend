@@ -677,7 +677,8 @@ export default function Emails() {
       school_email: school.email,
       all_emails: school.all_emails || [school.email],
       subject: '',
-      message: ''
+      message: '',
+      pdf_files: []
     })
     setShowCustomEmailModal(true)
   }
@@ -690,7 +691,8 @@ export default function Emails() {
       school_email: '',
       all_emails: [],
       subject: '',
-      message: ''
+      message: '',
+      pdf_files: []
     })
     setShowCustomEmailModal(true)
   }

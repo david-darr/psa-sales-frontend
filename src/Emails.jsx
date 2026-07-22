@@ -300,8 +300,10 @@ export default function Emails() {
       let totalErrors = []
       let totalBatches = 0
       
-      // NEW: Smart chunking based on email count, not just school count
-      const MAX_EMAILS_PER_FRONTEND_BATCH = 8  // Match backend limit
+      // Smart chunking based on email count, not just school count. The backend now reuses a
+      // single SMTP connection per request instead of one per email, so a batch this size sends
+      // in a few seconds rather than tens of seconds - this is mainly for progress feedback now.
+      const MAX_EMAILS_PER_FRONTEND_BATCH = 20
       let currentChunk = []
       let currentChunkEmailCount = 0
       const emailAwareChunks = []
@@ -381,10 +383,10 @@ export default function Emails() {
           totalErrors = [...totalErrors, ...data.errors]
         }
         
-        // Delay between frontend chunks (backend also has its own delays)
+        // Brief delay between frontend chunks
         if (i < emailAwareChunks.length - 1) {
           setStatus(`Batch ${i + 1} complete. Waiting before next batch...`)
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          await new Promise(resolve => setTimeout(resolve, 1000))
         }
       }
       
@@ -454,6 +456,53 @@ export default function Emails() {
       setStatus(prev => prev + ` ${errors.length} failed to delete.`)
     }
     
+    setLoading(false)
+    setTimeout(() => setStatus(""), 5000)
+  }
+
+  const handleDeleteSelectedSchools = async () => {
+    if (selectedSchools.length === 0) return
+
+    if (!confirm(`Are you sure you want to delete ${selectedSchools.length} school${selectedSchools.length === 1 ? '' : 's'}? This cannot be undone.`)) {
+      return
+    }
+
+    setLoading(true)
+    let deletedCount = 0
+    let errors = []
+
+    for (const schoolId of selectedSchools) {
+      try {
+        const res = await fetch("https://psa-sales-backend.onrender.com/api/delete-school", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ school_id: schoolId })
+        })
+
+        if (res.ok) {
+          deletedCount++
+        } else {
+          const data = await res.json()
+          errors.push(data.error || "Failed to delete")
+        }
+      } catch (error) {
+        errors.push("Network error")
+      }
+    }
+
+    setSelectedSchools([])
+    fetchMySchools()
+
+    if (deletedCount > 0) {
+      setStatus(`${deletedCount} school${deletedCount === 1 ? '' : 's'} deleted successfully!`)
+    }
+    if (errors.length > 0) {
+      setStatus(prev => prev + ` ${errors.length} failed to delete.`)
+    }
+
     setLoading(false)
     setTimeout(() => setStatus(""), 5000)
   }
@@ -734,7 +783,7 @@ export default function Emails() {
         }
       } else {
         // Bulk — identical chunking logic to handleSendEmails
-        const MAX_EMAILS_PER_FRONTEND_BATCH = 3
+        const MAX_EMAILS_PER_FRONTEND_BATCH = 20
         const schoolIds = customEmailData.school_ids
         const chunks = []
         let currentChunk = []
@@ -775,7 +824,7 @@ export default function Emails() {
 
           if (i < chunks.length - 1) {
             setStatus(`Batch ${i + 1} complete. Waiting before next batch...`)
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            await new Promise(resolve => setTimeout(resolve, 1000))
           }
         }
 
@@ -1602,17 +1651,33 @@ export default function Emails() {
                     </select>
                   </div>
                   
-                  <button
-                    className="modern-btn-primary"
-                    onClick={handleSelectAllSchools}
-                    style={{ 
-                      padding: "0.5rem 1rem", 
-                      fontSize: "0.85rem",
-                      background: selectedSchools.length === filteredSchools.length ? "#ef4444" : "#3b82f6"
-                    }}
-                  >
-                    {selectedSchools.length === filteredSchools.length ? "Deselect All" : "Select All"}
-                  </button>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      className="modern-btn-primary"
+                      onClick={handleSelectAllSchools}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        fontSize: "0.85rem",
+                        background: selectedSchools.length === filteredSchools.length ? "#ef4444" : "#3b82f6"
+                      }}
+                    >
+                      {selectedSchools.length === filteredSchools.length ? "Deselect All" : "Select All"}
+                    </button>
+                    {selectedSchools.length > 0 && (
+                      <button
+                        className="modern-btn-primary"
+                        onClick={handleDeleteSelectedSchools}
+                        style={{
+                          padding: "0.5rem 1rem",
+                          fontSize: "0.85rem",
+                          background: "#ef4444"
+                        }}
+                        disabled={loading}
+                      >
+                        {loading ? "🗑️ Deleting..." : `🗑️ Delete ${selectedSchools.length}`}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Filter Info */}
@@ -1868,8 +1933,8 @@ export default function Emails() {
                           totalEmails = selectedSchools.length
                         }
                         
-                        const estimatedBatches = Math.ceil(totalEmails / 8)
-                        const estimatedTime = estimatedBatches * 3 + (totalEmails * 2) // 3s between batches + 2s per email
+                        const estimatedBatches = Math.ceil(totalEmails / 20)
+                        const estimatedTime = estimatedBatches * 1 + (totalEmails * 1) // ~1s/email + 1s between batches
                         
                         return (
                           <>

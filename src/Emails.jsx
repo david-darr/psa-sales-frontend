@@ -88,15 +88,18 @@ export default function Emails() {
   const [sendingCustomEmail, setSendingCustomEmail] = useState(false)
   const customMessageRef = useRef(null)
 
-  const handleBoldSelection = () => {
+  const wrapSelectionWith = (marker, placeholder) => {
     const textarea = customMessageRef.current
     if (!textarea) return
 
     const { selectionStart, selectionEnd, value } = textarea
     const selected = value.slice(selectionStart, selectionEnd)
 
-    const isAlreadyBold = selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4
-    const newSelected = isAlreadyBold ? selected.slice(2, -2) : `**${selected || 'bold text'}**`
+    const markerLen = marker.length
+    const isAlreadyWrapped = selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= markerLen * 2
+    const newSelected = isAlreadyWrapped
+      ? selected.slice(markerLen, -markerLen)
+      : `${marker}${selected || placeholder}${marker}`
     const newValue = value.slice(0, selectionStart) + newSelected + value.slice(selectionEnd)
 
     setCustomEmailData(prev => ({ ...prev, message: newValue }))
@@ -107,6 +110,9 @@ export default function Emails() {
       textarea.setSelectionRange(cursor, cursor)
     })
   }
+
+  const handleBoldSelection = () => wrapSelectionWith('**', 'bold text')
+  const handleBiggerSelection = () => wrapSelectionWith('++', 'larger text')
 
   // Filter schools based on selected filter
   const filteredSchools = mySchools.filter(school => {
@@ -2904,23 +2910,42 @@ export default function Emails() {
                         <label style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
                           Message:
                         </label>
-                        <button
-                          type="button"
-                          onClick={handleBoldSelection}
-                          title="Wrap selected text in **bold**"
-                          style={{
-                            padding: '0.2rem 0.6rem',
-                            fontSize: '0.8rem',
-                            fontWeight: '700',
-                            border: '1px solid #475569',
-                            borderRadius: '6px',
-                            background: '#334155',
-                            color: '#f1f5f9',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          B
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button
+                            type="button"
+                            onClick={handleBoldSelection}
+                            title="Wrap selected text in **bold**"
+                            style={{
+                              padding: '0.2rem 0.6rem',
+                              fontSize: '0.8rem',
+                              fontWeight: '700',
+                              border: '1px solid #475569',
+                              borderRadius: '6px',
+                              background: '#334155',
+                              color: '#f1f5f9',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            B
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleBiggerSelection}
+                            title="Wrap selected text in ++larger text++"
+                            style={{
+                              padding: '0.2rem 0.6rem',
+                              fontSize: '1rem',
+                              fontWeight: '700',
+                              border: '1px solid #475569',
+                              borderRadius: '6px',
+                              background: '#334155',
+                              color: '#f1f5f9',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            A+
+                          </button>
+                        </div>
                       </div>
                       <textarea
                         ref={customMessageRef}
@@ -2944,7 +2969,8 @@ export default function Emails() {
                         }}
                       />
                       <div style={{ marginTop: '0.5rem', color: '#64748b', fontSize: '0.78rem', lineHeight: '1.6' }}>
-                        Wrap text in <code>**double asterisks**</code> (or select text and click <strong>B</strong>) to send it bold.
+                        Wrap text in <code>**double asterisks**</code> (or select text and click <strong>B</strong>) to send it bold,
+                        or <code>++double plus signs++</code> (or click <strong>A+</strong>) to send it larger.
                         <br />
                         Available placeholders — replaced per school before sending:&nbsp;
                         <span style={{ color: '#94a3b8' }}>

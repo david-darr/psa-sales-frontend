@@ -23,7 +23,7 @@ function useIsTablet() {
 }
 
 export default function Emails() {
-  const { user, accessToken } = useAuth()
+  const { user, accessToken, logout } = useAuth()
   const isMobile = useIsMobile()
   const isTablet = useIsTablet()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -196,20 +196,40 @@ export default function Emails() {
     }
   }, [accessToken])
 
+  // Call whenever a fetch comes back 401 - the token is dead (expired or invalid), so
+  // retrying is pointless. Logs out (ProtectedRoute then redirects to /account) and makes
+  // sure the user actually sees why, instead of silently failing every subsequent request.
+  const handleSessionExpired = () => {
+    alert("Your session has expired. Please log in again.")
+    logout()
+  }
+
   const fetchMySchools = () => {
     fetch("https://psa-sales-backend.onrender.com/api/my-schools", {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
-      .then(res => res.json())
-      .then(setMySchools)
+      .then(res => {
+        if (res.status === 401) {
+          handleSessionExpired()
+          return null
+        }
+        return res.json()
+      })
+      .then(data => { if (data) setMySchools(data) })
   }
 
   const fetchEmailStatuses = () => {
     fetch("https://psa-sales-backend.onrender.com/api/sent-emails", {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
-      .then(res => res.json())
-      .then(setEmailStatuses)
+      .then(res => {
+        if (res.status === 401) {
+          handleSessionExpired()
+          return null
+        }
+        return res.json()
+      })
+      .then(data => { if (data) setEmailStatuses(data) })
   }
 
   const handleSchoolSelect = (schoolId) => {
@@ -284,6 +304,7 @@ export default function Emails() {
         additional_emails: filteredAdditionalEmails
       })
     })
+    if (res.status === 401) return handleSessionExpired()
     const data = await res.json()
     if (data.message) {
       fetchMySchools()
@@ -402,7 +423,9 @@ export default function Emails() {
             send_to_all_emails: sendToAllEmails
           })
         })
-        
+
+        if (res.status === 401) return handleSessionExpired()
+
         const data = await res.json()
         totalSent += data.sent_count || 0
         totalBatches += data.batches_processed || 1
@@ -462,6 +485,11 @@ export default function Emails() {
           body: JSON.stringify({ email_id: emailId })
         })
 
+        if (res.status === 401) {
+          setLoading(false)
+          return handleSessionExpired()
+        }
+
         if (res.ok) {
           deletedCount++
         } else {
@@ -509,6 +537,11 @@ export default function Emails() {
           body: JSON.stringify({ school_id: schoolId })
         })
 
+        if (res.status === 401) {
+          setLoading(false)
+          return handleSessionExpired()
+        }
+
         if (res.ok) {
           deletedCount++
         } else {
@@ -546,9 +579,14 @@ export default function Emails() {
           "Authorization": `Bearer ${accessToken}`
         }
       })
-      
+
+      if (res.status === 401) {
+        setLoading(false)
+        return handleSessionExpired()
+      }
+
       const data = await res.json()
-      
+
       if (data.status) {
         setStatus("Email reply check completed! Refreshing email statuses...")
         fetchEmailStatuses()
@@ -585,6 +623,8 @@ export default function Emails() {
         },
         body: formData
       })
+
+      if (res.status === 401) return handleSessionExpired()
 
       const data = await res.json()
 
@@ -656,7 +696,9 @@ export default function Emails() {
       const res = await fetch(`https://psa-sales-backend.onrender.com/api/email-reply-chain/${emailId}`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       })
-      
+
+      if (res.status === 401) return handleSessionExpired()
+
       if (res.ok) {
         const replyData = await res.json()
         setSelectedReply(replyData)
@@ -719,6 +761,8 @@ export default function Emails() {
           message: customReplyData.message
         })
       })
+
+      if (res.status === 401) return handleSessionExpired()
 
       const data = await res.json()
 
@@ -798,6 +842,7 @@ export default function Emails() {
             pdf_files: customEmailData.pdf_files
           })
         })
+        if (res.status === 401) return handleSessionExpired()
         const data = await res.json()
         if (res.ok) {
           setStatus("✅ Custom email sent successfully!")
@@ -843,6 +888,8 @@ export default function Emails() {
               pdf_files: customEmailData.pdf_files
             })
           })
+
+          if (res.status === 401) return handleSessionExpired()
 
           const data = await res.json()
           totalSent += data.sent_count || 0
@@ -920,7 +967,11 @@ export default function Emails() {
               },
               body: JSON.stringify({ email_id: email.id })
             })
-            
+
+            if (res.status === 401) {
+              return { success: false, sessionExpired: true, school: email.school_name }
+            }
+
             const data = await res.json()
             if (data.status === "follow-up sent") {
               return { success: true, school: email.school_name }
@@ -931,9 +982,14 @@ export default function Emails() {
             return { success: false, school: email.school_name, error: "Network error" }
           }
         })
-        
+
         const chunkResults = await Promise.all(chunkPromises)
-        
+
+        if (chunkResults.some(result => result.sessionExpired)) {
+          setLoading(false)
+          return handleSessionExpired()
+        }
+
         // Count successes and errors
         chunkResults.forEach(result => {
           if (result.success) {
@@ -2519,7 +2575,9 @@ export default function Emails() {
                                       },
                                       body: JSON.stringify({ email_id: email.id, responded: false })
                                     })
-                                    if (res.ok) {
+                                    if (res.status === 401) {
+                                      handleSessionExpired()
+                                    } else if (res.ok) {
                                       fetchEmailStatuses()
                                       setStatus(`${email.school_name} marked as not responded`)
                                       setTimeout(() => setStatus(""), 3000)

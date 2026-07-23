@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from "./AuthContext"
 import NavigationCard from './NavigationCard'
 
@@ -86,6 +86,27 @@ export default function Emails() {
     pdf_files: []
   })
   const [sendingCustomEmail, setSendingCustomEmail] = useState(false)
+  const customMessageRef = useRef(null)
+
+  const handleBoldSelection = () => {
+    const textarea = customMessageRef.current
+    if (!textarea) return
+
+    const { selectionStart, selectionEnd, value } = textarea
+    const selected = value.slice(selectionStart, selectionEnd)
+
+    const isAlreadyBold = selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4
+    const newSelected = isAlreadyBold ? selected.slice(2, -2) : `**${selected || 'bold text'}**`
+    const newValue = value.slice(0, selectionStart) + newSelected + value.slice(selectionEnd)
+
+    setCustomEmailData(prev => ({ ...prev, message: newValue }))
+
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const cursor = selectionStart + newSelected.length
+      textarea.setSelectionRange(cursor, cursor)
+    })
+  }
 
   // Filter schools based on selected filter
   const filteredSchools = mySchools.filter(school => {
@@ -2879,10 +2900,30 @@ export default function Emails() {
 
                     {/* Message */}
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                        Message:
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                          Message:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleBoldSelection}
+                          title="Wrap selected text in **bold**"
+                          style={{
+                            padding: '0.2rem 0.6rem',
+                            fontSize: '0.8rem',
+                            fontWeight: '700',
+                            border: '1px solid #475569',
+                            borderRadius: '6px',
+                            background: '#334155',
+                            color: '#f1f5f9',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          B
+                        </button>
+                      </div>
                       <textarea
+                        ref={customMessageRef}
                         value={customEmailData.message}
                         onChange={(e) => setCustomEmailData(prev => ({ ...prev, message: e.target.value }))}
                         placeholder="Write your message here..."
@@ -2903,6 +2944,8 @@ export default function Emails() {
                         }}
                       />
                       <div style={{ marginTop: '0.5rem', color: '#64748b', fontSize: '0.78rem', lineHeight: '1.6' }}>
+                        Wrap text in <code>**double asterisks**</code> (or select text and click <strong>B</strong>) to send it bold.
+                        <br />
                         Available placeholders — replaced per school before sending:&nbsp;
                         <span style={{ color: '#94a3b8' }}>
                           <code>[school_name]</code> &nbsp;

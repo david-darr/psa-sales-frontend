@@ -1,0 +1,118 @@
+/* =========================================================
+   DESIGN TOKENS
+   Single source of truth for colour, spacing, type and depth.
+
+   Values here were extracted from the literals that were
+   previously repeated across App.css and ~770 inline style
+   objects, so adopting a token changes nothing visually -
+   it just gives the value one name instead of many copies.
+
+   Rule of thumb: if you are about to type a hex code, a px
+   radius or a rem gap into a component, add/use a token here.
+   ========================================================= */
+
+:root {
+  /* ---------- Surfaces (dark slate dashboard) ---------- */
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-raised: #334155;
+  --color-surface-gradient: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  --color-sidebar-gradient: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  --color-scrim: rgba(0, 0, 0, 0.5);
+
+  /* ---------- Borders ---------- */
+  --color-border: #334155;
+  --color-border-strong: #475569;
+
+  /* ---------- Text ---------- */
+  --color-text: #f1f5f9;
+  --color-text-body: #e2e8f0;
+  --color-text-muted: #64748b;
+  --color-text-on-accent: #ffffff;
+
+  /* ---------- Brand accent (interactive blue) ---------- */
+  --color-primary: #3b82f6;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  --color-primary-soft: rgba(59, 130, 246, 0.1);
+  --color-primary-soft-border: rgba(59, 130, 246, 0.2);
+  --color-primary-soft-icon: rgba(59, 130, 246, 0.2);
+
+  /* ---------- PSA brand red (marketing surfaces, legacy pages) ---------- */
+  --color-psa-red: #c40c0c;
+  --color-psa-red-bright: #e53935;
+  --color-psa-red-hover: #f42222;
+
+  /* ---------- Status ---------- */
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #8b5cf6;
+  --color-success-soft: rgba(16, 185, 129, 0.1);
+  --color-danger-soft: rgba(239, 68, 68, 0.1);
+  --color-warning-soft: rgba(245, 158, 11, 0.1);
+  --color-info-soft: rgba(139, 92, 246, 0.1);
+
+  /* ---------- Spacing scale ---------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* ---------- Radii ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* ---------- Depth ---------- */
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.3);
+  --shadow-primary: 0 4px 20px rgba(59, 130, 246, 0.3);
+  --shadow-primary-hover: 0 10px 25px rgba(59, 130, 246, 0.4);
+
+  /* ---------- Typography ---------- */
+  --font-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-display: "futura-pt", Verdana, Arial, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 3rem;
+
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-extrabold: 800;
+
+  /* ---------- Layout ---------- */
+  --sidebar-width: 280px;
+  --mobile-header-height: 64px;
+
+  /* ---------- Motion ---------- */
+  --transition-fast: 0.2s ease;
+  --transition-base: 0.3s ease;
+
+  /* ---------- Stacking order ----------
+     Declared together so the relative order is reviewable in
+     one place rather than inferred from scattered z-index values. */
+  --z-sidebar: 100;
+  --z-mobile-header: 900;
+  --z-scrim: 999;
+  --z-mobile-sidebar: 1000;
+  --z-modal: 1100;
+}
+
+/* Breakpoints cannot be CSS variables in media queries.
+   Keep these in sync with BREAKPOINTS in src/hooks/useBreakpoint.js:
+     mobile : max-width 768px
+     tablet : 769px - 1024px
+     desktop: min-width 1025px */

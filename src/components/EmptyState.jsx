@@ -1,0 +1,24 @@
+import '../styles/ui.css'
+
+/**
+ * The "nothing here" / "still loading" panel used inside cards and tables.
+ *
+ * @param {ReactNode} [icon]
+ * @param {string}    title
+ * @param {ReactNode} [message]
+ * @param {ReactNode} [action]  Usually a button.
+ */
+export default function EmptyState({ icon, title, message, action }) {
+  return (
+    <div className="ui-empty-state">
+      {icon && (
+        <div className="ui-empty-icon" aria-hidden="true">
+          {icon}
+        </div>
+      )}
+      <h3 className="ui-empty-title">{title}</h3>
+      {message && <p className="ui-empty-message">{message}</p>}
+      {action}
+    </div>
+  )
+}

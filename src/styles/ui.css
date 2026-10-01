@@ -824,8 +824,113 @@
   font-weight: var(--weight-medium);
 }
 
+/* Dashboard mini map: tighter columns and muted labels. */
+.ui-legend.is-compact {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.ui-legend.is-compact .ui-legend-swatch {
+  width: 12px;
+  height: 12px;
+}
+
+.ui-legend.is-compact .ui-legend-label {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+/* Mini map canvas on the dashboard card. */
+.ui-map-canvas.is-mini {
+  height: 200px;
+  min-height: 0;
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .ui-map-canvas.is-mini {
+    height: 160px;
+  }
+}
+
 .ui-center {
   text-align: center;
+}
+
+/* ---------------------------------------------------------
+   Dashboard grid + feed items
+   --------------------------------------------------------- */
+
+.ui-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .ui-dashboard-grid {
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+}
+
+/* A row in a small list inside a card (recent emails, top team members). */
+.ui-feed-item {
+  padding: var(--space-3);
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  border-radius: var(--radius-md);
+}
+
+.ui-feed-item + .ui-feed-item {
+  margin-top: var(--space-2);
+}
+
+.ui-feed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Inside a grid the items are siblings in both axes, so the stacking
+   margin above would add a stray gap on wrapped rows. */
+.ui-feed-grid .ui-feed-item + .ui-feed-item {
+  margin-top: 0;
+}
+
+.ui-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.ui-feed-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-gradient);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-on-accent);
+  font-weight: var(--weight-bold);
+}
+
+.ui-feed-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+  font-size: 0.8rem;
+  color: var(--color-text-body);
 }
 
 /* ---------------------------------------------------------

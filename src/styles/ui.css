@@ -858,6 +858,18 @@
   text-align: center;
 }
 
+/* Full-viewport wait state while a protected route checks the session. */
+.ui-route-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--color-bg);
+  color: #94a3b8;
+}
+
 /* ---------------------------------------------------------
    Dashboard grid + feed items
    --------------------------------------------------------- */
@@ -948,4 +960,323 @@
 
 .ui-form-stack > :last-child {
   margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------
+   Modal
+   --------------------------------------------------------- */
+
+.ui-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.ui-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 90vh;
+  background: var(--color-surface-gradient);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  outline: none;
+}
+
+.ui-modal-md {
+  max-width: 620px;
+}
+
+.ui-modal-lg {
+  max-width: 800px;
+}
+
+.ui-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.ui-modal-title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
+.ui-modal-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-danger);
+  color: var(--color-text-on-accent);
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+/* The body scrolls, so the header and footer stay put on a long reply chain. */
+.ui-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+}
+
+.ui-modal-footer {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.ui-modal-footer > .ui-grow {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------
+   Email composer
+   --------------------------------------------------------- */
+
+.ui-compose-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.ui-compose-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 0.4rem;
+}
+
+.ui-compose-tools {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.ui-tool-btn {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+/* Read-only "To:" display for a fixed recipient. */
+.ui-readonly-field {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.ui-readonly-field.is-bulk {
+  border-color: var(--color-info);
+  background: var(--color-info-soft);
+  color: #c4b5fd;
+}
+
+.ui-compose-hint {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.ui-compose-hint code {
+  color: #94a3b8;
+}
+
+.ui-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ---------------------------------------------------------
+   Reply chain
+   --------------------------------------------------------- */
+
+.ui-reply-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.ui-reply-meta strong {
+  color: var(--color-text);
+}
+
+.ui-reply-card {
+  margin-bottom: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.ui-reply-card:nth-child(even) {
+  background: var(--color-bg);
+}
+
+.ui-reply-head {
+  margin-bottom: var(--space-4);
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+/* Reply bodies are plain text from an email client, so they keep their own
+   line breaks and get a monospace treatment. */
+.ui-reply-body {
+  padding: var(--space-4);
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-body);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.ui-reply-body.is-single {
+  max-height: 300px;
+}
+
+/* ---------------------------------------------------------
+   Email-center specifics
+   --------------------------------------------------------- */
+
+.ui-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.ui-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ui-toolbar-group .ui-select {
+  width: auto;
+  min-width: 180px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.9rem;
+}
+
+.ui-summary-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--tone-soft, var(--color-primary-soft));
+  border: 1px solid var(--tone-border, var(--color-primary-soft-border));
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.ui-summary-bar-note {
+  flex-basis: 100%;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--tone-border, var(--color-primary-soft-border));
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+/* Denser table for the email center's three tables. */
+.ui-table.is-dense th,
+.ui-table.is-dense td {
+  padding: var(--space-3);
+}
+
+.ui-table.is-dense th:not(:last-child),
+.ui-table.is-dense td:not(:last-child) {
+  border-right: none;
+}
+
+.ui-table .ui-select-col {
+  width: 50px;
+}
+
+.ui-table input[type='checkbox'] {
+  accent-color: var(--color-primary);
+}
+
+.ui-cell-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ui-cell-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ui-sub {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-top: var(--space-1);
+}
+
+.ui-sub-dim {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  margin-top: var(--space-1);
+}
+
+/* Highlight responded rows in the responses table. */
+.ui-table.is-responded tbody tr:nth-child(odd) {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.ui-table.is-responded tbody tr:nth-child(even) {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.ui-btn-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
 }

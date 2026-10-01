@@ -11,40 +11,51 @@
 /* ---------------------------------------------------------
    Tones
 
-   A tone sets the accent colour for a component via two
-   variables that the component's own rules consume. Adding a
-   tone here makes it available to every primitive at once.
+   A tone sets three variables that the primitives below read.
+   Adding a tone here makes it available to every primitive at
+   once, instead of each call site inlining its own hex pair.
+
+     --tone-color   the accent itself (text, icons, titles)
+     --tone-soft    a 20%-alpha fill for chips and icon chips
+     --tone-border  a 20%-alpha border, so panels read as
+                    tinted rather than outlined in full accent
    --------------------------------------------------------- */
 
 .tone-primary {
   --tone-color: var(--color-primary);
   --tone-soft: var(--color-primary-soft-icon);
+  --tone-border: var(--color-primary-soft-border);
 }
 
 .tone-success {
   --tone-color: var(--color-success);
   --tone-soft: rgba(16, 185, 129, 0.2);
+  --tone-border: rgba(16, 185, 129, 0.2);
 }
 
 .tone-warning {
   --tone-color: var(--color-warning);
   --tone-soft: rgba(245, 158, 11, 0.2);
+  --tone-border: rgba(245, 158, 11, 0.2);
 }
 
 .tone-danger {
   --tone-color: var(--color-danger);
   --tone-soft: rgba(239, 68, 68, 0.2);
+  --tone-border: rgba(239, 68, 68, 0.2);
 }
 
 .tone-info {
   --tone-color: var(--color-info);
   --tone-soft: rgba(139, 92, 246, 0.2);
+  --tone-border: rgba(139, 92, 246, 0.2);
 }
 
 /* Not a semantic tone - the deliberate "no signal" grey. */
 .ui-badge-neutral {
   --tone-color: var(--color-text-muted);
   --tone-soft: rgba(100, 116, 139, 0.2);
+  --tone-border: rgba(100, 116, 139, 0.2);
 }
 
 /* ---------------------------------------------------------
@@ -598,7 +609,7 @@
   padding: var(--space-5);
   border-radius: var(--radius-md);
   background: var(--tone-soft, var(--color-primary-soft));
-  border: 1px solid var(--tone-color, var(--color-primary));
+  border: 1px solid var(--tone-border, var(--color-primary-soft-border));
 }
 
 .ui-panel-title {
@@ -652,8 +663,131 @@
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid var(--tone-color, var(--color-primary));
+  border: 1px solid var(--tone-border, var(--color-primary-soft-border));
   background: var(--tone-soft, var(--color-primary-soft));
   color: var(--color-text);
   font-size: 0.9rem;
+}
+
+.ui-alert.is-centered {
+  text-align: center;
+  font-weight: var(--weight-semibold);
+  color: var(--tone-color, var(--color-primary));
+}
+
+/* ---------------------------------------------------------
+   Info tile
+
+   Labelled read-only value (EMAIL ADDRESS / PHONE NUMBER) and
+   the feature/callout boxes. Same soft-tone box in both cases.
+   --------------------------------------------------------- */
+
+.ui-info-tile {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--tone-soft, var(--color-primary-soft));
+  border: 1px solid var(--tone-border, var(--color-primary-soft-border));
+}
+
+.ui-info-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ui-info-value {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.ui-info-title {
+  color: var(--tone-color, var(--color-primary));
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.ui-info-body {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.ui-tile-stack {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* ---------------------------------------------------------
+   Feature grid (marketing tiles on the login page)
+   --------------------------------------------------------- */
+
+.ui-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.ui-feature-icon {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-2);
+}
+
+.ui-feature-title {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+/* ---------------------------------------------------------
+   Profile header (large avatar + name + role)
+   --------------------------------------------------------- */
+
+.ui-profile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.ui-profile-avatar {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-gradient);
+  border-radius: 20px;
+  color: var(--color-text-on-accent);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-2xl);
+}
+
+.ui-profile-name {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+/* ---------------------------------------------------------
+   Narrow single-column form page (login / register)
+   --------------------------------------------------------- */
+
+.ui-narrow {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.ui-form-stack > * {
+  margin-bottom: var(--space-4);
+}
+
+.ui-form-stack > :last-child {
+  margin-bottom: 0;
 }

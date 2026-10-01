@@ -310,6 +310,41 @@
   box-shadow: var(--shadow-primary-hover);
 }
 
+/* Variants. Pages previously recoloured this button by inlining
+   `background: "#ef4444"` (and an opacity/cursor pair that `:disabled`
+   above now handles), which meant the gradient was silently dropped and
+   every call site repeated the hex code. */
+.modern-btn-primary.is-danger {
+  background: var(--color-danger);
+}
+
+.modern-btn-primary.is-success {
+  background: var(--color-success);
+}
+
+.modern-btn-primary.is-warning {
+  background: var(--color-warning);
+}
+
+.modern-btn-primary.is-info {
+  background: var(--color-info);
+}
+
+.modern-btn-primary.is-neutral {
+  background: var(--color-text-muted);
+}
+
+/* Larger tap target for primary page actions (login, save, logout). */
+.modern-btn-primary.is-large {
+  padding: var(--space-4);
+  font-size: var(--text-base);
+}
+
+.modern-btn-primary.is-small {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+}
+
 .modern-btn-primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;

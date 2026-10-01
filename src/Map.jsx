@@ -21,7 +21,7 @@ export default function PSAMap() {
     setLoading(true)
     setError('')
     try {
-      const data = await api.get('/api/map-schools', { auth: false })
+      const data = await api.get('/api/map-schools')
       setSchools(data && typeof data === 'object' ? data : {})
     } catch (err) {
       setError(err.message || 'Could not load map data.')
@@ -41,7 +41,7 @@ export default function PSAMap() {
     try {
       // Re-reads the Google Sheet and re-geocodes every address server-side,
       // so this is slow by design.
-      await api.post('/api/refresh-map-schools', undefined, { auth: false })
+      await api.post('/api/refresh-map-schools')
       await fetchSchools()
     } catch (err) {
       setError(err.message || 'Could not refresh map data.')

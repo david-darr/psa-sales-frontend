@@ -100,7 +100,7 @@ export default function Home() {
   const fetchMapSchools = useCallback(async () => {
     setMapLoading(true)
     try {
-      const data = await api.get('/api/map-schools', { auth: false })
+      const data = await api.get('/api/map-schools')
       setMapSchools(data && typeof data === 'object' ? data : {})
     } catch {
       setMapSchools({})

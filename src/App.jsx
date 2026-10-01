@@ -15,11 +15,11 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/map" element={<PSAMap />} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/map" element={<ProtectedRoute><PSAMap /></ProtectedRoute>} />
           <Route path="/account" element={<Account />} />
-          <Route path="/finder" element={<SchoolFinder />} />
+          <Route path="/finder" element={<ProtectedRoute><SchoolFinder /></ProtectedRoute>} />
           <Route
             path="/schools"
             element={

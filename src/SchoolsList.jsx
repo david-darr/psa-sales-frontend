@@ -17,7 +17,7 @@ export default function SchoolsList() {
     setLoading(true)
     setError('')
     try {
-      const data = await api.get('/api/schools', { auth: false })
+      const data = await api.get('/api/schools')
       setSchools(Array.isArray(data) ? data : [])
     } catch (err) {
       // Previously this was only console.error'd, so a failed load was

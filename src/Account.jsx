@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext'
 import AppLayout from './components/AppLayout'
 import Card from './components/Card'
 import Badge from './components/Badge'
+import EmployeeInvites from './components/EmployeeInvites'
 import api from './lib/api'
 
 const EMPTY_FORM = { name: '', email: '', phone: '', password: '' }
@@ -48,8 +49,9 @@ export default function Account() {
   const { user, login, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const inviteToken = new URLSearchParams(location.hash.replace(/^#/, '')).get('invite') || ''
 
-  const [isRegister, setIsRegister] = useState(false)
+  const [isRegister, setIsRegister] = useState(Boolean(inviteToken))
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [appPassword, setAppPassword] = useState('')
@@ -68,7 +70,8 @@ export default function Account() {
     setAuthNotice(null)
     setSubmitting(true)
     try {
-      const data = await api.post(isRegister ? '/api/register' : '/api/login', form, {
+      const body = isRegister ? { ...form, invite_token: inviteToken } : form
+      const data = await api.post(isRegister ? '/api/register' : '/api/login', body, {
         auth: false,
       })
 
@@ -82,6 +85,7 @@ export default function Account() {
         setIsRegister(false)
         setForm(EMPTY_FORM)
         setAuthNotice({ tone: 'success', text: 'Registration successful. Please log in.' })
+        navigate('/account', { replace: true })
       }
     } catch (err) {
       setAuthNotice({ tone: 'danger', text: err.message || 'Unknown error' })
@@ -215,6 +219,7 @@ export default function Account() {
             </div>
           </Card>
         </div>
+        {user.admin && <EmployeeInvites />}
       </AppLayout>
     )
   }
@@ -237,6 +242,11 @@ export default function Account() {
           <form onSubmit={handleSubmit} className="ui-form-stack">
             {isRegister && (
               <>
+                <div className="ui-info-tile tone-primary">
+                  <div className="ui-info-body">
+                    Use the email address your PSA administrator invited.
+                  </div>
+                </div>
                 <input
                   name="name"
                   className="ui-input"
@@ -295,18 +305,24 @@ export default function Account() {
             </button>
           </form>
 
-          <button
-            type="button"
-            className="modern-btn-primary is-neutral is-large ui-block"
-            style={{ marginTop: 'var(--space-4)' }}
-            onClick={() => {
-              setIsRegister((r) => !r)
-              setAuthNotice(null)
-              setForm(EMPTY_FORM)
-            }}
-          >
-            {isRegister ? 'Already have an account? Login' : 'Need an account? Register'}
-          </button>
+          {inviteToken ? (
+            <button
+              type="button"
+              className="modern-btn-primary is-neutral is-large ui-block"
+              style={{ marginTop: 'var(--space-4)' }}
+              onClick={() => {
+                setIsRegister((r) => !r)
+                setAuthNotice(null)
+                setForm(EMPTY_FORM)
+              }}
+            >
+              {isRegister ? 'Already have an account? Login' : 'Use your invitation to register'}
+            </button>
+          ) : (
+            <p className="ui-info-body" style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
+              Need an account? Ask your PSA administrator for an invitation link.
+            </p>
+          )}
 
           {!isRegister && (
             <div

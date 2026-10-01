@@ -62,7 +62,6 @@ export default function SchoolFinder() {
       const data = await api.post(
         '/api/find-schools',
         { address, keywords: selectedKeywords },
-        { auth: false },
       )
       setSchools(data.schools || [])
       setCoords(data.location || null)
@@ -92,7 +91,6 @@ export default function SchoolFinder() {
       const data = await api.post(
         '/api/route-plan',
         { schools: schoolsToRoute, start_address: startAddress },
-        { auth: false },
       )
       setRouteOrder(data.route || null)
     } catch (err) {

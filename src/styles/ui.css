@@ -41,6 +41,12 @@
   --tone-soft: rgba(139, 92, 246, 0.2);
 }
 
+/* Not a semantic tone - the deliberate "no signal" grey. */
+.ui-badge-neutral {
+  --tone-color: var(--color-text-muted);
+  --tone-soft: rgba(100, 116, 139, 0.2);
+}
+
 /* ---------------------------------------------------------
    Grids
    --------------------------------------------------------- */
@@ -302,4 +308,352 @@
   .ui-table {
     min-width: 600px;
   }
+}
+
+/* ---------------------------------------------------------
+   Badge
+   --------------------------------------------------------- */
+
+.ui-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--tone-soft, var(--color-primary-soft-icon));
+  color: var(--tone-color, var(--color-primary));
+  font-size: 0.8rem;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.ui-badge.is-compact {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------
+   Metric row
+
+   The "N schools / N emails" pairs and the team summary panel.
+   Auto-fit again rather than a breakpoint ternary.
+   --------------------------------------------------------- */
+
+.ui-metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-4);
+}
+
+.ui-metric {
+  text-align: center;
+}
+
+.ui-metric-value {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-extrabold);
+  color: var(--tone-color, var(--color-primary));
+  margin-bottom: var(--space-1);
+  line-height: 1.1;
+}
+
+.ui-metric-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ui-summary-panel {
+  margin-bottom: var(--space-6);
+  padding: var(--space-5);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-border);
+  border-radius: var(--radius-lg);
+}
+
+.ui-summary-title {
+  color: var(--color-primary);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.ui-summary-panel .ui-metric-value {
+  font-size: var(--text-2xl);
+}
+
+.ui-summary-panel .ui-metric-label {
+  font-size: 0.8rem;
+}
+
+/* ---------------------------------------------------------
+   Person card (team directory)
+   --------------------------------------------------------- */
+
+.ui-person-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.ui-person-card {
+  padding: var(--space-5);
+  background: rgba(51, 65, 85, 0.3);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: var(--radius-lg);
+}
+
+.ui-person-card.is-current-user {
+  background: var(--color-primary-soft);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.ui-person-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.ui-person-avatar {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: var(--color-text-on-accent);
+  font-weight: var(--weight-bold);
+  font-size: 1.2rem;
+}
+
+.ui-person-card.is-current-user .ui-person-avatar {
+  background: var(--color-primary-gradient);
+}
+
+.ui-person-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-person-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-1);
+}
+
+.ui-person-role {
+  font-size: 0.85rem;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.ui-person-role.is-admin {
+  color: var(--color-warning);
+}
+
+.ui-person-contact {
+  margin-bottom: var(--space-4);
+  font-size: 0.85rem;
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
+.ui-person-contact > div + div {
+  margin-top: var(--space-1);
+}
+
+.ui-person-footer {
+  margin-top: var(--space-4);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
+   Toolbar row (description + action)
+   --------------------------------------------------------- */
+
+.ui-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.ui-toolbar-hint {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------
+   Checkbox grid
+   --------------------------------------------------------- */
+
+.ui-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-3);
+}
+
+.ui-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.ui-check input[type='checkbox'] {
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------
+   Selectable list
+
+   Rows are <label>s wrapping their own checkbox, so the whole
+   row is a click target with exactly one handler. The previous
+   markup put an onClick on the row AND an onChange on the
+   checkbox, so a click landing on the checkbox fired both and
+   the two toggles cancelled out.
+   --------------------------------------------------------- */
+
+.ui-selectable-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: var(--space-4);
+}
+
+.ui-selectable {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  background: rgba(51, 65, 85, 0.3);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ui-selectable:hover {
+  border-color: var(--color-primary-soft-border);
+}
+
+.ui-selectable.is-selected {
+  background: var(--color-primary-soft);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.ui-selectable input[type='checkbox'] {
+  margin-top: 0.25rem;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.ui-selectable-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* display:block so these work as <span>s inside a <label> as well as
+   <div>s elsewhere - a <div> inside a <label> is not valid markup. */
+.ui-selectable-title {
+  display: block;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  margin-bottom: var(--space-1);
+}
+
+.ui-selectable-meta {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.ui-list-hint {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------
+   Tone panel (callout block inside a card)
+   --------------------------------------------------------- */
+
+.ui-panel {
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--tone-soft, var(--color-primary-soft));
+  border: 1px solid var(--tone-color, var(--color-primary));
+}
+
+.ui-panel-title {
+  color: var(--tone-color, var(--color-primary));
+  margin-bottom: var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---------------------------------------------------------
+   Utilities
+   --------------------------------------------------------- */
+
+.ui-block {
+  width: 100%;
+}
+
+.ui-stack {
+  margin-bottom: var(--space-5);
+}
+
+.ui-field-label {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: 0.9rem;
+  font-weight: var(--weight-semibold);
+  color: #94a3b8;
+}
+
+.ui-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.ui-map-frame {
+  height: 400px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------
+   Inline alert
+   --------------------------------------------------------- */
+
+.ui-alert {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--tone-color, var(--color-primary));
+  background: var(--tone-soft, var(--color-primary-soft));
+  color: var(--color-text);
+  font-size: 0.9rem;
 }

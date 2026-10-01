@@ -1,685 +1,238 @@
-import { useEffect, useState } from "react"
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
-import "leaflet/dist/leaflet.css"
-import L from "leaflet"
-import NavigationCard from './NavigationCard'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+import AppLayout from './components/AppLayout'
+import Card from './components/Card'
+import StatCard from './components/StatCard'
+import EmptyState from './components/EmptyState'
+import { useIsMobile } from './hooks/useBreakpoint'
+import api from './lib/api'
 
 // Configure Leaflet icons
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: '/map/marker-icon-2x.png',
   iconUrl: '/map/marker-icon.png',
   shadowUrl: '/map/marker-shadow.png',
-});
+})
 
-const markerIcons = {
-  happyfeet: new L.Icon({ iconUrl: "/map/marker-red.png", iconSize: [32, 32] }),
-  psa: new L.Icon({ iconUrl: "/map/marker-blue.png", iconSize: [32, 32] }),
-  elementary: new L.Icon({ iconUrl: "/map/marker-purple.png", iconSize: [32, 32] }),  // NEW: Purple marker
-  sheet: new L.Icon({ iconUrl: "/map/marker-yellow.png", iconSize: [32, 32] }),
-  rec: new L.Icon({ iconUrl: "/map/marker-green.png", iconSize: [32, 32] })
-}
+/**
+ * One entry per marker layer. Previously each layer was three separate
+ * hand-written blocks - a stat card, a <Marker> loop and a legend row - that
+ * had to be kept in sync by hand; adding the "elementary" layer meant editing
+ * all three in three places.
+ *
+ * `key` matches the key in the /api/map-schools response.
+ */
+const LAYERS = [
+  {
+    key: 'happyfeet',
+    label: 'HappyFeet',
+    legend: 'HappyFeet Schools',
+    popup: 'HappyFeet School',
+    swatch: '#ef4444',
+    icon: '🔴',
+    tone: 'danger',
+    marker: '/map/marker-red.png',
+  },
+  {
+    key: 'psa',
+    label: 'PSA',
+    legend: 'PSA Schools',
+    popup: 'PSA School',
+    swatch: '#3b82f6',
+    icon: '🔵',
+    tone: 'primary',
+    marker: '/map/marker-blue.png',
+  },
+  {
+    key: 'elementary',
+    label: 'Elementary',
+    legend: 'Elementary',
+    popup: 'Elementary/Catholic School',
+    swatch: '#8b5cf6',
+    icon: '🟣',
+    tone: 'info',
+    marker: '/map/marker-purple.png',
+  },
+  {
+    key: 'reached_out',
+    label: 'Contacted',
+    legend: 'Contacted',
+    popup: 'Contacted School',
+    swatch: '#eab308',
+    icon: '🟡',
+    tone: 'warning',
+    marker: '/map/marker-yellow.png',
+  },
+  {
+    key: 'rec',
+    label: 'Rec Sites',
+    legend: 'Recreation Sites',
+    popup: 'Recreation Site',
+    swatch: '#10b981',
+    icon: '🟢',
+    tone: 'success',
+    caption: 'Sites',
+    marker: '/map/marker-green.png',
+  },
+]
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  return isMobile
-}
+const MARKER_ICONS = Object.fromEntries(
+  LAYERS.map((layer) => [layer.key, new L.Icon({ iconUrl: layer.marker, iconSize: [32, 32] })]),
+)
 
-function useIsTablet() {
-  const [isTablet, setIsTablet] = useState(window.innerWidth <= 1024 && window.innerWidth > 768)
-  useEffect(() => {
-    const onResize = () => setIsTablet(window.innerWidth <= 1024 && window.innerWidth > 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  return isTablet
-}
+const MAP_CENTER = [38.9, -77.25]
 
 export default function PSAMap() {
   const isMobile = useIsMobile()
-  const isTablet = useIsTablet()
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [schools, setSchools] = useState({
-    happyfeet: [],
-    psa: [],
-    elementary: [],  // NEW
-    reached_out: [],
-    rec: []
-  })
+  const [schools, setSchools] = useState({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState('')
 
-  // Example center (Northern Virginia)
-  const mapCenter = [38.9, -77.25]
-  const mapZoom = isMobile ? 9 : 10
-
-  // Load schools data
-  useEffect(() => {
-    fetchSchools()
-  }, [])
-
-  // Ensure full viewport coverage
-  useEffect(() => {
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.documentElement.style.margin = '0';
-    document.documentElement.style.padding = '0';
-    
-    return () => {
-      if (!document.querySelector('.dashboard-container')) {
-        document.body.style.display = 'flex';
-        document.body.style.alignItems = 'center';
-        document.body.style.justifyContent = 'center';
-        document.body.style.background = '#f5f5f5';
-      }
-    };
-  }, []);
-
-  // Close mobile nav when clicking outside or on resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (!isMobile && mobileNavOpen) {
-        setMobileNavOpen(false)
-      }
-    }
-
-    const handleClickOutside = (event) => {
-      if (mobileNavOpen && !event.target.closest('.mobile-nav-sidebar') && !event.target.closest('.mobile-nav-toggle')) {
-        setMobileNavOpen(false)
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-    document.addEventListener('click', handleClickOutside)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      document.removeEventListener('click', handleClickOutside)
-    }
-  }, [isMobile, mobileNavOpen])
-
-  const fetchSchools = async () => {
+  const fetchSchools = useCallback(async () => {
+    setLoading(true)
+    setError('')
     try {
-      setLoading(true)
-      const response = await fetch("https://psa-sales-backend.onrender.com/api/map-schools")
-      const data = await response.json()
-      setSchools(data)
-    } catch (error) {
-      console.error('Error fetching schools:', error)
+      const data = await api.get('/api/map-schools', { auth: false })
+      setSchools(data && typeof data === 'object' ? data : {})
+    } catch (err) {
+      setError(err.message || 'Could not load map data.')
+      setSchools({})
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchSchools()
+  }, [fetchSchools])
 
   const handleRefreshMap = async () => {
+    setRefreshing(true)
+    setError('')
     try {
-      setRefreshing(true)
-      await fetch("https://psa-sales-backend.onrender.com/api/refresh-map-schools", { method: "POST" })
+      // Re-reads the Google Sheet and re-geocodes every address server-side,
+      // so this is slow by design.
+      await api.post('/api/refresh-map-schools', undefined, { auth: false })
       await fetchSchools()
-    } catch (error) {
-      console.error('Error refreshing map:', error)
+    } catch (err) {
+      setError(err.message || 'Could not refresh map data.')
     } finally {
       setRefreshing(false)
     }
   }
 
-  // Calculate statistics
-  const mapStats = {
-    happyfeet: schools.happyfeet?.length || 0,
-    psa: schools.psa?.length || 0,
-    elementary: schools.elementary?.length || 0,  // NEW
-    reached_out: schools.reached_out?.length || 0,
-    rec: schools.rec?.length || 0,
-    total: (schools.happyfeet?.length || 0) + 
-           (schools.psa?.length || 0) + 
-           (schools.elementary?.length || 0) +  // NEW
-           (schools.reached_out?.length || 0) + 
-           (schools.rec?.length || 0)
-  }
+  const counts = useMemo(() => {
+    const perLayer = LAYERS.map((layer) => ({
+      layer,
+      count: Array.isArray(schools[layer.key]) ? schools[layer.key].length : 0,
+    }))
+    return {
+      perLayer,
+      total: perLayer.reduce((sum, entry) => sum + entry.count, 0),
+    }
+  }, [schools])
+
+  const refreshButton = (
+    <button
+      className="modern-btn-primary"
+      onClick={handleRefreshMap}
+      disabled={refreshing || loading}
+    >
+      {refreshing ? '🔄 Refreshing...' : '🔄 Refresh Map Data'}
+    </button>
+  )
 
   return (
-    <div className="dashboard-container">
-      {/* Mobile Navigation Toggle Button */}
-      {isMobile && (
-        <button
-          className="mobile-nav-toggle"
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          style={{
-            position: 'fixed',
-            top: '1rem',
-            left: '1rem',
-            zIndex: 1001,
-            background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-            border: '1px solid #475569',
-            borderRadius: '12px',
-            width: '48px',
-            height: '48px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '3px',
-              width: '20px',
-              height: '16px'
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                height: '2px',
-                background: '#f1f5f9',
-                borderRadius: '1px',
-                transition: 'all 0.3s ease',
-                transform: mobileNavOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none'
-              }}
-            />
-            <div
-              style={{
-                width: '100%',
-                height: '2px',
-                background: '#f1f5f9',
-                borderRadius: '1px',
-                transition: 'all 0.3s ease',
-                opacity: mobileNavOpen ? 0 : 1
-              }}
-            />
-            <div
-              style={{
-                width: '100%',
-                height: '2px',
-                background: '#f1f5f9',
-                borderRadius: '1px',
-                transition: 'all 0.3s ease',
-                transform: mobileNavOpen ? 'rotate(-45deg) translate(7px, -6px)' : 'none'
-              }}
-            />
+    <AppLayout title="MAP" subtitle="School Locations & Distribution" actions={refreshButton}>
+      <div className="ui-stat-grid">
+        <StatCard label="Total" icon="🏫" value={counts.total} caption="Schools" />
+        {counts.perLayer.map(({ layer, count }) => (
+          <StatCard
+            key={layer.key}
+            label={layer.label}
+            icon={layer.icon}
+            tone={layer.tone}
+            value={count}
+            caption={layer.caption || 'Schools'}
+          />
+        ))}
+      </div>
+
+      <Card title="School Distribution Map" icon="🗺️" tone="success">
+        {error && (
+          <div className="ui-alert tone-danger" role="alert">
+            {error}
           </div>
-        </button>
-      )}
+        )}
 
-      {/* Mobile Navigation Overlay */}
-      {isMobile && mobileNavOpen && (
-        <div
-          onClick={() => setMobileNavOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 999,
-            transition: 'opacity 0.3s ease'
-          }}
-        />
-      )}
+        {loading ? (
+          <EmptyState icon="⏳" title="Loading map data..." />
+        ) : counts.total === 0 && !error ? (
+          // The backend serves this from an in-memory cache that starts empty
+          // on every boot, so a cold Render instance legitimately has no data
+          // until someone refreshes. Previously this rendered as a blank map
+          // with no explanation.
+          <EmptyState
+            icon="🗺️"
+            title="No Map Data Loaded"
+            message="The server builds this map by geocoding the PSA school sheet, and its cache is empty after a restart. Refreshing rebuilds it."
+            action={refreshButton}
+          />
+        ) : (
+          <>
+            <div className="ui-map-canvas">
+              <MapContainer
+                center={MAP_CENTER}
+                zoom={isMobile ? 9 : 10}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
 
-      {/* Mobile Navigation Sidebar - Only visible on mobile when open */}
-      {isMobile && (
-        <div
-          className="mobile-nav-sidebar"
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            width: '280px',
-            height: '100vh',
-            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-            borderRight: '1px solid #334155',
-            padding: '2rem',
-            transform: mobileNavOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.3s ease',
-            zIndex: 1000,
-            overflowY: 'auto'
-          }}
-        >
-          <NavigationCard />
-        </div>
-      )}
+                {LAYERS.flatMap((layer) => {
+                  const rows = Array.isArray(schools[layer.key]) ? schools[layer.key] : []
+                  return rows
+                    .filter((s) => s.lat && s.lng)
+                    .map((s, i) => (
+                      <Marker
+                        key={`${layer.key}-${i}`}
+                        position={[s.lat, s.lng]}
+                        icon={MARKER_ICONS[layer.key]}
+                      >
+                        <Popup>
+                          <b>{s.name}</b>
+                          <br />
+                          {layer.popup}
+                          <br />
+                          {s.address}
+                        </Popup>
+                      </Marker>
+                    ))
+                })}
+              </MapContainer>
+            </div>
 
-      {/* Desktop Navigation Sidebar - Only visible on desktop */}
-      {!isMobile && (
-        <div
-          className="nav-sidebar"
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            width: '280px',
-            height: '100vh',
-            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-            borderRight: '1px solid #334155',
-            padding: '2rem',
-            zIndex: 1000,
-            overflowY: 'auto'
-          }}
-        >
-          <NavigationCard />
-        </div>
-      )}
-      
-      <main className="modern-main-content" style={{ 
-        marginLeft: isMobile ? 0 : 280,
-        paddingTop: isMobile ? "4rem" : "2rem",
-        paddingLeft: isMobile ? "1rem" : "2rem",
-        paddingRight: isMobile ? "1rem" : "2rem",
-        paddingBottom: "2rem",
-        width: isMobile ? "100vw" : "calc(100vw - 280px)"
-      }}>
-        {/* Header Section */}
-        <div className="modern-page-header" style={{ 
-          marginBottom: isMobile ? "1rem" : "2rem",
-          textAlign: "left"
-        }}>
-          <h1 className="modern-page-title" style={{
-            fontSize: isMobile ? "2rem" : "3rem",
-            marginBottom: isMobile ? "0.25rem" : "0.5rem",
-            textAlign: "left"
-          }}>
-            MAP
-          </h1>
-          <p className="modern-page-subtitle" style={{
-            textAlign: "left"
-          }}>
-            School Locations & Distribution
-          </p>
-        </div>
-
-        {/* Statistics Row */}
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr 1fr 1fr" : "repeat(5, 1fr)",
-          gap: isMobile ? "0.75rem" : "1rem",
-          marginBottom: isMobile ? "1rem" : "2rem"
-        }}>
-          {/* Total Schools */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Total</div>
-              <div className="modern-card-icon" style={{ 
-                background: "rgba(59, 130, 246, 0.2)", 
-                color: "#3b82f6",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🏫
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#3b82f6",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.total}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Schools
-              </div>
-            </div>
-          </div>
-
-          {/* HappyFeet Schools */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>HappyFeet</div>
-              <div className="modern-card-icon" style={{ 
-                background: "rgba(239, 68, 68, 0.2)", 
-                color: "#ef4444",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🔴
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#ef4444",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.happyfeet}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Schools
-              </div>
-            </div>
-          </div>
-
-          {/* PSA Schools */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>PSA</div>
-              <div className="modern-card-icon" style={{ 
-                background: "rgba(59, 130, 246, 0.2)", 
-                color: "#3b82f6",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🔵
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#3b82f6",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.psa}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Schools
-              </div>
-            </div>
-          </div>
-
-          {/* Elementary Schools */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Elementary</div>
-              <div className="modern-card-icon" style={{ 
-                background: "rgba(139, 92, 246, 0.2)", 
-                color: "#8b5cf6",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🟣
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#8b5cf6",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.elementary}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Schools
-              </div>
-            </div>
-          </div>
-
-          {/* Contacted Schools */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Contacted</div>
-              <div className="modern-card-icon" style={{ 
-                background: "rgba(234, 179, 8, 0.2)", 
-                color: "#eab308",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🟡
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#eab308",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.reached_out}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Schools
-              </div>
-            </div>
-          </div>
-
-          {/* Recreation Sites */}
-          <div className="modern-dashboard-card" style={{ minHeight: "120px" }}>
-            <div className="modern-card-header">
-              <div className="modern-card-title" style={{ fontSize: "0.9rem" }}>Rec Sites</div>
-              <div className="modern-card-icon" style={{ 
-                background: "rgba(16, 185, 129, 0.2)", 
-                color: "#10b981",
-                width: "30px",
-                height: "30px",
-                fontSize: "1rem"
-              }}>
-                🟢
-              </div>
-            </div>
-            <div className="modern-card-content" style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: isMobile ? "1.5rem" : "2rem", 
-                fontWeight: "800", 
-                color: "#10b981",
-                marginBottom: "0.25rem"
-              }}>
-                {mapStats.rec}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>
-                Sites
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Map Card */}
-        <div className="modern-dashboard-card" style={{ minHeight: isMobile ? "60vh" : "70vh" }}>
-          <div className="modern-card-header">
-            <div className="modern-card-title">School Distribution Map</div>
-            <div className="modern-card-icon" style={{ background: "#10b98120", color: "#10b981" }}>
-              🗺️
-            </div>
-          </div>
-          <div className="modern-card-content">
-            {loading ? (
-              <div style={{ 
-                height: isMobile ? "50vh" : "60vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#94a3b8",
-                fontSize: "1.1rem"
-              }}>
-                Loading map data...
-              </div>
-            ) : (
-              <>
-                <div style={{ 
-                  height: isMobile ? "50vh" : "60vh", 
-                  borderRadius: "12px", 
-                  overflow: "hidden",
-                  marginBottom: "1rem"
-                }}>
-                  <MapContainer 
-                    center={mapCenter} 
-                    zoom={mapZoom} 
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution="&copy; OpenStreetMap contributors"
-                    />
-                    
-                    {/* HappyFeet Schools - Red markers */}
-                    {Array.isArray(schools.happyfeet) && schools.happyfeet.map((s, i) => (
-                      s.lat && s.lng && (
-                        <Marker key={`hf-${i}`} position={[s.lat, s.lng]} icon={markerIcons.happyfeet}>
-                          <Popup>
-                            <b>{s.name}</b><br />
-                            HappyFeet School<br />
-                            {s.address}
-                          </Popup>
-                        </Marker>
-                      )
-                    ))}
-                    
-                    {/* PSA Schools - Blue markers */}
-                    {Array.isArray(schools.psa) && schools.psa.map((s, i) => (
-                      s.lat && s.lng && (
-                        <Marker key={`psa-${i}`} position={[s.lat, s.lng]} icon={markerIcons.psa}>
-                          <Popup>
-                            <b>{s.name}</b><br />
-                            PSA School<br />
-                            {s.address}
-                          </Popup>
-                        </Marker>
-                      )
-                    ))}
-                    
-                    {/* Elementary Schools - Purple markers */}
-                    {Array.isArray(schools.elementary) && schools.elementary.map((s, i) => (
-                      s.lat && s.lng && (
-                        <Marker key={`elem-${i}`} position={[s.lat, s.lng]} icon={markerIcons.elementary}>
-                          <Popup>
-                            <b>{s.name}</b><br />
-                            Elementary/Catholic School<br />
-                            {s.address}
-                          </Popup>
-                        </Marker>
-                      )
-                    ))}
-                    
-                    {/* Contacted Schools - Yellow markers */}
-                    {Array.isArray(schools.reached_out) && schools.reached_out.map((s, i) => (
-                      s.lat && s.lng && (
-                        <Marker key={`sheet-${i}`} position={[s.lat, s.lng]} icon={markerIcons.sheet}>
-                          <Popup>
-                            <b>{s.name}</b><br />
-                            Contacted School<br />
-                            {s.address}
-                          </Popup>
-                        </Marker>
-                      )
-                    ))}
-                    
-                    {/* Recreation Sites - Green markers */}
-                    {Array.isArray(schools.rec) && schools.rec.map((s, i) => (
-                      s.lat && s.lng && (
-                        <Marker key={`rec-${i}`} position={[s.lat, s.lng]} icon={markerIcons.rec}>
-                          <Popup>
-                            <b>{s.name}</b><br />
-                            Recreation Site<br />
-                            {s.address}
-                          </Popup>
-                        </Marker>
-                      )
-                    ))}
-                  </MapContainer>
+            <div className="ui-legend">
+              {LAYERS.map((layer) => (
+                <div key={layer.key} className="ui-legend-item">
+                  <span
+                    className="ui-legend-swatch"
+                    style={{ '--swatch-color': layer.swatch }}
+                  />
+                  <span className="ui-legend-label">{layer.legend}</span>
                 </div>
+              ))}
+            </div>
 
-                {/* Legend */}
-                <div style={{ 
-                  display: "grid", 
-                  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)",
-                  gap: "1rem",
-                  marginBottom: "1rem",
-                  padding: "1rem",
-                  background: "rgba(59, 130, 246, 0.05)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(59, 130, 246, 0.1)"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ 
-                      width: "16px", 
-                      height: "16px", 
-                      background: "#ef4444", 
-                      borderRadius: "50%",
-                      flexShrink: 0
-                    }}></div>
-                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
-                      HappyFeet Schools
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ 
-                      width: "16px", 
-                      height: "16px", 
-                      background: "#3b82f6", 
-                      borderRadius: "50%",
-                      flexShrink: 0
-                    }}></div>
-                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
-                      PSA Schools
-                    </span>
-                  </div>
-                  {/* NEW: Elementary Legend Item */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ 
-                      width: "16px", 
-                      height: "16px", 
-                      background: "#8b5cf6", 
-                      borderRadius: "50%",
-                      flexShrink: 0
-                    }}></div>
-                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
-                      Elementary
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ 
-                      width: "16px", 
-                      height: "16px", 
-                      background: "#eab308", 
-                      borderRadius: "50%",
-                      flexShrink: 0
-                    }}></div>
-                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
-                      Contacted
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ 
-                      width: "16px", 
-                      height: "16px", 
-                      background: "#10b981", 
-                      borderRadius: "50%",
-                      flexShrink: 0
-                    }}></div>
-                    <span style={{ color: "#f1f5f9", fontSize: "0.85rem", fontWeight: "500" }}>
-                      Recreation Sites
-                    </span>
-                  </div>
-                </div>
-
-                {/* Refresh Button */}
-                <div style={{ textAlign: "center" }}>
-                  <button 
-                    className="modern-btn-primary"
-                    onClick={handleRefreshMap}
-                    disabled={refreshing}
-                    style={{ 
-                      padding: "0.75rem 2rem",
-                      fontSize: "0.9rem",
-                      fontWeight: "600",
-                      opacity: refreshing ? 0.7 : 1,
-                      cursor: refreshing ? "not-allowed" : "pointer"
-                    }}
-                  >
-                    {refreshing ? "🔄 Refreshing..." : "Refresh Map Data"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
+            <div className="ui-center">{refreshButton}</div>
+          </>
+        )}
+      </Card>
+    </AppLayout>
   )
 }

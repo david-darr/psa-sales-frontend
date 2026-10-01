@@ -77,13 +77,15 @@ export default function EmailHistoryCard({
         </div>
 
         <div className="ui-toolbar-group">
-          {counts.pending > 0 && (
+          {counts.followupEligible > 0 && (
             <button
               className="modern-btn-primary is-warning is-small"
               onClick={onMassFollowup}
               disabled={loading}
             >
-              {loading ? '📧 Sending...' : `📧 Mass Follow-up (${counts.pending})`}
+              {loading
+                ? '📧 Sending...'
+                : `📧 Send My Follow-ups (${counts.followupEligible})`}
             </button>
           )}
           <button

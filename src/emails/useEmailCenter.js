@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../lib/api'
-import { batchSchoolIds, countOutgoing, schoolType } from './constants'
+import { batchSchoolIds, canSendFollowup, countOutgoing, schoolType } from './constants'
 
 /**
  * All data loading and mutations for the Email Center.
@@ -76,6 +76,7 @@ export function useEmailCenter({ accessToken, user }) {
     () => ({
       all: sentEmails.length,
       pending: sentEmails.filter((e) => !e.responded && !e.followup_sent).length,
+      followupEligible: sentEmails.filter((e) => canSendFollowup(e, user?.admin)).length,
       followup: sentEmails.filter((e) => !e.responded && e.followup_sent).length,
       responded: sentEmails.filter((e) => e.responded).length,
       urgent: sentEmails.filter(
@@ -89,7 +90,7 @@ export function useEmailCenter({ accessToken, user }) {
           (e.days_ago || 0) < 14,
       ).length,
     }),
-    [sentEmails],
+    [sentEmails, user?.admin],
   )
 
   const filterSchools = useCallback(
@@ -365,9 +366,9 @@ export function useEmailCenter({ accessToken, user }) {
   )
 
   const sendMassFollowup = useCallback(async () => {
-    const pending = sentEmails.filter((e) => !e.responded && !e.followup_sent)
+    const pending = sentEmails.filter((e) => canSendFollowup(e, user?.admin))
     if (pending.length === 0) {
-      notify('info', 'No pending emails to follow up on.')
+      notify('info', 'No pending emails from your account to follow up on.')
       return
     }
 
@@ -422,7 +423,7 @@ export function useEmailCenter({ accessToken, user }) {
     } finally {
       setLoading(false)
     }
-  }, [sentEmails, loadSentEmails, notify])
+  }, [sentEmails, user?.admin, loadSentEmails, notify])
 
   const checkReplies = useCallback(async () => {
     setLoading(true)

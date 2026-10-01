@@ -88,14 +88,10 @@ export default function PSAMap() {
         {loading ? (
           <EmptyState icon="⏳" title="Loading map data..." />
         ) : counts.total === 0 && !error ? (
-          // The backend serves this from an in-memory dict that is empty on
-          // every boot, so a cold Render instance legitimately has no data
-          // until someone refreshes. This previously rendered as a blank map
-          // with no explanation.
           <EmptyState
             icon="🗺️"
-            title="No Map Data Loaded"
-            message="The server builds this map by geocoding the PSA school sheet, and its cache is empty after a restart. Refreshing rebuilds it."
+            title="No School Locations Available"
+            message="Refresh the map to load school locations."
             action={refreshButton}
           />
         ) : (

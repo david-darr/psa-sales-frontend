@@ -151,7 +151,7 @@ export default function Emails() {
   }
 
   const massFollowup = async () => {
-    if (!window.confirm(`Send follow-up emails to ${center.emailCounts.pending} pending school(s)?`))
+    if (!window.confirm(`Send follow-up emails to ${center.emailCounts.followupEligible} pending email address(es) from your account?`))
       return
     await center.sendMassFollowup()
   }

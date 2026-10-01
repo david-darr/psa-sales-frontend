@@ -82,6 +82,11 @@ export function emailState(email) {
   return { tone: 'neutral', label: '⏳ Pending' }
 }
 
+/** The follow-up endpoint accepts only records owned by the signed-in user. */
+export function canSendFollowup(email, isAdmin) {
+  return !email.responded && !email.followup_sent && (!isAdmin || email.is_mine === true)
+}
+
 export const CSV_TEMPLATE = `school_name,email,contact_name,phone,address,school_type
 "ABC Preschool","director@abcpreschool.com","Jane Smith","555-0123","123 Main St, Fairfax VA","preschool"
 "ABC Preschool","admin@abcpreschool.com","John Doe","555-0123","123 Main St, Fairfax VA","preschool"

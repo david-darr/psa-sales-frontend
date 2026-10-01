@@ -8,7 +8,7 @@ import Badge from './components/Badge'
 import EmptyState from './components/EmptyState'
 import SchoolMarkers from './components/SchoolMarkers'
 import MapLegend from './components/MapLegend'
-import { MAP_CENTER } from './lib/mapLayers'
+import { MAP_CENTER, countLayers } from './lib/mapLayers'
 import api from './lib/api'
 
 const RECENT_EMAIL_COUNT = 4
@@ -157,6 +157,8 @@ export default function Home() {
     [team],
   )
 
+  const mapCount = useMemo(() => countLayers(mapSchools).total, [mapSchools])
+
   const loginPrompt = (label = '🔐 Login') => (
     <button className="modern-btn-primary ui-block" onClick={() => navigate('/account')}>
       {label}
@@ -230,6 +232,12 @@ export default function Home() {
             >
               Loading map...
             </div>
+          ) : mapCount === 0 ? (
+            <EmptyState
+              icon="🗺️"
+              title="No school locations available"
+              message="Open the map to refresh school locations."
+            />
           ) : (
             <>
               <div className="ui-map-canvas is-mini">

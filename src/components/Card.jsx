@@ -1,4 +1,6 @@
 import '../styles/ui.css'
+import Icon from './Icon'
+import iconForLabel from './iconForLabel'
 
 /**
  * The dashboard card shell: optional titled header with an icon chip, then
@@ -34,7 +36,7 @@ export default function Card({
           {headerAside}
           {icon && (
             <div className="modern-card-icon" aria-hidden="true">
-              {icon}
+              {typeof icon === 'string' ? <Icon name={iconForLabel(title)} size={16} /> : icon}
             </div>
           )}
         </div>

@@ -58,7 +58,7 @@ export default function RespondedCard({
                   <tr key={email.id}>
                     <td>
                       <div className="ui-cell-strong">{email.school_name}</div>
-                      {isMobile && <div className="ui-sub">📧 {email.school_email}</div>}
+                      {isMobile && <div className="ui-sub"> {email.school_email}</div>}
                     </td>
                     {!isMobile && <td>{email.school_email}</td>}
                     <td>
@@ -67,7 +67,7 @@ export default function RespondedCard({
                     {isAdmin && !isMobile && <td>{email.user_name || 'Unknown'}</td>}
                     <td>
                       <Badge tone="success" compact>
-                        ✅ Responded
+                         Responded
                       </Badge>
                     </td>
                     <td>
@@ -76,7 +76,7 @@ export default function RespondedCard({
                           className="modern-btn-primary is-small"
                           onClick={() => onCopyEmail(email)}
                         >
-                          📋 Copy Email
+                           Copy Email
                         </button>
 
                         {/* Only offer the thread view when the backend says
@@ -86,7 +86,7 @@ export default function RespondedCard({
                             className="modern-btn-primary is-success is-small"
                             onClick={() => onViewReply(email)}
                           >
-                            👁️ View Reply
+                             View Reply
                           </button>
                         )}
 
@@ -94,14 +94,14 @@ export default function RespondedCard({
                           className="modern-btn-primary is-info is-small"
                           onClick={() => onCompose(email)}
                         >
-                          ✍️ Reply
+                           Reply
                         </button>
 
                         <button
                           className="modern-btn-primary is-neutral is-small"
                           onClick={() => onUnmark(email)}
                         >
-                          ↩️ Unmark
+                          ↩ Unmark
                         </button>
                       </div>
                     </td>

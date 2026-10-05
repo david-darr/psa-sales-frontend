@@ -1,4 +1,6 @@
 import '../styles/ui.css'
+import Icon from './Icon'
+import iconForLabel from './iconForLabel'
 
 /**
  * A single metric tile for the stat row at the top of a page.
@@ -20,7 +22,7 @@ export default function StatCard({ label, icon, value, caption, tone = 'primary'
         <div className="modern-card-title">{label}</div>
         {icon && (
           <div className="modern-card-icon" aria-hidden="true">
-            {icon}
+            {typeof icon === 'string' ? <Icon name={iconForLabel(label)} size={16} /> : icon}
           </div>
         )}
       </div>

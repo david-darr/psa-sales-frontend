@@ -29,33 +29,33 @@
 
 .tone-success {
   --tone-color: var(--color-success);
-  --tone-soft: rgba(16, 185, 129, 0.2);
-  --tone-border: rgba(16, 185, 129, 0.2);
+  --tone-soft: var(--color-success-soft);
+  --tone-border: rgba(101, 203, 163, 0.25);
 }
 
 .tone-warning {
   --tone-color: var(--color-warning);
-  --tone-soft: rgba(245, 158, 11, 0.2);
-  --tone-border: rgba(245, 158, 11, 0.2);
+  --tone-soft: var(--color-warning-soft);
+  --tone-border: rgba(238, 194, 123, 0.25);
 }
 
 .tone-danger {
   --tone-color: var(--color-danger);
-  --tone-soft: rgba(239, 68, 68, 0.2);
-  --tone-border: rgba(239, 68, 68, 0.2);
+  --tone-soft: var(--color-danger-soft);
+  --tone-border: rgba(255, 113, 128, 0.25);
 }
 
 .tone-info {
   --tone-color: var(--color-info);
-  --tone-soft: rgba(139, 92, 246, 0.2);
-  --tone-border: rgba(139, 92, 246, 0.2);
+  --tone-soft: var(--color-info-soft);
+  --tone-border: rgba(185, 196, 215, 0.25);
 }
 
 /* Not a semantic tone - the deliberate "no signal" grey. */
 .ui-badge-neutral {
   --tone-color: var(--color-text-muted);
-  --tone-soft: rgba(100, 116, 139, 0.2);
-  --tone-border: rgba(100, 116, 139, 0.2);
+  --tone-soft: rgba(255, 255, 255, 0.06);
+  --tone-border: var(--color-border);
 }
 
 /* ---------------------------------------------------------
@@ -68,25 +68,31 @@
    available width instead of from a JS breakpoint flag. */
 .ui-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1px;
+  padding: 1px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
   margin-bottom: var(--space-6);
 }
 
 @media (max-width: 768px) {
   .ui-stat-grid {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: var(--space-3);
     margin-bottom: var(--space-4);
   }
 }
+
+.ui-stat-grid .modern-dashboard-card { border: 0; border-radius: 0; }
 
 /* ---------------------------------------------------------
    Stat card
    --------------------------------------------------------- */
 
 .ui-stat-card {
-  min-height: 120px;
+  min-height: 132px;
   display: flex;
   flex-direction: column;
 }
@@ -105,13 +111,13 @@
 
 .ui-stat-body {
   margin-top: auto;
-  text-align: center;
+  text-align: left;
 }
 
 .ui-stat-value {
   font-size: var(--text-2xl);
-  font-weight: var(--weight-extrabold);
-  color: var(--tone-color, var(--color-primary));
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
   margin-bottom: var(--space-1);
   line-height: 1.1;
 }
@@ -147,8 +153,8 @@
 .ui-textarea {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
   font-family: inherit;
@@ -204,7 +210,7 @@
 .ui-empty-state {
   text-align: center;
   padding: var(--space-7) var(--space-6);
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .ui-empty-icon {
@@ -232,15 +238,15 @@
    --------------------------------------------------------- */
 
 .ui-table-frame {
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
 
 .ui-table-toolbar {
   padding: var(--space-4);
-  background: var(--color-border-strong);
-  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ui-table-scroll {
@@ -257,18 +263,20 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--color-border-strong);
+  background: var(--color-surface-raised);
   padding: var(--space-4) var(--space-3);
   text-align: left;
-  color: var(--color-text);
-  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
   font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .ui-table th:not(:last-child),
 .ui-table td:not(:last-child) {
-  border-right: 1px solid var(--color-border-strong);
+  border-right: 0;
 }
 
 .ui-table td {
@@ -277,7 +285,7 @@
   color: var(--color-text-body);
   font-size: 0.85rem;
   line-height: 1.4;
-  border-bottom: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* Zebra striping and hover as CSS rather than per-row inline styles plus
@@ -285,11 +293,11 @@
    handlers also read `index` from a closure, so they restored the wrong
    colour after the list was filtered. */
 .ui-table tbody tr:nth-child(odd) {
-  background: rgba(51, 65, 85, 0.3);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .ui-table tbody tr:nth-child(even) {
-  background: rgba(30, 41, 59, 0.3);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .ui-table tbody tr:hover {
@@ -305,7 +313,7 @@
 
 .ui-cell-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .ui-cell-email {
@@ -361,8 +369,8 @@
 
 .ui-metric-value {
   font-size: var(--text-xl);
-  font-weight: var(--weight-extrabold);
-  color: var(--tone-color, var(--color-primary));
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
   margin-bottom: var(--space-1);
   line-height: 1.1;
 }
@@ -377,13 +385,13 @@
 .ui-summary-panel {
   margin-bottom: var(--space-6);
   padding: var(--space-5);
-  background: var(--color-primary-soft);
-  border: 1px solid var(--color-primary-soft-border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
 
 .ui-summary-title {
-  color: var(--color-primary);
+  color: var(--color-text);
   margin-bottom: var(--space-4);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
@@ -409,14 +417,14 @@
 
 .ui-person-card {
   padding: var(--space-5);
-  background: rgba(51, 65, 85, 0.3);
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
 
 .ui-person-card.is-current-user {
   background: var(--color-primary-soft);
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: var(--color-primary-soft-border);
 }
 
 .ui-person-head {
@@ -434,7 +442,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  background: #35363b;
   color: var(--color-text-on-accent);
   font-weight: var(--weight-bold);
   font-size: 1.2rem;
@@ -473,7 +481,7 @@
 .ui-person-contact {
   margin-bottom: var(--space-4);
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
 
@@ -500,7 +508,7 @@
 }
 
 .ui-toolbar-hint {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
 }
 
@@ -550,8 +558,8 @@
   gap: var(--space-3);
   padding: var(--space-4);
   margin-bottom: var(--space-3);
-  background: rgba(51, 65, 85, 0.3);
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast);
@@ -563,7 +571,7 @@
 
 .ui-selectable.is-selected {
   background: var(--color-primary-soft);
-  border-color: rgba(59, 130, 246, 0.3);
+  border-color: var(--color-primary-soft-border);
 }
 
 .ui-selectable input[type='checkbox'] {
@@ -589,7 +597,7 @@
 
 .ui-selectable-meta {
   display: block;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   line-height: 1.4;
 }
@@ -636,7 +644,7 @@
   margin-bottom: var(--space-3);
   font-size: 0.9rem;
   font-weight: var(--weight-semibold);
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .ui-two-col {
@@ -685,8 +693,8 @@
 .ui-info-tile {
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--tone-soft, var(--color-primary-soft));
-  border: 1px solid var(--tone-border, var(--color-primary-soft-border));
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
 }
 
 .ui-info-label {
@@ -704,14 +712,14 @@
 }
 
 .ui-info-title {
-  color: var(--tone-color, var(--color-primary));
+  color: var(--color-text);
   font-weight: var(--weight-semibold);
   margin-bottom: var(--space-2);
   font-size: 0.9rem;
 }
 
 .ui-info-body {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -799,8 +807,8 @@
   gap: var(--space-4);
   margin-bottom: var(--space-4);
   padding: var(--space-4);
-  background: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.1);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
@@ -837,7 +845,7 @@
 }
 
 .ui-legend.is-compact .ui-legend-label {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
@@ -867,7 +875,7 @@
   justify-content: center;
   gap: var(--space-2);
   background: var(--color-bg);
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 /* ---------------------------------------------------------
@@ -892,8 +900,8 @@
 /* A row in a small list inside a card (recent emails, top team members). */
 .ui-feed-item {
   padding: var(--space-3);
-  background: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.1);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
@@ -1015,13 +1023,14 @@
   flex-shrink: 0;
   width: 36px;
   height: 36px;
-  border: none;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-danger);
-  color: var(--color-text-on-accent);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
   font-size: var(--text-lg);
   cursor: pointer;
 }
+.ui-modal-close:hover { color: var(--color-text); background: #303136; }
 
 /* The body scrolls, so the header and footer stay put on a long reply chain. */
 .ui-modal-body {
@@ -1050,7 +1059,7 @@
 .ui-compose-label {
   display: block;
   margin-bottom: 0.4rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
 }
 
@@ -1083,14 +1092,14 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
 }
 
 .ui-readonly-field.is-bulk {
   border-color: var(--color-info);
   background: var(--color-info-soft);
-  color: #c4b5fd;
+  color: var(--color-info);
 }
 
 .ui-compose-hint {
@@ -1101,7 +1110,7 @@
 }
 
 .ui-compose-hint code {
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .ui-check-list {
@@ -1124,7 +1133,7 @@
   border: 1px solid var(--color-primary-soft-border);
   border-radius: var(--radius-md);
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .ui-reply-meta strong {
@@ -1145,7 +1154,7 @@
 
 .ui-reply-head {
   margin-bottom: var(--space-4);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
 }
 
@@ -1208,7 +1217,7 @@
   background: var(--tone-soft, var(--color-primary-soft));
   border: 1px solid var(--tone-border, var(--color-primary-soft-border));
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .ui-summary-bar-note {
@@ -1255,7 +1264,7 @@
 }
 
 .ui-sub {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
   margin-top: var(--space-1);
 }
@@ -1279,4 +1288,29 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--space-3);
+}
+
+.email-section-nav { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px; margin-bottom: 22px; width: fit-content; max-width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.email-section-nav a { padding: 8px 13px; border-radius: 6px; color: var(--color-text-muted); font-size: 0.8rem; font-weight: 600; text-decoration: none; }
+.email-section-nav a:hover, .email-section-nav a:focus-visible { background: var(--color-surface-raised); color: var(--color-text); }
+.email-section { scroll-margin-top: 22px; }
+.email-section > .modern-dashboard-card { margin-bottom: 18px; }
+
+.followup-intro { margin-bottom: var(--space-4); color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.55; }
+.followup-count, .followup-limit { color: var(--color-text-muted); font-size: 0.8rem; }
+.followup-limit { margin: 0 0 var(--space-3); }
+.followup-table-scroll { max-height: 420px; }
+.followup-preview-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: var(--space-4); padding-bottom: 4px; }
+.followup-preview-tabs button { flex: 0 0 auto; padding: 8px 11px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; }
+.followup-preview-tabs button.is-active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); }
+.followup-preview { display: grid; gap: var(--space-2); color: var(--color-text-body); font-size: 0.88rem; }
+.followup-preview pre { max-height: 380px; overflow: auto; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text-body); font: inherit; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 768px) {
+  .ui-two-col, .ui-person-grid, .ui-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+  .ui-toolbar-group { width: 100%; }
+  .ui-toolbar-group .ui-select { flex: 1; min-width: 0; }
+  .ui-modal-header, .ui-modal-body, .ui-modal-footer { padding-left: 18px; padding-right: 18px; }
+  .email-section-nav { width: 100%; }
+  .followup-table-scroll { overflow-x: auto; }
 }

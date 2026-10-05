@@ -5,31 +5,34 @@ import AppLayout from './components/AppLayout'
 import Card from './components/Card'
 import Badge from './components/Badge'
 import EmployeeInvites from './components/EmployeeInvites'
+import MailCredentialMigration from './components/MailCredentialMigration'
+import Icon from './components/Icon'
 import api from './lib/api'
+import { UI_PREVIEW } from './lib/previewMode'
 
 const EMPTY_FORM = { name: '', email: '', phone: '', password: '' }
 
 const FEATURES = [
   {
-    icon: '🏫',
+    icon: 'school',
     tone: 'primary',
     title: 'School Database',
     body: 'Manage your school contacts and track interactions',
   },
   {
-    icon: '📧',
+    icon: 'mail',
     tone: 'success',
     title: 'Email Campaigns',
     body: 'Send and track email communications',
   },
   {
-    icon: '🗺️',
+    icon: 'map',
     tone: 'warning',
     title: 'School Mapping',
     body: 'Visualize school locations and plan routes',
   },
   {
-    icon: '📊',
+    icon: 'chart',
     tone: 'info',
     title: 'Analytics',
     body: 'Track your performance and team metrics',
@@ -46,7 +49,7 @@ function initials(name) {
 }
 
 export default function Account() {
-  const { user, login, logout } = useAuth()
+  const { user, login, logout, markMailConnected } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const inviteToken = new URLSearchParams(location.hash.replace(/^#/, '')).get('invite') || ''
@@ -100,6 +103,7 @@ export default function Account() {
     setSavingPassword(true)
     try {
       await api.post('/api/email-settings', { email_password: appPassword })
+      markMailConnected()
       setEmailNotice({ tone: 'success', text: 'Email settings saved successfully.' })
       setAppPassword('')
     } catch (err) {
@@ -118,7 +122,7 @@ export default function Account() {
 
   if (user) {
     return (
-      <AppLayout title="ACCOUNT SETTINGS" subtitle={`Welcome back, ${user.name}!`}>
+      <AppLayout title="Account" subtitle="Your profile and email settings">
         <div className="ui-two-col">
           <Card title="Profile Information" icon="👤">
             <div className="ui-profile-head">
@@ -128,7 +132,7 @@ export default function Account() {
               <div>
                 <div className="ui-profile-name">{user.name}</div>
                 <Badge tone={user.admin ? 'warning' : 'info'}>
-                  {user.admin ? '👑 Administrator' : '📊 Sales Associate'}
+                  {user.admin ? 'Administrator' : 'Sales Associate'}
                 </Badge>
               </div>
             </div>
@@ -136,11 +140,11 @@ export default function Account() {
             <div className="ui-tile-stack">
               <div className="ui-info-tile tone-primary">
                 <div className="ui-info-label">Email Address</div>
-                <div className="ui-info-value">📧 {user.email}</div>
+                <div className="ui-info-value">{user.email}</div>
               </div>
               <div className="ui-info-tile tone-primary">
                 <div className="ui-info-label">Phone Number</div>
-                <div className="ui-info-value">📞 {user.phone || 'Not provided'}</div>
+                <div className="ui-info-value">{user.phone || 'Not provided'}</div>
               </div>
             </div>
 
@@ -148,7 +152,7 @@ export default function Account() {
               className="modern-btn-primary is-danger is-large ui-block"
               onClick={handleLogout}
             >
-              🚪 Logout
+              {UI_PREVIEW ? 'Exit preview' : 'Logout'}
             </button>
           </Card>
 
@@ -163,11 +167,11 @@ export default function Account() {
             )}
 
             <div className="ui-info-tile tone-warning" style={{ marginBottom: 'var(--space-4)' }}>
-              <div className="ui-info-title">⚠️ Gmail App Password Required</div>
+              <div className="ui-info-title">Gmail App Password Required</div>
               <div className="ui-info-body">
                 To send emails from your account, you need to configure a Gmail App Password.
-                This is different from your regular Gmail password and provides secure access
-                for applications.
+                This is different from your regular Gmail password. You can revoke it in your
+                Google Account settings.
               </div>
             </div>
 
@@ -203,22 +207,23 @@ export default function Account() {
               />
               <button
                 type="submit"
-                className="modern-btn-primary is-success is-large ui-block"
+                className="modern-btn-primary is-large ui-block"
                 disabled={savingPassword || !appPassword.trim()}
               >
-                {savingPassword ? '💾 Saving...' : '💾 Save Email Settings'}
+                {savingPassword ? 'Saving...' : 'Save Email Settings'}
               </button>
             </form>
 
             <div className="ui-info-tile tone-primary" style={{ marginTop: 'var(--space-5)' }}>
-              <div className="ui-info-title">🔒 Security Note</div>
+              <div className="ui-info-title">How this is used</div>
               <div className="ui-info-body">
-                Your app password is only used to send emails on your behalf. You can revoke
-                this access at any time from your Google Account settings.
+                PSA saves an encrypted copy of this app password to send email and check for replies on your behalf.
+                You can revoke it at any time from your Google Account settings.
               </div>
             </div>
           </Card>
         </div>
+        {user.admin && <MailCredentialMigration />}
         {user.admin && <EmployeeInvites />}
       </AppLayout>
     )
@@ -227,7 +232,7 @@ export default function Account() {
   /* ---------------- Signed out ---------------- */
 
   return (
-    <AppLayout title="ACCOUNT SETTINGS" subtitle="Login to Your Account">
+    <AppLayout title="Account" subtitle="Sign in to your PSA workspace">
       <div className="ui-narrow">
         <Card title={isRegister ? 'Create Account' : 'Login'} icon={isRegister ? '✨' : '🔐'}>
           {authNotice && (
@@ -300,8 +305,8 @@ export default function Account() {
               {submitting
                 ? 'Please wait...'
                 : isRegister
-                  ? '✨ Create Account'
-                  : '🔐 Login'}
+                  ? 'Create Account'
+                  : 'Login'}
             </button>
           </form>
 
@@ -330,7 +335,7 @@ export default function Account() {
               style={{ marginTop: 'var(--space-6)', textAlign: 'center' }}
             >
               <div className="ui-info-title" style={{ fontSize: 'var(--text-lg)' }}>
-                🚀 Welcome to PSA Sales Platform
+                 Welcome to PSA Sales Platform
               </div>
               <div className="ui-info-body">
                 Your tool for managing school relationships, sending email campaigns, and
@@ -350,7 +355,7 @@ export default function Account() {
             {FEATURES.map((feature) => (
               <div key={feature.title} className={`ui-info-tile tone-${feature.tone}`}>
                 <div className="ui-feature-icon" aria-hidden="true">
-                  {feature.icon}
+                  <Icon name={feature.icon} size={22} />
                 </div>
                 <div className="ui-feature-title">{feature.title}</div>
                 <div className="ui-info-body">{feature.body}</div>

@@ -1,4 +1,6 @@
 import '../styles/ui.css'
+import Icon from './Icon'
+import iconForLabel from './iconForLabel'
 
 /**
  * The "nothing here" / "still loading" panel used inside cards and tables.
@@ -13,7 +15,7 @@ export default function EmptyState({ icon, title, message, action }) {
     <div className="ui-empty-state">
       {icon && (
         <div className="ui-empty-icon" aria-hidden="true">
-          {icon}
+          {typeof icon === 'string' ? <Icon name={iconForLabel(title)} size={24} /> : icon}
         </div>
       )}
       <h3 className="ui-empty-title">{title}</h3>

@@ -17,10 +17,10 @@ const EMPTY_STATS = {
 
 /** Activity tier shown as a badge on each member card. */
 function performanceTier(totalEmails) {
-  if (totalEmails > 20) return { tone: 'success', label: '🌟 High Performer' }
-  if (totalEmails > 10) return { tone: 'warning', label: '🚀 Active' }
-  if (totalEmails > 0) return { tone: 'primary', label: '📈 Getting Started' }
-  return { tone: 'neutral', label: '💤 Inactive' }
+  if (totalEmails > 20) return { tone: 'success', label: 'High Performer' }
+  if (totalEmails > 10) return { tone: 'warning', label: 'Active' }
+  if (totalEmails > 0) return { tone: 'primary', label: 'Getting Started' }
+  return { tone: 'neutral', label: 'Inactive' }
 }
 
 function initials(name) {
@@ -130,7 +130,7 @@ export default function Team() {
 
   if (!user) {
     return (
-      <AppLayout title="TEAM DIRECTORY">
+      <AppLayout title="Team">
         <Card>
           <EmptyState
             icon="🔐"
@@ -138,7 +138,7 @@ export default function Team() {
             message="Please log in to access the Team Directory and view team member information."
             action={
               <button className="modern-btn-primary" onClick={() => navigate('/account')}>
-                🔐 Login to Continue
+                 Login to Continue
               </button>
             }
           />
@@ -149,14 +149,14 @@ export default function Team() {
 
   const refreshButton = (
     <button className="modern-btn-primary" onClick={handleRefresh} disabled={refreshing}>
-      {refreshing ? '🔄 Refreshing...' : '🔄 Refresh Data'}
+      {refreshing ? 'Refreshing...' : 'Refresh Data'}
     </button>
   )
 
   return (
     <AppLayout
-      title="TEAM DIRECTORY"
-      subtitle={`Welcome, ${user.name}! Team Member Contact Information & Performance Statistics`}
+      title="Team"
+      subtitle="Contact information and performance across the team"
       actions={refreshButton}
     >
       <div className="ui-stat-grid">
@@ -213,7 +213,7 @@ export default function Team() {
           <>
             {teamData.length > 1 && (
               <div className="ui-summary-panel">
-                <h4 className="ui-summary-title">📊 Team Performance Summary</h4>
+                <h4 className="ui-summary-title">Team Performance Summary</h4>
                 <div className="ui-metric-row">
                   <div className="ui-metric tone-primary">
                     <div className="ui-metric-value">{teamTotals.totalSchools}</div>
@@ -269,14 +269,14 @@ export default function Team() {
                           )}
                         </div>
                         <div className={`ui-person-role${isAdmin ? ' is-admin' : ''}`}>
-                          {isAdmin ? '👑 Administrator' : '📊 Sales Associate'}
+                          {isAdmin ? 'Administrator' : 'Sales Associate'}
                         </div>
                       </div>
                     </div>
 
                     <div className="ui-person-contact">
-                      <div>📧 {member.email}</div>
-                      <div>📞 {member.phone}</div>
+                      <div>{member.email}</div>
+                      <div>{member.phone}</div>
                     </div>
 
                     <div className="ui-metric-row">

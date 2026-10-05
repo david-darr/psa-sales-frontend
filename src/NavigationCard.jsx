@@ -1,123 +1,70 @@
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from "./AuthContext"
+import { NavLink } from 'react-router-dom'
+import { useAuth } from './AuthContext'
+import Icon from './components/Icon'
 
-export default function NavigationCard() {
-  const navigate = useNavigate()
-  const location = useLocation()
+const groups = [
+  {
+    label: 'Workspace',
+    items: [
+      { label: 'Home', path: '/', icon: 'home' },
+      { label: 'School Finder', path: '/finder', icon: 'search' },
+      { label: 'School Map', path: '/map', icon: 'map' },
+      { label: 'Schools', path: '/schools', icon: 'school' },
+      { label: 'Email Center', path: '/emails', icon: 'mail' },
+    ],
+  },
+  {
+    label: 'People & settings',
+    items: [
+      { label: 'Team', path: '/team', icon: 'team' },
+      { label: 'Account', path: '/account', icon: 'settings' },
+    ],
+  },
+]
+
+export default function NavigationCard({ collapsed = false, onToggle }) {
   const { user } = useAuth()
-
-  const navigationItems = [
-    {
-      label: "Home",
-      path: "/",
-      icon: "🏠",
-      protected: false
-    },
-    {
-      label: "Map",
-      path: "/map",
-      icon: "🗺️",
-      protected: false
-    },
-    {
-      label: "School Finder",
-      path: "/finder",
-      icon: "🔍", 
-      protected: false
-    },
-    {
-      label: "Email Center",
-      path: "/emails",
-      icon: "📧",
-      protected: true,
-      badge: user ? "New" : null
-    },
-    {
-      label: "Schools Database",
-      path: "/schools", 
-      icon: "🏫",
-      protected: true
-    },
-    {
-      label: "Team Analytics", 
-      path: "/team",
-      icon: "📊",
-      protected: true
-    },
-    {
-      label: "Account Settings",
-      path: "/account",
-      icon: "⚙️",
-      protected: false
-    }
-  ]
-
-  const handleNavigation = (item) => {
-    if (item.protected && !user) {
-      navigate("/account")
-    } else {
-      navigate(item.path)
-    }
-  }
 
   return (
     <div className="nav-sidebar">
       <div className="nav-sidebar-logo">
-        <img src="/PSA_logo.png" alt="PSA Logo" />
-        <div>
-          <div className="nav-sidebar-title">PSA SALES</div>
-          <div className="nav-sidebar-subtitle">Management Platform</div>
-        </div>
+        <img src="/PSA_logo.png" alt="PSA" />
+        {!collapsed && <div className="nav-brand-copy"><div className="nav-sidebar-title">PSA Sales</div><div className="nav-sidebar-subtitle">Sales workspace</div></div>}
       </div>
-      
-      <ul className="nav-menu">
-        {navigationItems.map((item, index) => (
-          <li 
-            key={index} 
-            className={`nav-menu-item ${location.pathname === item.path ? 'active' : ''}`}
-          >
-            <button
-              className="nav-menu-link"
-              onClick={() => handleNavigation(item)}
-            >
-              <span className="nav-menu-icon">{item.icon}</span>
-              {item.label}
-              {item.protected && !user && (
-                <span className="nav-menu-badge">🔒</span>
-              )}
-              {item.badge && user && (
-                <span className="nav-menu-badge">{item.badge}</span>
-              )}
-            </button>
-          </li>
-        ))}
-      </ul>
-      
-      {user && (
-        <div className="nav-user-section">
-          <div className="nav-user-info">
-            <div className="nav-user-avatar">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="nav-user-details">
-              <h4>{user.name}</h4>
-              <p>{user.admin ? 'Administrator' : 'Sales Associate'}</p>
-            </div>
+
+      <nav aria-label="Main navigation" className="nav-groups">
+        {groups.map((group) => (
+          <div className="nav-group" key={group.label}>
+            {!collapsed && <div className="nav-group-label">{group.label}</div>}
+            <ul className="nav-menu">
+              {group.items.map((item) => (
+                <li key={item.path}>
+                  <NavLink
+                    to={item.path}
+                    end={item.path === '/'}
+                    className={({ isActive }) => `nav-menu-link${isActive ? ' active' : ''}`}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <Icon name={item.icon} size={19} className="nav-menu-icon" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      )}
-      
-      {!user && (
-        <div className="nav-user-section">
-          <button 
-            className="modern-btn-primary"
-            onClick={() => navigate("/account")}
-            style={{ width: '100%' }}
-          >
-            🔐 Login to Continue
-          </button>
-        </div>
-      )}
+        ))}
+      </nav>
+
+      <div className="nav-user-section">
+        <NavLink to="/account" className="nav-user-info" title={collapsed ? (user?.name || 'Sign in') : undefined}>
+          <span className="nav-user-avatar" aria-hidden="true">{user ? user.name.charAt(0).toUpperCase() : <Icon name="user" size={18} />}</span>
+          {!collapsed && <span className="nav-user-details"><strong>{user?.name || 'Sign in'}</strong><span>{user ? (user.admin ? 'Administrator' : 'Sales associate') : 'PSA Sales'}</span></span>}
+        </NavLink>
+        <button type="button" className="nav-collapse" onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <span aria-hidden="true">{collapsed ? '›' : '‹'}</span>
+          {!collapsed && <span>Collapse</span>}
+        </button>
+      </div>
     </div>
   )
 }

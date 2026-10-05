@@ -1,362 +1,49 @@
-/* =========================================================
-   COMPONENT STYLES
+/* Navigation and common card/button language. Layout lives in styles/layout.css. */
+.nav-sidebar { display: flex; flex-direction: column; min-height: 100%; }
+.nav-sidebar-logo { display: flex; align-items: center; gap: 11px; padding: 0 10px 27px; margin-bottom: 22px; border-bottom: 1px solid var(--color-border); min-height: 60px; }
+.nav-sidebar-logo img { width: 36px; height: 36px; object-fit: contain; flex: none; }
+.nav-brand-copy { min-width: 0; }
+.nav-sidebar-title { color: var(--color-text); font-size: 0.96rem; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+.nav-sidebar-subtitle { margin-top: 1px; color: var(--color-text-muted); font-size: 0.71rem; white-space: nowrap; }
+.nav-groups { display: grid; gap: 26px; }
+.nav-group-label { margin: 0 10px 9px; color: var(--color-text-muted); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.nav-menu { list-style: none; display: grid; gap: 3px; }
+.nav-menu-link { display: flex; align-items: center; gap: 12px; min-height: 41px; padding: 0 11px; border-radius: var(--radius-md); color: var(--color-text-muted); font-size: 0.85rem; font-weight: 500; text-decoration: none; transition: background var(--transition-fast), color var(--transition-fast); }
+.nav-menu-link:hover { background: var(--color-surface-raised); color: var(--color-text); text-decoration: none; }
+.nav-menu-link.active { color: var(--color-text); background: var(--color-primary-soft); font-weight: 650; box-shadow: inset 2px 0 0 var(--color-primary); }
+.nav-menu-link.active .nav-menu-icon { color: var(--color-primary); }
+.nav-menu-icon { flex: none; color: currentColor; }
+.nav-user-section { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.nav-user-info { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; }
+.nav-user-info:hover { background: var(--color-surface-raised); text-decoration: none; }
+.nav-user-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--color-primary-soft); color: var(--color-primary); font-size: 0.85rem; font-weight: 700; }
+.nav-user-details { display: grid; min-width: 0; line-height: 1.3; }
+.nav-user-details strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; font-weight: 650; }
+.nav-user-details span { color: var(--color-text-muted); font-size: 0.69rem; }
+.nav-collapse { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 7px 11px; background: transparent; border: 0; color: var(--color-text-muted); text-align: left; cursor: pointer; font-size: 0.75rem; }
+.nav-collapse:hover { color: var(--color-text); }
+.nav-collapse span:first-child { width: 18px; text-align: center; font-size: 1.35rem; line-height: 1; }
+.is-collapsed .nav-sidebar-logo { justify-content: center; padding-inline: 0; }
+.is-collapsed .nav-menu-link { justify-content: center; padding-inline: 0; }
+.is-collapsed .nav-user-info { justify-content: center; padding-inline: 0; }
+.is-collapsed .nav-collapse { justify-content: center; padding-inline: 0; }
+@media (max-width: 768px) { .nav-collapse { display: none; } }
 
-   This file previously held 979 lines accumulated across three
-   generations of the UI:
+.modern-dashboard-card { min-width: 0; padding: 22px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.modern-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 19px; }
+.modern-card-title { color: var(--color-text); font-size: 0.99rem; font-weight: 650; letter-spacing: -0.01em; }
+.modern-card-header > :last-child.modern-card-icon { margin-left: auto; }
+.modern-card-icon { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text-muted); background: var(--color-surface-raised); }
+.modern-card-content { color: var(--color-text-body); line-height: 1.55; }
 
-     1. the original red PSA marketing styles
-        (.header-container, .home-btn, .schools-table, ...)
-     2. a white floating sidebar (.nav-card*)
-     3. the current dark dashboard (.modern-*)
-
-   Generations 1 and 2 had no remaining `className` references
-   anywhere in src/*.jsx - verified class by class - so they are
-   removed rather than carried forward. `.nav-sidebar` and
-   `.modern-main-content` were each declared twice with different
-   values; only the winning declaration is kept.
-
-   Shell layout now lives in styles/layout.css (see AppLayout).
-   Colour, spacing and depth come from styles/tokens.css.
-   ========================================================= */
-
-/* =========================
-   NAVIGATION SIDEBAR
-   (contents of NavigationCard, rendered inside AppLayout's <aside>)
-   ========================= */
-
-.nav-sidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-.nav-sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin-bottom: var(--space-7);
-  padding-bottom: var(--space-6);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.nav-sidebar-logo img {
-  width: 50px;
-  height: 50px;
-  border-radius: var(--radius-lg);
-  object-fit: cover;
-}
-
-.nav-sidebar-title {
-  font-size: var(--text-xl);
-  font-weight: var(--weight-extrabold);
-  color: var(--color-text);
-  letter-spacing: 0.5px;
-}
-
-.nav-sidebar-subtitle {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin-top: var(--space-1);
-}
-
-.nav-menu {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.nav-menu-item {
-  border-radius: var(--radius-lg);
-  transition: background var(--transition-fast), transform var(--transition-fast);
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-menu-item:hover {
-  background: var(--color-primary-soft);
-  transform: translateX(4px);
-}
-
-.nav-menu-item.active {
-  background: var(--color-primary-gradient);
-  box-shadow: var(--shadow-primary);
-}
-
-.nav-menu-link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  width: 100%;
-  padding: var(--space-4);
-  border: none;
-  background: none;
-  color: var(--color-text-body);
-  font-weight: var(--weight-medium);
-  font-size: 0.9rem;
-  text-align: left;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.nav-menu-link:hover {
-  color: var(--color-text);
-}
-
-.nav-menu-item.active .nav-menu-link {
-  color: var(--color-text-on-accent);
-  font-weight: var(--weight-semibold);
-}
-
-.nav-menu-icon {
-  font-size: 1.2rem;
-  width: 24px;
-  text-align: center;
-}
-
-.nav-menu-badge {
-  margin-left: auto;
-  background: var(--color-danger);
-  color: var(--color-text-on-accent);
-  font-size: var(--text-xs);
-  padding: 0.2rem var(--space-2);
-  border-radius: var(--radius-sm);
-  font-weight: var(--weight-semibold);
-}
-
-.nav-user-section {
-  margin-top: auto;
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border);
-}
-
-.nav-user-info {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--color-primary-soft);
-  border: 1px solid var(--color-primary-soft-border);
-  border-radius: var(--radius-lg);
-}
-
-.nav-user-avatar {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-md);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-lg);
-  color: var(--color-text-on-accent);
-}
-
-.nav-user-details h4 {
-  font-size: 0.9rem;
-  color: var(--color-text);
-  margin-bottom: var(--space-1);
-}
-
-.nav-user-details p {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-/* =========================
-   DASHBOARD CARDS
-   ========================= */
-
-.modern-dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-5);
-  margin-bottom: var(--space-6);
-}
-
-.modern-dashboard-card {
-  position: relative;
-  padding: var(--space-5);
-  background: var(--color-surface-gradient);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  transition: transform var(--transition-base), box-shadow var(--transition-base),
-    border-color var(--transition-base);
-}
-
-.modern-dashboard-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-strong));
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-}
-
-.modern-dashboard-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .modern-dashboard-card,
-  .nav-menu-item {
-    transition: none;
-  }
-
-  .modern-dashboard-card:hover,
-  .nav-menu-item:hover {
-    transform: none;
-  }
-}
-
-.modern-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.modern-card-title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-}
-
-.modern-card-icon {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary-soft-icon);
-  border-radius: var(--radius-md);
-  font-size: 1.2rem;
-}
-
-.modern-card-content {
-  color: var(--color-text-body);
-  line-height: 1.6;
-}
-
-/* =========================
-   STAT BLOCKS
-   ========================= */
-
-.modern-stat-value {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-extrabold);
-  color: var(--color-primary);
-  margin: var(--space-2) 0;
-}
-
-.modern-stat-label {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.modern-stat-change {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.modern-stat-change.positive {
-  color: var(--color-success);
-}
-
-.modern-stat-change.negative {
-  color: var(--color-danger);
-}
-
-.modern-stat-change.neutral {
-  color: var(--color-text-muted);
-}
-
-/* =========================
-   BUTTONS
-   ========================= */
-
-.modern-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-primary-gradient);
-  color: var(--color-text-on-accent);
-  font-weight: var(--weight-semibold);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.modern-btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-primary-hover);
-}
-
-/* Variants. Pages previously recoloured this button by inlining
-   `background: "#ef4444"` (and an opacity/cursor pair that `:disabled`
-   above now handles), which meant the gradient was silently dropped and
-   every call site repeated the hex code. */
-.modern-btn-primary.is-danger {
-  background: var(--color-danger);
-}
-
-.modern-btn-primary.is-success {
-  background: var(--color-success);
-}
-
-.modern-btn-primary.is-warning {
-  background: var(--color-warning);
-}
-
-.modern-btn-primary.is-info {
-  background: var(--color-info);
-}
-
-.modern-btn-primary.is-neutral {
-  background: var(--color-text-muted);
-}
-
-/* Larger tap target for primary page actions (login, save, logout). */
-.modern-btn-primary.is-large {
-  padding: var(--space-4);
-  font-size: var(--text-base);
-}
-
-.modern-btn-primary.is-small {
-  padding: var(--space-2) var(--space-4);
-  font-size: 0.85rem;
-}
-
-.modern-btn-primary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .modern-btn-primary {
-    transition: none;
-  }
-
-  .modern-btn-primary:hover:not(:disabled) {
-    transform: none;
-  }
-}
+.modern-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 8px 15px; background: var(--color-primary-strong); border: 1px solid var(--color-primary-strong); border-radius: var(--radius-md); color: var(--color-text-on-accent); font: inherit; font-size: 0.84rem; font-weight: 650; line-height: 1.2; text-align: center; text-decoration: none; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast); }
+.modern-btn-primary:hover:not(:disabled) { background: var(--color-psa-red-hover); border-color: var(--color-psa-red-hover); text-decoration: none; }
+.modern-btn-primary.is-neutral, .modern-btn-primary.is-info, .modern-btn-primary.is-success, .modern-btn-primary.is-warning { background: var(--color-surface-raised); border-color: var(--color-border-strong); color: var(--color-text); }
+.modern-btn-primary.is-neutral:hover:not(:disabled), .modern-btn-primary.is-info:hover:not(:disabled), .modern-btn-primary.is-success:hover:not(:disabled), .modern-btn-primary.is-warning:hover:not(:disabled) { background: #303136; border-color: #505158; }
+.modern-btn-primary.is-danger { background: transparent; border-color: rgba(255, 113, 128, 0.48); color: var(--color-danger); }
+.modern-btn-primary.is-danger:hover:not(:disabled) { background: var(--color-danger-soft); border-color: var(--color-danger); }
+.modern-btn-primary.is-large { min-height: 46px; padding: 11px 17px; font-size: 0.95rem; }
+.modern-btn-primary.is-small { min-height: 32px; padding: 5px 10px; font-size: 0.76rem; }
+.modern-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 768px) { .modern-dashboard-card { padding: 18px; } }
+@media (prefers-reduced-motion: reduce) { .modern-btn-primary, .nav-menu-link { transition: none; } }

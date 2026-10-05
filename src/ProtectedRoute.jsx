@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import Icon from './components/Icon'
 import './styles/ui.css'
 
 export default function ProtectedRoute({ children }) {
@@ -13,7 +14,7 @@ export default function ProtectedRoute({ children }) {
     return (
       <div className="ui-route-loading" role="status" aria-live="polite">
         <div className="ui-empty-icon" aria-hidden="true">
-          ⏳
+          <Icon name="clock" size={24} />
         </div>
         <p>Checking your session...</p>
       </div>

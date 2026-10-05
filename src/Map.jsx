@@ -58,12 +58,12 @@ export default function PSAMap() {
       onClick={handleRefreshMap}
       disabled={refreshing || loading}
     >
-      {refreshing ? '🔄 Refreshing...' : '🔄 Refresh Map Data'}
+      {refreshing ? 'Refreshing...' : 'Refresh Map Data'}
     </button>
   )
 
   return (
-    <AppLayout title="MAP" subtitle="School Locations & Distribution" actions={refreshButton}>
+    <AppLayout title="School map" subtitle="Explore school locations across your area" actions={refreshButton}>
       <div className="ui-stat-grid">
         <StatCard label="Total" icon="🏫" value={counts.total} caption="Schools" />
         {counts.perLayer.map(({ layer, count }) => (

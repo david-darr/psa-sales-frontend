@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import NavigationCard from '../NavigationCard'
 import { useBreakpoint } from '../hooks/useBreakpoint'
+import { UI_PREVIEW, exitUiPreview } from '../lib/previewMode'
 import '../styles/layout.css'
 
 /**
@@ -22,7 +23,15 @@ import '../styles/layout.css'
 export default function AppLayout({ title, subtitle, actions, children }) {
   const { isMobile } = useBreakpoint()
   const [navOpen, setNavOpen] = useState(false)
+  const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem('psa-nav-collapsed') === 'true')
   const location = useLocation()
+
+  const toggleCollapsed = () => {
+    setNavCollapsed((collapsed) => {
+      localStorage.setItem('psa-nav-collapsed', String(!collapsed))
+      return !collapsed
+    })
+  }
 
   // Navigating from inside the drawer should dismiss it, otherwise the new
   // page renders behind a still-open overlay.
@@ -57,7 +66,7 @@ export default function AppLayout({ title, subtitle, actions, children }) {
   }, [navOpen])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${!isMobile && navCollapsed ? ' is-collapsed' : ''}`}>
       {isMobile && (
         <button
           type="button"
@@ -87,13 +96,20 @@ export default function AppLayout({ title, subtitle, actions, children }) {
         id="app-sidebar"
         className={`app-sidebar${isMobile ? ' is-drawer' : ''}${navOpen ? ' is-open' : ''}`}
       >
-        <NavigationCard />
+        <NavigationCard collapsed={!isMobile && navCollapsed} onToggle={toggleCollapsed} />
       </aside>
 
       <main className="app-main">
+        {UI_PREVIEW && (
+          <div className="app-preview-banner" role="status">
+            <span><strong>UI preview</strong> · Fictional sample data · Changes and email sending disabled</span>
+            <button type="button" onClick={exitUiPreview}>Exit preview</button>
+          </div>
+        )}
         {(title || subtitle || actions) && (
           <header className="app-page-header">
             <div>
+              <div className="app-page-eyebrow">PSA / Sales workspace</div>
               {title && <h1 className="app-page-title">{title}</h1>}
               {subtitle && <p className="app-page-subtitle">{subtitle}</p>}
             </div>

@@ -9,6 +9,7 @@
    staging backend. If it is unset we fall back to production,
    which preserves the previous behaviour.
    ========================================================= */
+import { UI_PREVIEW } from './previewMode'
 
 export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || 'https://psa-sales-backend.onrender.com'
@@ -72,6 +73,11 @@ function storedToken() {
  * @returns {Promise<any>} the parsed JSON body (or null for 204/empty responses)
  */
 export async function apiFetch(path, options = {}) {
+  if (UI_PREVIEW) {
+    const { previewRequest } = await import('./previewData')
+    return previewRequest(path, options)
+  }
+
   const {
     method = 'GET',
     body,

@@ -29,7 +29,7 @@ export default function CustomReplyModal({ draft, onChange, onSubmit, onClose, s
   }
 
   return (
-    <Modal title={`✍️ Reply — ${draft.school_name}`} onClose={onClose}>
+    <Modal title={`Reply — ${draft.school_name}`} onClose={onClose}>
       <form onSubmit={handleSubmit} id="custom-reply-form">
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <span className="ui-compose-label">To:</span>
@@ -88,10 +88,10 @@ export default function CustomReplyModal({ draft, onChange, onSubmit, onClose, s
         <button
           type="submit"
           form="custom-reply-form"
-          className="modern-btn-primary is-success ui-grow"
+          className="modern-btn-primary ui-grow"
           disabled={sending}
         >
-          {sending ? '📧 Sending...' : '📧 Send Reply'}
+          {sending ? 'Sending...' : 'Send Reply'}
         </button>
         <button type="button" className="modern-btn-primary is-neutral" onClick={onClose}>
           Cancel

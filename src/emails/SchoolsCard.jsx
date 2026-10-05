@@ -70,9 +70,9 @@ export default function SchoolsCard({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >
-            <option value="all">📋 All Schools ({counts.all})</option>
-            <option value="pending">⏳ Pending ({counts.pending})</option>
-            <option value="contacted">✅ Contacted ({counts.contacted})</option>
+            <option value="all">All Schools ({counts.all})</option>
+            <option value="pending">Pending ({counts.pending})</option>
+            <option value="contacted">Contacted ({counts.contacted})</option>
           </select>
 
           <label className="ui-field-label" htmlFor="school-sort" style={{ marginBottom: 0 }}>
@@ -84,11 +84,11 @@ export default function SchoolsCard({
             value={sort}
             onChange={(e) => setSort(e.target.value)}
           >
-            <option value="default">📋 Default Order</option>
-            <option value="type">🔤 By Type (All)</option>
-            <option value="preschool">👶 Preschool First</option>
-            <option value="elementary">📚 Elementary First</option>
-            <option value="private">🏫 Private First</option>
+            <option value="default">Default Order</option>
+            <option value="type">By Type (All)</option>
+            <option value="preschool">Preschool First</option>
+            <option value="elementary">Elementary First</option>
+            <option value="private">Private First</option>
           </select>
         </div>
 
@@ -106,7 +106,7 @@ export default function SchoolsCard({
               onClick={onDeleteSelected}
               disabled={loading}
             >
-              {loading ? '🗑️ Deleting...' : `🗑️ Delete ${selectedIds.length}`}
+              {loading ? 'Deleting...' : `Delete ${selectedIds.length}`}
             </button>
           )}
         </div>
@@ -119,7 +119,7 @@ export default function SchoolsCard({
           {filter !== 'all' && <span> (filtered from {counts.all} total)</span>}
         </span>
         <span>
-          ⏳ {counts.pending} pending • ✅ {counts.contacted} contacted
+          {counts.pending} pending • {counts.contacted} contacted
         </span>
       </div>
 
@@ -176,7 +176,7 @@ export default function SchoolsCard({
                         <div className="ui-cell-strong">{school.school_name}</div>
                         {isMobile && (
                           <div className="ui-sub">
-                            <div>📧 {school.email}</div>
+                            <div> {school.email}</div>
                             {extra > 0 && (
                               <div className="ui-sub-dim">
                                 +{extra} more email{extra === 1 ? '' : 's'}
@@ -203,7 +203,7 @@ export default function SchoolsCard({
                       )}
                       <td>
                         <Badge tone={school.status === 'contacted' ? 'success' : 'neutral'} compact>
-                          {school.status === 'contacted' ? '✅ Contacted' : '⏳ Pending'}
+                          {school.status === 'contacted' ? 'Contacted' : 'Pending'}
                         </Badge>
                       </td>
                       {isAdmin && !isMobile && <td>{school.user_name || 'Unknown'}</td>}
@@ -212,7 +212,7 @@ export default function SchoolsCard({
                           className="modern-btn-primary is-info is-small"
                           onClick={() => onComposeSingle(school)}
                         >
-                          ✉️ Custom Email
+                           Custom Email
                         </button>
                       </td>
                     </tr>
@@ -233,7 +233,7 @@ export default function SchoolsCard({
                 checked={sendToAllEmails}
                 onChange={(e) => setSendToAllEmails(e.target.checked)}
               />
-              📧 Send to all email addresses (including additional emails)
+               Send to all email addresses (including additional emails)
             </label>
             <div className="ui-info-body" style={{ marginTop: 'var(--space-2)' }}>
               When checked, each school receives the email at its primary and additional
@@ -242,7 +242,7 @@ export default function SchoolsCard({
           </div>
 
           <div className="ui-info-tile tone-primary" style={{ marginBottom: 'var(--space-4)' }}>
-            <div className="ui-info-title">📊 Sending Preview</div>
+            <div className="ui-info-title">Sending Preview</div>
             <div className="ui-info-body">
               <div>
                 • Selected schools: <strong>{selectedIds.length}</strong>
@@ -255,7 +255,7 @@ export default function SchoolsCard({
               </div>
               {outgoing > 50 && (
                 <div style={{ color: 'var(--color-warning)', marginTop: 'var(--space-2)' }}>
-                  ⚠️ Large batch. Consider sending in smaller groups for easier recovery if
+                   Large batch. Consider sending in smaller groups for easier recovery if
                   something fails partway.
                 </div>
               )}
@@ -271,15 +271,15 @@ export default function SchoolsCard({
           disabled={selectedIds.length === 0 || loading}
         >
           {loading
-            ? '📧 Sending...'
-            : `📧 Template Email to ${selectedIds.length} School${selectedIds.length === 1 ? '' : 's'}`}
+            ? 'Sending...'
+            : `Template Email to ${selectedIds.length} School${selectedIds.length === 1 ? '' : 's'}`}
         </button>
         <button
-          className="modern-btn-primary is-info"
+          className="modern-btn-primary"
           onClick={() => onComposeBulk(selectedIds)}
           disabled={selectedIds.length === 0 || loading}
         >
-          ✉️ Custom Email to {selectedIds.length} School{selectedIds.length === 1 ? '' : 's'}
+           Custom Email to {selectedIds.length} School{selectedIds.length === 1 ? '' : 's'}
         </button>
       </div>
     </Card>

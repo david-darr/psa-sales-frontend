@@ -13,14 +13,14 @@ export default function ReplyChainModal({ chain, loading, onClose, onReply }) {
 
   return (
     <Modal
-      title="💬 Email Reply Chain"
+      title=" Email Reply Chain"
       size="lg"
       onClose={onClose}
       footer={
         hasChain && (
           <>
             <button className="modern-btn-primary is-success" onClick={onReply}>
-              ✍️ Send Custom Reply
+               Send Custom Reply
             </button>
             <button className="modern-btn-primary is-neutral" onClick={onClose}>
               Close
@@ -30,7 +30,7 @@ export default function ReplyChainModal({ chain, loading, onClose, onReply }) {
       }
     >
       {loading ? (
-        <div className="ui-empty-state">🔄 Loading reply chain...</div>
+        <div className="ui-empty-state">Loading reply chain...</div>
       ) : chain?.error ? (
         <div className="ui-alert tone-danger" role="alert">
           <strong>Could not load the reply chain.</strong>

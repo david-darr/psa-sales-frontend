@@ -9,9 +9,9 @@ export const AVAILABLE_PDFS = [
 ]
 
 export const SCHOOL_TYPES = [
-  { value: 'preschool', label: 'Preschool', display: '👶 Preschool', tone: 'warning', order: 0 },
-  { value: 'elementary', label: 'Elementary School', display: '📚 Elementary', tone: 'success', order: 1 },
-  { value: 'private', label: 'Private School', display: '🏫 Private School', tone: 'info', order: 2 },
+  { value: 'preschool', label: 'Preschool', display: 'Preschool', tone: 'warning', order: 0 },
+  { value: 'elementary', label: 'Elementary School', display: 'Elementary', tone: 'success', order: 1 },
+  { value: 'private', label: 'Private School', display: 'Private School', tone: 'info', order: 2 },
 ]
 
 const TYPE_BY_VALUE = new Map(SCHOOL_TYPES.map((t) => [t.value, t]))
@@ -58,33 +58,45 @@ export const MAX_EMAILS_PER_BATCH = 20
 
 /** "Today" / "3 days ago", with a tone that gets warmer as it ages. */
 export function timeAgo(daysAgo = 0) {
-  if (daysAgo === 0) return { text: 'Today', tone: 'success', icon: '🆕' }
-  if (daysAgo === 1) return { text: 'Yesterday', tone: 'primary', icon: '📅' }
-  if (daysAgo <= 7) return { text: `${daysAgo} days ago`, tone: 'warning', icon: '📆' }
-  if (daysAgo <= 30) return { text: `${daysAgo} days ago`, tone: 'danger', icon: '⏰' }
-  return { text: `${daysAgo} days ago`, tone: 'neutral', icon: '🕐' }
+  if (daysAgo === 0) return { text: 'Today', tone: 'success' }
+  if (daysAgo === 1) return { text: 'Yesterday', tone: 'primary' }
+  if (daysAgo <= 7) return { text: `${daysAgo} days ago`, tone: 'warning' }
+  if (daysAgo <= 30) return { text: `${daysAgo} days ago`, tone: 'danger' }
+  return { text: `${daysAgo} days ago`, tone: 'neutral' }
 }
 
 /** Follow-up nudge for an unanswered email, or null if none is warranted. */
 export function followupUrgency(email) {
   if (email.responded || email.followup_sent) return null
   const daysAgo = email.days_ago || 0
-  if (daysAgo >= 14) return { text: '🚨 Urgent Follow-up', tone: 'danger' }
-  if (daysAgo >= 7) return { text: '⚠️ Follow-up Due', tone: 'warning' }
-  if (daysAgo >= 3) return { text: '📅 Follow-up Soon', tone: 'primary' }
+  if (daysAgo >= 14) return { text: 'Urgent follow-up', tone: 'danger' }
+  if (daysAgo >= 7) return { text: 'Follow-up due', tone: 'warning' }
+  if (daysAgo >= 3) return { text: 'Follow-up soon', tone: 'primary' }
   return null
 }
 
 /** Sent-email state as a tone + label. */
 export function emailState(email) {
-  if (email.responded) return { tone: 'success', label: '✅ Responded' }
-  if (email.followup_sent) return { tone: 'warning', label: '📧 Follow-Up Sent' }
-  return { tone: 'neutral', label: '⏳ Pending' }
+  if (email.responded) return { tone: 'success', label: 'Responded' }
+  if (email.followup_sent) return { tone: 'warning', label: 'Follow-up sent' }
+  return { tone: 'neutral', label: 'Pending' }
 }
 
-/** The follow-up endpoint accepts only records owned by the signed-in user. */
-export function canSendFollowup(email, isAdmin) {
-  return !email.responded && !email.followup_sent && (!isAdmin || email.is_mine === true)
+/** Eligibility comes from the backend's 7-day, reply, and ownership rules. */
+export function canSendFollowup(email) {
+  return email.followup_eligible === true && email.is_mine === true
+}
+
+/** The backend stores UTC timestamps without a timezone suffix. */
+export function serverDate(value) {
+  if (!value) return null
+  const withZone = /(Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`
+  return new Date(withZone)
+}
+
+export function serverDateLabel(value) {
+  const date = serverDate(value)
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : 'Unknown'
 }
 
 export const CSV_TEMPLATE = `school_name,email,contact_name,phone,address,school_type

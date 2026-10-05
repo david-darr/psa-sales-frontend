@@ -8,16 +8,19 @@ import Badge from './components/Badge'
 import EmptyState from './components/EmptyState'
 import SchoolMarkers from './components/SchoolMarkers'
 import MapLegend from './components/MapLegend'
+import Icon from './components/Icon'
 import { MAP_CENTER, countLayers } from './lib/mapLayers'
+import { canSendFollowup, serverDateLabel } from './emails/constants'
 import api from './lib/api'
+import './styles/home.css'
 
 const RECENT_EMAIL_COUNT = 4
 
 /** Replies / follow-up / nothing-yet, as a tone plus a label. */
 function emailStatus(email) {
-  if (email.responded) return { tone: 'success', label: '✅ Replied' }
-  if (email.followup_sent) return { tone: 'warning', label: '📧 Follow-up' }
-  return { tone: 'neutral', label: '⏳ Pending' }
+  if (email.responded) return { tone: 'success', label: 'Replied' }
+  if (email.followup_sent) return { tone: 'warning', label: 'Follow-up' }
+  return { tone: 'neutral', label: 'Pending' }
 }
 
 function initials(name) {
@@ -36,6 +39,7 @@ export default function Home() {
   const [schools, setSchools] = useState([])
   const [emails, setEmails] = useState([])
   const [statsLoading, setStatsLoading] = useState(true)
+  const [dataError, setDataError] = useState(false)
 
   const [team, setTeam] = useState([])
   const [teamLoading, setTeamLoading] = useState(true)
@@ -73,9 +77,11 @@ export default function Home() {
       ])
       setSchools(Array.isArray(schoolsData) ? schoolsData : [])
       setEmails(Array.isArray(emailsData) ? emailsData : [])
+      setDataError(false)
     } catch {
       setSchools([])
       setEmails([])
+      setDataError(true)
     } finally {
       setStatsLoading(false)
     }
@@ -159,65 +165,113 @@ export default function Home() {
 
   const mapCount = useMemo(() => countLayers(mapSchools).total, [mapSchools])
 
-  const loginPrompt = (label = '🔐 Login') => (
+  const dueEmails = useMemo(
+    () => emails.filter(canSendFollowup).sort((a, b) => a.sent_at.localeCompare(b.sent_at)),
+    [emails],
+  )
+  const hasSentEmail = emails.some((email) => email.is_mine === true)
+  const gettingStartedSteps = [
+    { label: 'Account ready', done: true, detail: 'Your PSA access is active.', path: '/account' },
+    { label: 'Add your first school', done: schools.length > 0, detail: 'Enter a school contact or upload a CSV.', path: '/emails' },
+    { label: 'Set up Gmail', done: user?.mail_connected === true, detail: 'Add an app password to send emails and check replies.', path: '/account' },
+    { label: 'Send first outreach', done: hasSentEmail, detail: 'Choose a school and review your email.', path: '/emails' },
+  ]
+  const showGettingStarted = user && !user.admin && !statsLoading && !dataError &&
+    gettingStartedSteps.some((step) => !step.done)
+
+  const loginPrompt = (label = 'Login') => (
     <button className="modern-btn-primary ui-block" onClick={() => navigate('/account')}>
       {label}
     </button>
   )
 
   return (
-    <AppLayout title="HOME" subtitle={currentDate}>
-      <div className="ui-dashboard-grid">
-        {/* ---------------- Welcome ---------------- */}
-        <Card title={`Welcome${user ? `, ${user.name}!` : '!'}`} icon="👋">
-          {user ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0' }}>
-              <div className="ui-profile-name">{user.name}</div>
-              <Badge tone={user.admin ? 'warning' : 'info'}>
-                {user.admin ? '👑 Administrator' : '📊 Sales Associate'}
-              </Badge>
-            </div>
-          ) : (
-            <div className="ui-center" style={{ padding: 'var(--space-4) 0' }}>
-              <p style={{ marginBottom: 'var(--space-4)', color: '#94a3b8' }}>
-                Welcome to PSA Sales Platform!
-              </p>
-              {loginPrompt('🔐 Login to Continue')}
-            </div>
-          )}
-        </Card>
+    <AppLayout title="Home" subtitle={currentDate}>
+      <section className="home-hero" aria-label="Your workspace">
+        <div>
+          <div className="home-hero-kicker">YOUR WORKSPACE</div>
+          <h2>Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''}.</h2>
+          <p>Your schools, conversations, and team activity in one place.</p>
+        </div>
+        <div className="home-hero-actions">
+          <button className="modern-btn-primary" onClick={() => navigate('/finder')}><Icon name="search" size={16} />Find schools</button>
+          <button className="modern-btn-primary is-neutral" onClick={() => navigate('/emails')}><Icon name="mail" size={16} />Email center</button>
+        </div>
+      </section>
 
-        {/* ---------------- Your statistics ---------------- */}
-        <Card title="Your Statistics" icon="📊">
-          {!user ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: '#94a3b8' }}>
-              <p style={{ marginBottom: 'var(--space-4)' }}>Login to view your statistics</p>
-              {loginPrompt()}
-            </div>
-          ) : statsLoading ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: '#94a3b8' }}>
-              Loading your statistics...
-            </div>
-          ) : (
-            <div className="ui-metric-row">
-              <div className="ui-metric tone-primary">
-                <div className="ui-metric-value">{stats.totalSchools}</div>
-                <div className="ui-metric-label">Schools Added</div>
-              </div>
-              <div className="ui-metric tone-success">
-                <div className="ui-metric-value">{stats.totalEmails}</div>
-                <div className="ui-metric-label">Emails Sent</div>
-              </div>
-              <div className="ui-metric tone-warning">
-                <div className="ui-metric-value">{stats.pendingEmails}</div>
-                <div className="ui-metric-label">Pending</div>
-              </div>
-              <div className="ui-metric tone-info">
-                <div className="ui-metric-value">{stats.respondedEmails}</div>
-                <div className="ui-metric-label">Responded</div>
-              </div>
-            </div>
+      <div className="home-metrics" aria-label="Your activity">
+        {[
+          ['Schools added', stats.totalSchools, 'school'],
+          ['Emails sent', stats.totalEmails, 'mail'],
+          ['Awaiting reply', stats.pendingEmails, 'clock'],
+          ['Responses', stats.respondedEmails, 'check'],
+        ].map(([label, value, icon]) => (
+          <div className="home-metric" key={label}>
+            <div className="home-metric-label"><Icon name={icon} size={16} />{label}</div>
+            <div className="home-metric-value">{statsLoading || dataError ? '—' : value}</div>
+          </div>
+        ))}
+      </div>
+
+      {user && !statsLoading && (
+        <div className={`home-priority-grid ${showGettingStarted ? '' : 'is-single'}`}>
+          {showGettingStarted && (
+            <Card title="Getting started" icon="check">
+              <p className="home-priority-intro">Follow these steps to start using your PSA workspace.</p>
+              <ol className="home-start-list">
+                {gettingStartedSteps.map((step) => (
+                  <li key={step.label}>
+                    <span className={`home-step-status ${step.done ? 'is-done' : ''}`} aria-label={step.done ? 'Complete' : 'To do'}>
+                      {step.done ? '✓' : '○'}
+                    </span>
+                    <div><strong>{step.label}</strong><small>{step.detail}</small></div>
+                    {!step.done && (
+                      <button type="button" className="ui-link-button" onClick={() => navigate(step.path)}>
+                        Open
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </Card>
           )}
+
+          <Card title={`Due follow-ups (${dueEmails.length})`} icon="clock" tone="warning">
+            {dataError ? (
+              <div className="ui-alert tone-danger" role="alert">
+                Could not load your sales work. <button type="button" className="ui-link-button" onClick={fetchOwnData}>Retry</button>
+              </div>
+            ) : dueEmails.length === 0 ? (
+              <EmptyState icon="check" title="Nothing due today" message="Unanswered emails appear here after seven days." />
+            ) : (
+              <>
+                <p className="home-priority-intro">Review these recipients before sending a follow-up.</p>
+                <div className="home-due-list">
+                  {dueEmails.slice(0, 3).map((email) => (
+                    <div key={email.id}>
+                      <strong>{email.school_name}</strong>
+                      <small>{email.school_email} · due {serverDateLabel(email.followup_due_at)}</small>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {!dataError && (
+              <button type="button" className="modern-btn-primary ui-block" onClick={() => navigate('/emails')}>
+                Open due follow-ups
+              </button>
+            )}
+          </Card>
+        </div>
+      )}
+
+      <div className="home-feature-grid">
+        <Card title="Get to work" icon="→">
+          <div className="home-action-list">
+            <button onClick={() => navigate('/finder')}><Icon name="search" size={18} /><span><strong>Discover schools</strong><small>Search nearby schools and plan routes</small></span><Icon name="arrow" size={16} /></button>
+            <button onClick={() => navigate('/schools')}><Icon name="school" size={18} /><span><strong>Browse directory</strong><small>Review your school records</small></span><Icon name="arrow" size={16} /></button>
+            <button onClick={() => navigate('/emails')}><Icon name="mail" size={18} /><span><strong>Manage outreach</strong><small>Send email and review replies</small></span><Icon name="arrow" size={16} /></button>
+          </div>
         </Card>
 
         {/* ---------------- Mini map ----------------
@@ -228,7 +282,7 @@ export default function Home() {
           {mapLoading ? (
             <div
               className="ui-center"
-              style={{ height: '200px', display: 'grid', placeItems: 'center', color: '#94a3b8' }}
+              style={{ height: '200px', display: 'grid', placeItems: 'center', color: 'var(--color-text-muted)' }}
             >
               Loading map...
             </div>
@@ -273,14 +327,16 @@ export default function Home() {
         {/* ---------------- Recent emails ---------------- */}
         <Card title="Recent Emails" icon="📧">
           {!user ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: '#94a3b8' }}>
+            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
               <p style={{ marginBottom: 'var(--space-4)' }}>Login to view your emails</p>
               {loginPrompt()}
             </div>
           ) : statsLoading ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: '#94a3b8' }}>
+            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
               Loading recent emails...
             </div>
+          ) : dataError ? (
+            <div className="ui-alert tone-danger" role="alert">Could not load recent emails. Use Retry above.</div>
           ) : recentEmails.length === 0 ? (
             <EmptyState
               icon="📧"
@@ -302,11 +358,11 @@ export default function Home() {
                 return (
                   <div key={email.id} className="ui-feed-item">
                     <div className="ui-selectable-title">{email.school_display_name}</div>
-                    <div className="ui-selectable-meta">📧 {email.school_email}</div>
-                    <div className="ui-selectable-meta">👤 {email.contact_name}</div>
+                    <div className="ui-selectable-meta"> {email.school_email}</div>
+                    <div className="ui-selectable-meta"> {email.contact_name}</div>
                     <div className="ui-feed-footer">
                       <span style={{ color: 'var(--color-text-muted)' }}>
-                        📅 {new Date(email.sent_at).toLocaleDateString()}
+                         {new Date(email.sent_at).toLocaleDateString()}
                       </span>
                       <Badge tone={status.tone} compact>
                         {status.label}
@@ -331,12 +387,12 @@ export default function Home() {
             email counts, shown to actual staff as if it were live data. */}
         <Card title="Team" icon="👥" tone="warning">
           {!user ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: '#94a3b8' }}>
+            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
               <p style={{ marginBottom: 'var(--space-4)' }}>Login to view your team</p>
               {loginPrompt()}
             </div>
           ) : teamLoading ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: '#94a3b8' }}>
+            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
               Loading team...
             </div>
           ) : topTeam.length === 0 ? (
@@ -393,7 +449,7 @@ export default function Home() {
             style={{
               marginBottom: 'var(--space-5)',
               paddingLeft: 'var(--space-5)',
-              color: '#94a3b8',
+              color: 'var(--color-text-muted)',
               listStyle: 'disc',
             }}
           >

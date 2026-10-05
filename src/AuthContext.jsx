@@ -1,14 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import api, { onSessionExpired } from "./lib/api"
+import { UI_PREVIEW, NEW_EMPLOYEE_PREVIEW, ADMIN_PREVIEW, exitUiPreview } from './lib/previewMode'
+import { DEMO_USER, NEW_EMPLOYEE_USER, DEMO_ADMIN_USER } from './lib/previewFixtures'
 
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem("jwt") || "")
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(UI_PREVIEW ? (
+    ADMIN_PREVIEW ? DEMO_ADMIN_USER : NEW_EMPLOYEE_PREVIEW ? NEW_EMPLOYEE_USER : DEMO_USER
+  ) : null)
+  const [accessToken, setAccessToken] = useState(() => UI_PREVIEW ? 'preview-session' : localStorage.getItem("jwt") || "")
+  const [loading, setLoading] = useState(!UI_PREVIEW)
 
   const logout = useCallback(() => {
+    if (UI_PREVIEW) {
+      exitUiPreview()
+      return
+    }
     setAccessToken("")
     setUser(null)
     localStorage.removeItem("jwt")
@@ -20,6 +28,7 @@ export function AuthProvider({ children }) {
   useEffect(() => onSessionExpired(logout), [logout])
 
   useEffect(() => {
+    if (UI_PREVIEW) return
     if (!accessToken) {
       setUser(null)
       setLoading(false)
@@ -51,6 +60,7 @@ export function AuthProvider({ children }) {
   }, [accessToken])
 
   const login = (token, userData) => {
+    if (UI_PREVIEW) return
     localStorage.setItem("jwt", token)
     setAccessToken(token)
     setUser({
@@ -59,11 +69,16 @@ export function AuthProvider({ children }) {
       email: userData.email,
       phone: userData.phone,
       admin: userData.admin || false,
+      mail_connected: userData.mail_connected === true,
     })
   }
 
+  const markMailConnected = () => {
+    setUser((current) => current ? { ...current, mail_connected: true } : current)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, accessToken, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, accessToken, login, logout, loading, markMailConnected }}>
       {children}
     </AuthContext.Provider>
   )

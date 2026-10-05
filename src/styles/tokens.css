@@ -1,59 +1,38 @@
-/* =========================================================
-   DESIGN TOKENS
-   Single source of truth for colour, spacing, type and depth.
-
-   Values here were extracted from the literals that were
-   previously repeated across App.css and ~770 inline style
-   objects, so adopting a token changes nothing visually -
-   it just gives the value one name instead of many copies.
-
-   Rule of thumb: if you are about to type a hex code, a px
-   radius or a rem gap into a component, add/use a token here.
-   ========================================================= */
-
 :root {
-  /* ---------- Surfaces (dark slate dashboard) ---------- */
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-raised: #334155;
-  --color-surface-gradient: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  --color-sidebar-gradient: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  --color-scrim: rgba(0, 0, 0, 0.5);
+  /* PSA branding in a quiet, JARVIS-like workspace. */
+  --color-bg: #101113;
+  --color-surface: #191a1d;
+  --color-surface-raised: #232428;
+  --color-surface-gradient: var(--color-surface);
+  --color-sidebar-gradient: #151619;
+  --color-scrim: rgba(0, 0, 0, 0.72);
+  --color-border: #2e2f34;
+  --color-border-strong: #3a3b40;
+  --color-text: #f4f3f4;
+  --color-text-body: #d5d4d8;
+  --color-text-muted: #a6a4ac;
+  --color-text-on-accent: #fff;
 
-  /* ---------- Borders ---------- */
-  --color-border: #334155;
-  --color-border-strong: #475569;
+  /* Brighter red for text and focus; deeper red for white-on-red actions. */
+  --color-primary: #ff6176;
+  --color-primary-strong: #ce1733;
+  --color-primary-gradient: #ce1733;
+  --color-primary-soft: rgba(230, 36, 65, 0.10);
+  --color-primary-soft-border: rgba(255, 97, 118, 0.30);
+  --color-primary-soft-icon: rgba(255, 97, 118, 0.12);
+  --color-psa-red: #ce1733;
+  --color-psa-red-bright: #ff6176;
+  --color-psa-red-hover: #e32743;
 
-  /* ---------- Text ---------- */
-  --color-text: #f1f5f9;
-  --color-text-body: #e2e8f0;
-  --color-text-muted: #64748b;
-  --color-text-on-accent: #ffffff;
+  --color-success: #65cba3;
+  --color-danger: #ff7180;
+  --color-warning: #eec27b;
+  --color-info: #b9c4d7;
+  --color-success-soft: rgba(101, 203, 163, 0.11);
+  --color-danger-soft: rgba(255, 113, 128, 0.11);
+  --color-warning-soft: rgba(238, 194, 123, 0.11);
+  --color-info-soft: rgba(185, 196, 215, 0.11);
 
-  /* ---------- Brand accent (interactive blue) ---------- */
-  --color-primary: #3b82f6;
-  --color-primary-strong: #1d4ed8;
-  --color-primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  --color-primary-soft: rgba(59, 130, 246, 0.1);
-  --color-primary-soft-border: rgba(59, 130, 246, 0.2);
-  --color-primary-soft-icon: rgba(59, 130, 246, 0.2);
-
-  /* ---------- PSA brand red (marketing surfaces, legacy pages) ---------- */
-  --color-psa-red: #c40c0c;
-  --color-psa-red-bright: #e53935;
-  --color-psa-red-hover: #f42222;
-
-  /* ---------- Status ---------- */
-  --color-success: #10b981;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
-  --color-info: #8b5cf6;
-  --color-success-soft: rgba(16, 185, 129, 0.1);
-  --color-danger-soft: rgba(239, 68, 68, 0.1);
-  --color-warning-soft: rgba(245, 158, 11, 0.1);
-  --color-info-soft: rgba(139, 92, 246, 0.1);
-
-  /* ---------- Spacing scale ---------- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -61,58 +40,38 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
-
-  /* ---------- Radii ---------- */
   --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-xl: 14px;
   --radius-pill: 999px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.24);
+  --shadow-primary: none;
+  --shadow-primary-hover: none;
 
-  /* ---------- Depth ---------- */
-  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.3);
-  --shadow-primary: 0 4px 20px rgba(59, 130, 246, 0.3);
-  --shadow-primary-hover: 0 10px 25px rgba(59, 130, 246, 0.4);
-
-  /* ---------- Typography ---------- */
-  --font-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --font-display: "futura-pt", Verdana, Arial, sans-serif;
-
+  --font-sans: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-sans);
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
-  --text-lg: 1.1rem;
+  --text-lg: 1.125rem;
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
-  --text-3xl: 3rem;
-
+  --text-3xl: clamp(1.75rem, 2.5vw, 2.5rem);
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
   --weight-extrabold: 800;
 
-  /* ---------- Layout ---------- */
-  --sidebar-width: 280px;
+  --sidebar-width: 220px;
   --mobile-header-height: 64px;
-
-  /* ---------- Motion ---------- */
-  --transition-fast: 0.2s ease;
-  --transition-base: 0.3s ease;
-
-  /* ---------- Stacking order ----------
-     Declared together so the relative order is reviewable in
-     one place rather than inferred from scattered z-index values. */
+  --transition-fast: 0.16s ease;
+  --transition-base: 0.24s ease;
   --z-sidebar: 100;
   --z-mobile-header: 900;
   --z-scrim: 999;
   --z-mobile-sidebar: 1000;
   --z-modal: 1100;
 }
-
-/* Breakpoints cannot be CSS variables in media queries.
-   Keep these in sync with BREAKPOINTS in src/hooks/useBreakpoint.js:
-     mobile : max-width 768px
-     tablet : 769px - 1024px
-     desktop: min-width 1025px */

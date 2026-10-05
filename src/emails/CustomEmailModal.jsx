@@ -38,13 +38,13 @@ export default function CustomEmailModal({ draft, onChange, onSubmit, onClose, s
     })
 
   return (
-    <Modal title={`✉️ Custom Email — ${draft.school_name}`} onClose={onClose}>
+    <Modal title={`Custom Email — ${draft.school_name}`} onClose={onClose}>
       <form onSubmit={handleSubmit} id="custom-email-form">
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <span className="ui-compose-label">To:</span>
           {isBulk ? (
             <div className="ui-readonly-field is-bulk">
-              ✉️ {draft.school_name} — primary email per school
+               {draft.school_name} — primary email per school
             </div>
           ) : draft.all_emails.length > 1 ? (
             <select
@@ -119,7 +119,7 @@ export default function CustomEmailModal({ draft, onChange, onSubmit, onClose, s
                   checked={draft.pdf_files.includes(file)}
                   onChange={() => togglePdf(file)}
                 />
-                📄 {label}
+                 {label}
               </label>
             ))}
           </div>
@@ -136,10 +136,10 @@ export default function CustomEmailModal({ draft, onChange, onSubmit, onClose, s
         <button
           type="submit"
           form="custom-email-form"
-          className="modern-btn-primary is-info ui-grow"
+          className="modern-btn-primary ui-grow"
           disabled={sending}
         >
-          {sending ? '📧 Sending...' : '📧 Send Email'}
+          {sending ? 'Sending...' : 'Send Email'}
         </button>
         <button type="button" className="modern-btn-primary is-neutral" onClick={onClose}>
           Cancel

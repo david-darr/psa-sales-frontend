@@ -14,7 +14,7 @@ function SentCell({ email }) {
         {email.sent_at_formatted || new Date(email.sent_at).toLocaleDateString()}
       </div>
       <Badge tone={age.tone} compact>
-        {age.icon} {age.text}
+        {age.text}
       </Badge>
     </div>
   )
@@ -29,7 +29,6 @@ export default function EmailHistoryCard({
   selectedIds,
   onSelectionChange,
   onDeleteSelected,
-  onMassFollowup,
   onCheckReplies,
 }) {
   const isMobile = useIsMobile()
@@ -69,25 +68,14 @@ export default function EmailHistoryCard({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >
-            <option value="all">📋 All Emails ({counts.all})</option>
-            <option value="pending">⏳ Pending ({counts.pending})</option>
-            <option value="followup">📧 Follow-up Sent ({counts.followup})</option>
-            <option value="responded">✅ Responded ({counts.responded})</option>
+            <option value="all">All Emails ({counts.all})</option>
+            <option value="pending">Pending ({counts.pending})</option>
+            <option value="followup">Follow-up Sent ({counts.followup})</option>
+            <option value="responded">Responded ({counts.responded})</option>
           </select>
         </div>
 
         <div className="ui-toolbar-group">
-          {counts.followupEligible > 0 && (
-            <button
-              className="modern-btn-primary is-warning is-small"
-              onClick={onMassFollowup}
-              disabled={loading}
-            >
-              {loading
-                ? '📧 Sending...'
-                : `📧 Send My Follow-ups (${counts.followupEligible})`}
-            </button>
-          )}
           <button
             className={`modern-btn-primary is-small ${allVisibleSelected ? 'is-danger' : 'is-neutral'}`}
             onClick={toggleAll}
@@ -100,7 +88,7 @@ export default function EmailHistoryCard({
             onClick={onCheckReplies}
             disabled={loading}
           >
-            {loading ? '🔄 Checking...' : '🔄 Check Replies'}
+            {loading ? 'Checking...' : 'Check Replies'}
           </button>
           {selectedIds.length > 0 && (
             <button
@@ -108,7 +96,7 @@ export default function EmailHistoryCard({
               onClick={onDeleteSelected}
               disabled={loading}
             >
-              {loading ? '🗑️ Deleting...' : `🗑️ Delete ${selectedIds.length}`}
+              {loading ? 'Deleting...' : `Delete ${selectedIds.length}`}
             </button>
           )}
         </div>
@@ -120,7 +108,7 @@ export default function EmailHistoryCard({
           {filter !== 'all' && <span> (filtered from {counts.all} total)</span>}
         </span>
         <span>
-          ⏳ {counts.pending} pending • 📧 {counts.followup} follow-up sent • ✅{' '}
+          {counts.pending} pending • {counts.followup} follow-up sent •{' '}
           {counts.responded} responded
         </span>
 
@@ -128,12 +116,12 @@ export default function EmailHistoryCard({
           <div className="ui-summary-bar-note">
             {counts.urgent > 0 && (
               <span style={{ color: 'var(--color-danger)' }}>
-                🚨 {counts.urgent} urgent follow-up{counts.urgent === 1 ? '' : 's'} (14+ days)
+                {counts.urgent} urgent follow-up{counts.urgent === 1 ? '' : 's'} (14+ days)
               </span>
             )}
             {counts.due > 0 && (
               <span style={{ color: 'var(--color-warning)' }}>
-                ⚠️ {counts.due} follow-up{counts.due === 1 ? '' : 's'} due (7+ days)
+                {counts.due} follow-up{counts.due === 1 ? '' : 's'} due (7+ days)
               </span>
             )}
           </div>
@@ -189,7 +177,7 @@ export default function EmailHistoryCard({
                       </td>
                       <td>
                         <div className="ui-cell-strong">{email.school_name}</div>
-                        {isMobile && <div className="ui-sub">📧 {email.school_email}</div>}
+                        {isMobile && <div className="ui-sub"> {email.school_email}</div>}
                       </td>
                       {!isMobile && <td>{email.school_email}</td>}
                       <td>

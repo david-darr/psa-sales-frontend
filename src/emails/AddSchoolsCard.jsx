@@ -76,13 +76,13 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
           className={`modern-btn-primary ${mode === 'manual' ? 'is-danger' : 'is-success'}`}
           onClick={() => setMode(mode === 'manual' ? null : 'manual')}
         >
-          {mode === 'manual' ? '❌ Cancel Manual Entry' : '➕ Add Single School'}
+          {mode === 'manual' ? 'Cancel Manual Entry' : 'Add Single School'}
         </button>
         <button
           className={`modern-btn-primary ${mode === 'csv' ? 'is-danger' : ''}`}
           onClick={() => setMode(mode === 'csv' ? null : 'csv')}
         >
-          {mode === 'csv' ? '❌ Cancel CSV Upload' : '📄 Upload CSV File'}
+          {mode === 'csv' ? 'Cancel CSV Upload' : 'Upload CSV File'}
         </button>
       </div>
 
@@ -150,7 +150,7 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
                   onClick={() => removeEmailField(index)}
                   aria-label={`Remove additional email ${index + 1}`}
                 >
-                  ✕
+                  Remove
                 </button>
               </div>
             ))}
@@ -194,10 +194,10 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
 
           <button
             type="submit"
-            className="modern-btn-primary is-success ui-block"
+            className="modern-btn-primary ui-block"
             disabled={submitting}
           >
-            {submitting ? 'Adding...' : '✅ Add School'}
+            {submitting ? 'Adding...' : 'Add School'}
           </button>
         </form>
       )}
@@ -205,7 +205,7 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
       {mode === 'csv' && (
         <div>
           <div className="ui-info-tile tone-primary" style={{ marginBottom: 'var(--space-5)' }}>
-            <div className="ui-info-title">📋 CSV Format Requirements</div>
+            <div className="ui-info-title">CSV Format Requirements</div>
             <div className="ui-info-body">
               <p>
                 <strong>Required columns:</strong> school_name, email
@@ -229,12 +229,12 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
           </div>
 
           <div className="ui-info-tile tone-success" style={{ marginBottom: 'var(--space-5)' }}>
-            <div className="ui-info-title">📥 Sample CSV Template</div>
+            <div className="ui-info-title">Sample CSV Template</div>
             <div className="ui-info-body" style={{ marginBottom: 'var(--space-3)' }}>
               Download a sample file to see the expected format:
             </div>
             <button className="modern-btn-primary is-success is-small" onClick={downloadCsvTemplate}>
-              📄 Download Template
+               Download Template
             </button>
           </div>
 
@@ -255,7 +255,7 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
             )}
 
             {csvFile && (
-              <div className="ui-alert tone-warning">📁 Selected file: {csvFile.name}</div>
+              <div className="ui-alert tone-warning">Selected file: {csvFile.name}</div>
             )}
 
             <button
@@ -263,13 +263,13 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
               className="modern-btn-primary ui-block"
               disabled={!csvFile || csvUploading}
             >
-              {csvUploading ? '📤 Uploading...' : '📤 Upload CSV File'}
+              {csvUploading ? 'Uploading...' : 'Upload CSV File'}
             </button>
           </form>
 
           {csvResult && (
             <div className="ui-info-tile tone-success" style={{ marginTop: 'var(--space-5)' }}>
-              <div className="ui-info-title">✅ Upload Results</div>
+              <div className="ui-info-title">Upload Results</div>
               <div className="ui-info-body">
                 <p>
                   Schools added:{' '}

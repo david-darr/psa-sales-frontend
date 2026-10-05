@@ -76,21 +76,21 @@ export function useEmailCenter({ accessToken, user }) {
     () => ({
       all: sentEmails.length,
       pending: sentEmails.filter((e) => !e.responded && !e.followup_sent).length,
-      followupEligible: sentEmails.filter((e) => canSendFollowup(e, user?.admin)).length,
       followup: sentEmails.filter((e) => !e.responded && e.followup_sent).length,
       responded: sentEmails.filter((e) => e.responded).length,
       urgent: sentEmails.filter(
-        (e) => !e.responded && !e.followup_sent && (e.days_ago || 0) >= 14,
+        (e) => canSendFollowup(e) && (e.days_ago || 0) >= 14,
       ).length,
       due: sentEmails.filter(
-        (e) =>
-          !e.responded &&
-          !e.followup_sent &&
-          (e.days_ago || 0) >= 7 &&
-          (e.days_ago || 0) < 14,
+        (e) => canSendFollowup(e) && (e.days_ago || 0) < 14,
       ).length,
     }),
-    [sentEmails, user?.admin],
+    [sentEmails],
+  )
+
+  const dueFollowups = useMemo(
+    () => sentEmails.filter(canSendFollowup).sort((a, b) => a.sent_at.localeCompare(b.sent_at)),
+    [sentEmails],
   )
 
   const filterSchools = useCallback(
@@ -365,26 +365,37 @@ export function useEmailCenter({ accessToken, user }) {
     [loadSentEmails, notify],
   )
 
-  const sendMassFollowup = useCallback(async () => {
-    const pending = sentEmails.filter((e) => canSendFollowup(e, user?.admin))
-    if (pending.length === 0) {
-      notify('info', 'No pending emails from your account to follow up on.')
-      return
+  const previewFollowups = useCallback(async (ids) => {
+    try {
+      return await Promise.all(ids.map((id) => api.get(`/api/followup-preview/${id}`)))
+    } catch (err) {
+      notify('danger', err.message || 'Could not preview the selected follow-ups.')
+      await loadSentEmails()
+      return null
+    }
+  }, [loadSentEmails, notify])
+
+  const sendSelectedFollowups = useCallback(async (ids) => {
+    const selected = dueFollowups.filter((email) => ids.includes(email.id))
+    if (selected.length === 0) {
+      notify('info', 'No due follow-ups are selected.')
+      return { sent: 0, failed: 0 }
     }
 
     setLoading(true)
     let sent = 0
     const failures = []
+    let expired = false
 
     try {
       // Three at a time: each follow-up is its own SMTP login server-side, so
       // this paces the mailbox rather than the request.
       const chunkSize = 3
-      for (let i = 0; i < pending.length; i += chunkSize) {
-        const chunk = pending.slice(i, i + chunkSize)
+      for (let i = 0; i < selected.length; i += chunkSize) {
+        const chunk = selected.slice(i, i + chunkSize)
         notify(
           'info',
-          `Sending follow-ups ${i + 1}-${Math.min(i + chunkSize, pending.length)} of ${pending.length}...`,
+          `Sending follow-ups ${i + 1}-${Math.min(i + chunkSize, selected.length)} of ${selected.length}...`,
         )
 
         const results = await Promise.all(
@@ -399,17 +410,19 @@ export function useEmailCenter({ accessToken, user }) {
           }),
         )
 
-        if (results.some((r) => r.expired)) break
-
         results.forEach((r) => {
           if (r.ok) sent++
+          else if (r.expired) expired = true
           else failures.push(`${r.school}: ${r.error}`)
         })
+        if (expired) break
       }
 
-      await loadSentEmails()
+      if (!expired) await loadSentEmails()
 
-      if (sent > 0) {
+      if (expired) {
+        notify('danger', `Session expired after ${sent} follow-up${sent === 1 ? '' : 's'} sent. Sign in again to continue.`)
+      } else if (sent > 0) {
         notify(
           failures.length ? 'warning' : 'success',
           `Sent ${sent} follow-up${sent === 1 ? '' : 's'}` +
@@ -418,12 +431,14 @@ export function useEmailCenter({ accessToken, user }) {
       } else {
         notify('danger', 'No follow-ups were sent.')
       }
+      return { sent, failed: failures.length }
     } catch (err) {
       notify('danger', err.message || 'Error while sending follow-ups.')
+      return { sent, failed: failures.length }
     } finally {
       setLoading(false)
     }
-  }, [sentEmails, user?.admin, loadSentEmails, notify])
+  }, [dueFollowups, loadSentEmails, notify])
 
   const checkReplies = useCallback(async () => {
     setLoading(true)
@@ -461,6 +476,7 @@ export function useEmailCenter({ accessToken, user }) {
     // data
     schools,
     sentEmails,
+    dueFollowups,
     schoolCounts,
     emailCounts,
     isAdmin: Boolean(user?.admin),
@@ -482,7 +498,8 @@ export function useEmailCenter({ accessToken, user }) {
     sendTemplateEmails,
     sendCustomEmail,
     sendCustomReply,
-    sendMassFollowup,
+    previewFollowups,
+    sendSelectedFollowups,
     checkReplies,
     loadReplyChain,
     setResponded,

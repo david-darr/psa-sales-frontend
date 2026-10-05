@@ -69,14 +69,14 @@ export default function SchoolsList() {
 
   const refreshButton = (
     <button className="modern-btn-primary" onClick={fetchSchools} disabled={loading}>
-      {loading ? '🔄 Loading...' : '🔄 Refresh'}
+      {loading ? 'Loading...' : 'Refresh'}
     </button>
   )
 
   return (
     <AppLayout
-      title="SCHOOLS DATABASE"
-      subtitle="Complete Directory of Schools & Contact Information"
+      title="Schools"
+      subtitle="Search the school directory and contact information"
       actions={refreshButton}
     >
       <div className="ui-stat-grid">
@@ -155,7 +155,7 @@ export default function SchoolsList() {
                 </button>
               ) : (
                 <button className="modern-btn-primary" onClick={fetchSchools}>
-                  🔄 Refresh Database
+                   Refresh Database
                 </button>
               )
             }

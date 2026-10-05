@@ -7,6 +7,7 @@ import EmptyState from './components/EmptyState'
 import useEmailCenter from './emails/useEmailCenter'
 import AddSchoolsCard from './emails/AddSchoolsCard'
 import SchoolsCard from './emails/SchoolsCard'
+import DueFollowupsCard from './emails/DueFollowupsCard'
 import EmailHistoryCard from './emails/EmailHistoryCard'
 import RespondedCard from './emails/RespondedCard'
 import ReplyChainModal from './emails/ReplyChainModal'
@@ -150,12 +151,6 @@ export default function Emails() {
     setSelectedSchoolIds([])
   }
 
-  const massFollowup = async () => {
-    if (!window.confirm(`Send follow-up emails to ${center.emailCounts.followupEligible} pending email address(es) from your account?`))
-      return
-    await center.sendMassFollowup()
-  }
-
   const unmarkResponded = async (email) => {
     if (!window.confirm(`Mark ${email.school_name} as no longer responded?`)) return
     await center.setResponded(email.id, false)
@@ -174,7 +169,7 @@ export default function Emails() {
 
   if (!user) {
     return (
-      <AppLayout title="EMAIL CENTER" subtitle="Manage School Communications">
+      <AppLayout title="Email center" subtitle="Manage school conversations">
         <Card>
           <EmptyState
             icon="🔐"
@@ -182,7 +177,7 @@ export default function Emails() {
             message="Please log in to access the Email Center and manage your school communications."
             action={
               <button className="modern-btn-primary" onClick={() => navigate('/account')}>
-                🔐 Login to Continue
+                 Login to Continue
               </button>
             }
           />
@@ -193,15 +188,15 @@ export default function Emails() {
 
   return (
     <AppLayout
-      title="EMAIL CENTER"
-      subtitle="Manage School Communications & Email Campaigns"
+      title="Email center"
+      subtitle="Manage school conversations and outreach"
       actions={
         <button
           className="modern-btn-primary is-neutral"
           onClick={center.reload}
           disabled={center.loading}
         >
-          🔄 Refresh
+           Refresh
         </button>
       }
     >
@@ -215,9 +210,30 @@ export default function Emails() {
         </div>
       )}
 
-      <AddSchoolsCard onAddSchool={center.addSchool} onUploadCsv={center.uploadCsv} />
+      <nav className="email-section-nav" aria-label="Email center sections">
+        <a href="#email-followups">Due follow-ups ({center.dueFollowups.length})</a>
+        <a href="#email-add-schools">Add schools</a>
+        <a href="#email-schools">School list</a>
+        <a href="#email-history">Sent email</a>
+        <a href="#email-responses">Replies</a>
+      </nav>
 
-      <SchoolsCard
+      <section id="email-followups" className="email-section">
+        <DueFollowupsCard
+          dueEmails={center.dueFollowups}
+          mailConnected={user.mail_connected === true}
+          loading={center.loading}
+          onPreview={center.previewFollowups}
+          onSend={center.sendSelectedFollowups}
+        />
+      </section>
+
+      <section id="email-add-schools" className="email-section">
+        <AddSchoolsCard onAddSchool={center.addSchool} onUploadCsv={center.uploadCsv} />
+      </section>
+
+      <section id="email-schools" className="email-section">
+        <SchoolsCard
         schools={center.schools}
         counts={center.schoolCounts}
         isAdmin={center.isAdmin}
@@ -230,9 +246,11 @@ export default function Emails() {
         onSendTemplate={sendTemplate}
         onComposeSingle={composeForSchool}
         onComposeBulk={composeForSelection}
-      />
+        />
+      </section>
 
-      <EmailHistoryCard
+      <section id="email-history" className="email-section">
+        <EmailHistoryCard
         sentEmails={center.sentEmails}
         counts={center.emailCounts}
         isAdmin={center.isAdmin}
@@ -241,18 +259,20 @@ export default function Emails() {
         selectedIds={selectedEmailIds}
         onSelectionChange={setSelectedEmailIds}
         onDeleteSelected={deleteSelectedEmails}
-        onMassFollowup={massFollowup}
         onCheckReplies={center.checkReplies}
-      />
+        />
+      </section>
 
-      <RespondedCard
+      <section id="email-responses" className="email-section">
+        <RespondedCard
         sentEmails={center.sentEmails}
         isAdmin={center.isAdmin}
         onViewReply={openReplyChain}
         onCompose={composeReplyTo}
         onUnmark={unmarkResponded}
         onCopyEmail={copyEmail}
-      />
+        />
+      </section>
 
       {replyChain && (
         <ReplyChainModal

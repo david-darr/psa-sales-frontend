@@ -104,7 +104,7 @@ export default function SchoolFinder() {
   const canRoute = selectedRouteSchools.length >= 2 && Boolean(startAddress)
 
   return (
-    <AppLayout title="SCHOOL FINDER" subtitle="Discover New Schools in Your Area">
+    <AppLayout title="School finder" subtitle="Discover schools and plan your outreach">
       <Card title="Search for Schools" icon="🔍" style={{ marginBottom: 'var(--space-6)' }}>
         <form onSubmit={handleSubmit}>
           <div className="ui-stack">
@@ -146,7 +146,7 @@ export default function SchoolFinder() {
             className="modern-btn-primary ui-block"
             disabled={loading || !address.trim() || selectedKeywords.length === 0}
           >
-            {loading ? '🔍 Searching...' : '🔍 Find Schools'}
+            {loading ? 'Searching...' : 'Find Schools'}
           </button>
         </form>
       </Card>
@@ -169,7 +169,7 @@ export default function SchoolFinder() {
                     />
                     <span className="ui-selectable-body">
                       <span className="ui-selectable-title">{school.name}</span>
-                      <span className="ui-selectable-meta">📍 {school.address}</span>
+                      <span className="ui-selectable-meta">{school.address}</span>
                     </span>
                   </label>
                 )
@@ -231,12 +231,12 @@ export default function SchoolFinder() {
             disabled={!canRoute || routeLoading}
             style={{ marginBottom: routeOrder ? 'var(--space-5)' : 0 }}
           >
-            {routeLoading ? '🛣️ Creating Route...' : '🛣️ Create Optimal Route'}
+            {routeLoading ? 'Creating Route...' : 'Create Optimal Route'}
           </button>
 
           {routeOrder && (
             <div className="ui-panel tone-success">
-              <h4 className="ui-panel-title">🏁 Optimal Route Order:</h4>
+              <h4 className="ui-panel-title">Optimal Route Order:</h4>
               <div className="ui-toolbar-hint" style={{ marginBottom: 'var(--space-4)' }}>
                 Starting from: <strong style={{ color: 'var(--color-text)' }}>{startAddress}</strong>
               </div>
@@ -246,7 +246,7 @@ export default function SchoolFinder() {
                   return (
                     <li key={pid} style={{ marginBottom: 'var(--space-3)' }}>
                       <div className="ui-selectable-title">{school?.name}</div>
-                      <div className="ui-selectable-meta">📍 {school?.address}</div>
+                      <div className="ui-selectable-meta"> {school?.address}</div>
                     </li>
                   )
                 })}
@@ -264,7 +264,7 @@ export default function SchoolFinder() {
             message="Try adjusting your search location or selecting different school types."
             action={
               <button className="modern-btn-primary" onClick={resetSearch}>
-                🔄 Start New Search
+                 Start New Search
               </button>
             }
           />

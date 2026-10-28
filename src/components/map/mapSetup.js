@@ -1,4 +1,5 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { bindMapWorker } from './mapWorker'
 
 /**
  * OpenFreeMap's key-less dark vector style. Commercial use is allowed; the
@@ -21,7 +22,9 @@ export const FALLBACK_STYLE = {
 /** MapLibre is large, so it is only imported once a map is actually shown. */
 export async function loadMapLibre() {
   const module = await import('maplibre-gl')
-  return module.default ?? module
+  const maplibregl = module.default ?? module
+  bindMapWorker(maplibregl)
+  return maplibregl
 }
 
 export function webglAvailable() {

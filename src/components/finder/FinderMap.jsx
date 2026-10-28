@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { circlePolygon } from './finderUtils'
+import { bindMapWorker } from '../map/mapWorker'
+
+bindMapWorker(maplibregl)
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark'
 const EMPTY = { type: 'FeatureCollection', features: [] }

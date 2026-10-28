@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
 import EmployeeInvites from './components/EmployeeInvites'
 import JoinLinks from './components/JoinLinks'
+import AgentKeys from './components/AgentKeys'
 import MailCredentialMigration from './components/MailCredentialMigration'
 import Icon from './components/Icon'
 import { Panel, ErrorNotice } from './components/WorkspaceUI'
@@ -289,6 +290,7 @@ export default function Account() {
         {[
           ['profile', 'My profile'],
           ['mail', 'Email connection'],
+          ['ai', 'AI & integrations'],
           ...(user.admin ? [['admin', 'Administration']] : []),
         ].map(([key, label]) => (
           <button
@@ -469,6 +471,7 @@ export default function Account() {
           </Panel>
         </div>
       )}
+      {tab === 'ai' && <AgentKeys admin={Boolean(user.admin)} />}
       {tab === 'admin' && user.admin && (
         <div className="workspace-form">
           <JoinLinks />

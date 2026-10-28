@@ -623,6 +623,14 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
       error: null,
     }
   if (endpoint === '/api/invitations' && method === 'GET') return []
+  if (endpoint === '/api/agent-keys' && method === 'GET')
+    return {
+      items: [{ id: 1, name: 'Kairos on my laptop', hint: 'psak_1a2b...9f0e', scope: 'read',
+        expires_at: ago(-20), last_used_at: ago(0), expired: false }],
+      base_url: 'https://demo.invalid/api/agent/v1',
+    }
+  if (endpoint.startsWith('/api/agent-keys'))
+    throw new Error('API keys are not available in the demo.')
   if (endpoint === '/api/mail-credential-migration' && method === 'GET')
     return {
       configured: 3,

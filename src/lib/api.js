@@ -1,18 +1,10 @@
-/* =========================================================
-   API CLIENT
-
-   Replaces the backend URL that was hardcoded at 33 call sites
-   across 9 files, and the `if (res.status === 401)` block that
-   was hand-repeated at every one of those call sites.
-
-   Set VITE_API_BASE_URL in .env.local to point at a local or
-   staging backend. If it is unset we fall back to production,
-   which preserves the previous behaviour.
-   ========================================================= */
+/* Vite development requests use the local Flask proxy. Production uses Render.
+   Set VITE_API_BASE_URL to override either environment. */
 import { UI_PREVIEW } from './previewMode'
 
 export const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'https://psa-sales-backend.onrender.com'
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? '' : 'https://psa-sales-backend.onrender.com')
 ).replace(/\/$/, '')
 
 /** Thrown for any non-2xx response. `payload` is the parsed JSON body when there was one. */
@@ -134,10 +126,16 @@ export async function apiFetch(path, options = {}) {
 /* Thin verb helpers - most call sites read better with these. */
 export const api = {
   get: (path, options) => apiFetch(path, { ...options, method: 'GET' }),
-  post: (path, body, options) => apiFetch(path, { ...options, method: 'POST', body }),
-  put: (path, body, options) => apiFetch(path, { ...options, method: 'PUT', body }),
-  del: (path, body, options) => apiFetch(path, { ...options, method: 'DELETE', body }),
-  upload: (path, formData, options) => apiFetch(path, { ...options, method: 'POST', formData }),
+  post: (path, body, options) =>
+    apiFetch(path, { ...options, method: 'POST', body }),
+  put: (path, body, options) =>
+    apiFetch(path, { ...options, method: 'PUT', body }),
+  patch: (path, body, options) =>
+    apiFetch(path, { ...options, method: 'PATCH', body }),
+  del: (path, body, options) =>
+    apiFetch(path, { ...options, method: 'DELETE', body }),
+  upload: (path, formData, options) =>
+    apiFetch(path, { ...options, method: 'POST', formData }),
 }
 
 export default api

@@ -1,15 +1,32 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import api, { onSessionExpired } from "./lib/api"
-import { UI_PREVIEW, NEW_EMPLOYEE_PREVIEW, ADMIN_PREVIEW, exitUiPreview } from './lib/previewMode'
-import { DEMO_USER, NEW_EMPLOYEE_USER, DEMO_ADMIN_USER } from './lib/previewFixtures'
+import { useCallback, useEffect, useState } from 'react'
+import api, { onSessionExpired } from './lib/api'
+import {
+  UI_PREVIEW,
+  NEW_EMPLOYEE_PREVIEW,
+  ADMIN_PREVIEW,
+  exitUiPreview,
+} from './lib/previewMode'
+import {
+  DEMO_USER,
+  NEW_EMPLOYEE_USER,
+  DEMO_ADMIN_USER,
+} from './lib/previewFixtures'
 
-const AuthContext = createContext()
+import AuthContext from './context/authContext'
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(UI_PREVIEW ? (
-    ADMIN_PREVIEW ? DEMO_ADMIN_USER : NEW_EMPLOYEE_PREVIEW ? NEW_EMPLOYEE_USER : DEMO_USER
-  ) : null)
-  const [accessToken, setAccessToken] = useState(() => UI_PREVIEW ? 'preview-session' : localStorage.getItem("jwt") || "")
+  const [user, setUser] = useState(
+    UI_PREVIEW
+      ? ADMIN_PREVIEW
+        ? DEMO_ADMIN_USER
+        : NEW_EMPLOYEE_PREVIEW
+          ? NEW_EMPLOYEE_USER
+          : DEMO_USER
+      : null,
+  )
+  const [accessToken, setAccessToken] = useState(() =>
+    UI_PREVIEW ? 'preview-session' : localStorage.getItem('jwt') || '',
+  )
   const [loading, setLoading] = useState(!UI_PREVIEW)
 
   const logout = useCallback(() => {
@@ -17,9 +34,9 @@ export function AuthProvider({ children }) {
       exitUiPreview()
       return
     }
-    setAccessToken("")
+    setAccessToken('')
     setUser(null)
-    localStorage.removeItem("jwt")
+    localStorage.removeItem('jwt')
   }, [])
 
   // Register once so any 401 from anywhere in the app clears the session.
@@ -41,7 +58,7 @@ export function AuthProvider({ children }) {
     setLoading(true)
 
     api
-      .get("/api/profile", { token: accessToken })
+      .get('/api/profile', { token: accessToken })
       .then((data) => {
         if (active) setUser(data && !data.error ? data : null)
       })
@@ -61,7 +78,7 @@ export function AuthProvider({ children }) {
 
   const login = (token, userData) => {
     if (UI_PREVIEW) return
-    localStorage.setItem("jwt", token)
+    localStorage.setItem('jwt', token)
     setAccessToken(token)
     setUser({
       id: userData.id,
@@ -74,16 +91,25 @@ export function AuthProvider({ children }) {
   }
 
   const markMailConnected = () => {
-    setUser((current) => current ? { ...current, mail_connected: true } : current)
+    setUser((current) =>
+      current ? { ...current, mail_connected: true } : current,
+    )
   }
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, login, logout, loading, markMailConnected }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        login,
+        logout,
+        loading,
+        markMailConnected,
+        updateProfile: (data) =>
+          setUser((current) => ({ ...current, ...data })),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  return useContext(AuthContext)
 }

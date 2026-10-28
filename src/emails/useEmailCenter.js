@@ -1,31 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import api from '../lib/api'
-import { batchSchoolIds, canSendFollowup, countOutgoing, schoolType } from './constants'
 
 /**
- * All data loading and mutations for the Email Center.
- *
- * Emails.jsx previously held 29 useState hooks in one 3,128-line component,
- * mixing server data, form drafts, modal visibility and transient status. This
- * owns the server data and the actions against it; the page keeps only the
- * draft/modal state that belongs to its own UI.
+ * Account-level data for the Outreach page: sent emails (history and replies),
+ * mailbox sync state, and the actions that mutate them. Batch sending lives in
+ * useOutreach.js; this keeps the older endpoints (add school, CSV import, reply
+ * threads, delete records) working.
  */
 export function useEmailCenter({ accessToken, user }) {
-  const [schools, setSchools] = useState([])
   const [sentEmails, setSentEmails] = useState([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState(null)
+  const [mailSync, setMailSync] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const autoSyncToken = useRef(null)
 
-  /** Status notices carry an explicit tone. */
-  const notify = useCallback((tone, text) => {
-    setStatus({ tone, text })
-  }, [])
-
+  const notify = useCallback((tone, text) => setStatus({ tone, text }), [])
   const clearStatus = useCallback(() => setStatus(null), [])
 
-  // Auto-dismiss, but reset the timer whenever a new notice replaces an old
-  // one. The previous code scheduled a bare setTimeout per action, so
-  // overlapping actions cleared each other's messages early.
+  // Restart the dismiss timer whenever a new notice replaces an old one.
   useEffect(() => {
     if (!status) return
     const timer = setTimeout(() => setStatus(null), 6000)
@@ -34,98 +27,37 @@ export function useEmailCenter({ accessToken, user }) {
 
   /* ---------------- Loading ---------------- */
 
-  const loadSchools = useCallback(async () => {
-    try {
-      const data = await api.get('/api/my-schools')
-      setSchools(Array.isArray(data) ? data : [])
-    } catch (err) {
-      notify('danger', err.message || 'Could not load your schools.')
-    }
-  }, [notify])
-
   const loadSentEmails = useCallback(async () => {
     try {
-      const data = await api.get('/api/sent-emails')
+      const data = await api.get('/api/sent-emails?scope=mine')
       setSentEmails(Array.isArray(data) ? data : [])
     } catch (err) {
       notify('danger', err.message || 'Could not load sent emails.')
     }
   }, [notify])
 
+  const loadMailSync = useCallback(async () => {
+    try {
+      setMailSync(await api.get('/api/mail-sync-status'))
+    } catch (err) {
+      setMailSync({
+        ready: false,
+        error: err.message || 'Could not check mailbox status.',
+      })
+    }
+  }, [])
+
   const reload = useCallback(
-    () => Promise.all([loadSchools(), loadSentEmails()]),
-    [loadSchools, loadSentEmails],
+    () => Promise.all([loadSentEmails(), loadMailSync()]),
+    [loadSentEmails, loadMailSync],
   )
 
   useEffect(() => {
     if (accessToken) reload()
   }, [accessToken, reload])
 
-  /* ---------------- Derived ---------------- */
-
-  const schoolCounts = useMemo(
-    () => ({
-      all: schools.length,
-      pending: schools.filter((s) => s.status !== 'contacted').length,
-      contacted: schools.filter((s) => s.status === 'contacted').length,
-    }),
-    [schools],
-  )
-
-  const emailCounts = useMemo(
-    () => ({
-      all: sentEmails.length,
-      pending: sentEmails.filter((e) => !e.responded && !e.followup_sent).length,
-      followup: sentEmails.filter((e) => !e.responded && e.followup_sent).length,
-      responded: sentEmails.filter((e) => e.responded).length,
-      urgent: sentEmails.filter(
-        (e) => canSendFollowup(e) && (e.days_ago || 0) >= 14,
-      ).length,
-      due: sentEmails.filter(
-        (e) => canSendFollowup(e) && (e.days_ago || 0) < 14,
-      ).length,
-    }),
-    [sentEmails],
-  )
-
-  const dueFollowups = useMemo(
-    () => sentEmails.filter(canSendFollowup).sort((a, b) => a.sent_at.localeCompare(b.sent_at)),
-    [sentEmails],
-  )
-
-  const filterSchools = useCallback(
-    (filter, sort) => {
-      const filtered = schools.filter((school) => {
-        if (filter === 'pending') return school.status !== 'contacted'
-        if (filter === 'contacted') return school.status === 'contacted'
-        return true
-      })
-
-      if (sort === 'default') return filtered
-      if (sort === 'type') {
-        return [...filtered].sort(
-          (a, b) => schoolType(a.school_type).order - schoolType(b.school_type).order,
-        )
-      }
-      // Named type first, everything else after, original order preserved
-      // within each group.
-      return [...filtered].sort((a, b) => {
-        const aMatch = a.school_type === sort ? 0 : 1
-        const bMatch = b.school_type === sort ? 0 : 1
-        return aMatch - bMatch
-      })
-    },
-    [schools],
-  )
-
-  const filterEmails = useCallback(
-    (filter) =>
-      sentEmails.filter((email) => {
-        if (filter === 'pending') return !email.responded && !email.followup_sent
-        if (filter === 'followup') return !email.responded && email.followup_sent
-        if (filter === 'responded') return email.responded
-        return true
-      }),
+  const responded = useMemo(
+    () => sentEmails.filter((email) => email.responded),
     [sentEmails],
   )
 
@@ -139,15 +71,14 @@ export function useEmailCenter({ accessToken, user }) {
       }
       try {
         await api.post('/api/add-school', payload)
-        await loadSchools()
-        notify('success', 'School added successfully.')
+        notify('success', 'School added.')
         return true
       } catch (err) {
         notify('danger', err.message || 'Failed to add school.')
         return false
       }
     },
-    [loadSchools, notify],
+    [notify],
   )
 
   const uploadCsv = useCallback(
@@ -155,13 +86,9 @@ export function useEmailCenter({ accessToken, user }) {
       const formData = new FormData()
       formData.append('file', file)
       try {
+        // The endpoint returns {message, schools_added, schools_skipped}; there
+        // is no `status` key, so success is the absence of an error response.
         const data = await api.upload('/api/upload-schools-csv', formData)
-        await loadSchools()
-        // The old code gated success on `data.status === "success"`, but this
-        // endpoint returns {"message": ..., "schools_added": ...} and has no
-        // `status` key at all - so every successful import reported "Failed to
-        // upload CSV" and left the panel open, even though the rows had been
-        // written. Success is now the absence of an error response.
         notify(
           'success',
           `Added ${data.schools_added} school${data.schools_added === 1 ? '' : 's'}` +
@@ -173,173 +100,34 @@ export function useEmailCenter({ accessToken, user }) {
         return null
       }
     },
-    [loadSchools, notify],
-  )
-
-  /** Delete many of one kind, reporting a single combined outcome. */
-  const deleteMany = useCallback(
-    async ({ ids, path, bodyKey, noun, after }) => {
-      setLoading(true)
-      let deleted = 0
-      const failures = []
-
-      for (const id of ids) {
-        try {
-          await api.del(path, { [bodyKey]: id })
-          deleted++
-        } catch (err) {
-          // A dead token aborts the whole loop; the api client has already
-          // triggered logout, so continuing would just repeat the failure.
-          if (err.status === 401) {
-            setLoading(false)
-            return { deleted, failed: ids.length - deleted }
-          }
-          failures.push(err.message || 'Failed to delete')
-        }
-      }
-
-      await after()
-      setLoading(false)
-
-      if (failures.length === 0) {
-        notify('success', `${deleted} ${noun}${deleted === 1 ? '' : 's'} deleted.`)
-      } else {
-        notify(
-          'warning',
-          `${deleted} ${noun}${deleted === 1 ? '' : 's'} deleted, ${failures.length} failed.`,
-        )
-      }
-      return { deleted, failed: failures.length }
-    },
     [notify],
   )
 
-  const deleteSchools = useCallback(
-    (ids) =>
-      deleteMany({
-        ids,
-        path: '/api/delete-school',
-        bodyKey: 'school_id',
-        noun: 'school',
-        after: loadSchools,
-      }),
-    [deleteMany, loadSchools],
-  )
-
   const deleteSentEmails = useCallback(
-    (ids) =>
-      deleteMany({
-        ids,
-        path: '/api/delete-sent-email',
-        bodyKey: 'email_id',
-        noun: 'email record',
-        after: loadSentEmails,
-      }),
-    [deleteMany, loadSentEmails],
-  )
-
-  /**
-   * Send the stock template to the selected schools, in batches, reporting
-   * progress as it goes.
-   */
-  const sendTemplateEmails = useCallback(
-    async ({ selectedIds, sendToAllEmails, subject = "Let's Connect! PSA Programs" }) => {
+    async (ids) => {
       setLoading(true)
-      const batches = batchSchoolIds(schools, selectedIds, sendToAllEmails)
-      let sent = 0
-      const errors = []
-
-      try {
-        for (let i = 0; i < batches.length; i++) {
-          notify('info', `Sending batch ${i + 1} of ${batches.length}...`)
-          const data = await api.post('/api/send-email', {
-            school_ids: batches[i],
-            subject,
-            send_to_all_emails: sendToAllEmails,
-          })
-          sent += data.sent_count || 0
-          if (data.errors?.length) errors.push(...data.errors)
+      let deleted = 0
+      let failed = 0
+      for (const id of ids) {
+        try {
+          await api.del('/api/delete-sent-email', { email_id: id })
+          deleted += 1
+        } catch (err) {
+          // A dead token ends the loop; the api client already logged out.
+          if (err.status === 401) break
+          failed += 1
         }
-
-        await reload()
-
-        if (sent > 0) {
-          notify(
-            errors.length ? 'warning' : 'success',
-            `Sent ${sent} email${sent === 1 ? '' : 's'}` +
-              (errors.length ? `, ${errors.length} failed.` : '.'),
-          )
-        } else {
-          notify('danger', 'Failed to send emails.')
-        }
-        return { sent, errors }
-      } catch (err) {
-        notify('danger', err.message || 'Error while sending emails.')
-        return { sent, errors }
-      } finally {
-        setLoading(false)
       }
+      await loadSentEmails()
+      setLoading(false)
+      notify(
+        failed ? 'warning' : 'success',
+        `${deleted} email record${deleted === 1 ? '' : 's'} deleted` +
+          (failed ? `, ${failed} failed.` : '.'),
+      )
+      return { deleted, failed }
     },
-    [schools, notify, reload],
-  )
-
-  /** Send a freeform email to one school, or in batches to many. */
-  const sendCustomEmail = useCallback(
-    async (draft) => {
-      const isBulk = !draft.school_id && draft.school_ids.length > 0
-      setLoading(true)
-
-      try {
-        if (!isBulk) {
-          await api.post('/api/send-custom-email', {
-            school_id: draft.school_id,
-            to_email: draft.school_email,
-            subject: draft.subject,
-            message: draft.message,
-            pdf_files: draft.pdf_files,
-          })
-          await reload()
-          notify('success', 'Custom email sent.')
-          return true
-        }
-
-        // Bulk goes one address per school, so batching by school count is
-        // equivalent to batching by address count here.
-        const batches = batchSchoolIds(schools, draft.school_ids, false)
-        let sent = 0
-        const errors = []
-
-        for (let i = 0; i < batches.length; i++) {
-          notify('info', `Sending batch ${i + 1} of ${batches.length}...`)
-          const data = await api.post('/api/send-custom-email-bulk', {
-            school_ids: batches[i],
-            subject: draft.subject,
-            message: draft.message,
-            pdf_files: draft.pdf_files,
-          })
-          sent += data.sent_count || 0
-          if (data.errors?.length) errors.push(...data.errors)
-        }
-
-        await reload()
-        if (sent > 0) {
-          notify(
-            errors.length ? 'warning' : 'success',
-            `Custom email sent to ${sent} school${sent === 1 ? '' : 's'}` +
-              (errors.length ? `, ${errors.length} failed.` : '.'),
-          )
-          return true
-        }
-        notify('danger', 'Failed to send custom emails.')
-        return false
-      } catch (err) {
-        notify('danger', err.message || 'Error while sending custom email.')
-        return false
-      } finally {
-        setLoading(false)
-      }
-    },
-    [schools, notify, reload],
+    [loadSentEmails, notify],
   )
 
   const sendCustomReply = useCallback(
@@ -365,106 +153,61 @@ export function useEmailCenter({ accessToken, user }) {
     [loadSentEmails, notify],
   )
 
-  const previewFollowups = useCallback(async (ids) => {
-    try {
-      return await Promise.all(ids.map((id) => api.get(`/api/followup-preview/${id}`)))
-    } catch (err) {
-      notify('danger', err.message || 'Could not preview the selected follow-ups.')
-      await loadSentEmails()
-      return null
-    }
-  }, [loadSentEmails, notify])
-
-  const sendSelectedFollowups = useCallback(async (ids) => {
-    const selected = dueFollowups.filter((email) => ids.includes(email.id))
-    if (selected.length === 0) {
-      notify('info', 'No due follow-ups are selected.')
-      return { sent: 0, failed: 0 }
-    }
-
-    setLoading(true)
-    let sent = 0
-    const failures = []
-    let expired = false
-
-    try {
-      // Three at a time: each follow-up is its own SMTP login server-side, so
-      // this paces the mailbox rather than the request.
-      const chunkSize = 3
-      for (let i = 0; i < selected.length; i += chunkSize) {
-        const chunk = selected.slice(i, i + chunkSize)
-        notify(
-          'info',
-          `Sending follow-ups ${i + 1}-${Math.min(i + chunkSize, selected.length)} of ${selected.length}...`,
-        )
-
-        const results = await Promise.all(
-          chunk.map(async (email) => {
-            try {
-              await api.post('/api/send-followup', { email_id: email.id })
-              return { ok: true }
-            } catch (err) {
-              if (err.status === 401) return { ok: false, expired: true }
-              return { ok: false, school: email.school_name, error: err.message }
-            }
-          }),
-        )
-
-        results.forEach((r) => {
-          if (r.ok) sent++
-          else if (r.expired) expired = true
-          else failures.push(`${r.school}: ${r.error}`)
-        })
-        if (expired) break
-      }
-
-      if (!expired) await loadSentEmails()
-
-      if (expired) {
-        notify('danger', `Session expired after ${sent} follow-up${sent === 1 ? '' : 's'} sent. Sign in again to continue.`)
-      } else if (sent > 0) {
-        notify(
-          failures.length ? 'warning' : 'success',
-          `Sent ${sent} follow-up${sent === 1 ? '' : 's'}` +
-            (failures.length ? `, ${failures.length} failed.` : '.'),
-        )
-      } else {
-        notify('danger', 'No follow-ups were sent.')
-      }
-      return { sent, failed: failures.length }
-    } catch (err) {
-      notify('danger', err.message || 'Error while sending follow-ups.')
-      return { sent, failed: failures.length }
-    } finally {
-      setLoading(false)
-    }
-  }, [dueFollowups, loadSentEmails, notify])
-
   const checkReplies = useCallback(async () => {
-    setLoading(true)
+    setSyncing(true)
     notify('info', 'Checking for email replies...')
     try {
       const data = await api.post('/api/check-email-replies')
       await loadSentEmails()
-      notify('success', data.status || 'Reply check complete.')
+      setMailSync(data)
+      notify(
+        data.ready ? 'success' : 'warning',
+        data.ready
+          ? `Checked ${data.messages_checked} messages and found ${data.replies_found} replies.`
+          : `Checked ${data.messages_checked} messages. ${data.pending_count} remain; check again before sending follow-ups.`,
+      )
     } catch (err) {
+      await loadMailSync()
       notify('danger', err.message || 'Failed to check for replies.')
     } finally {
-      setLoading(false)
+      setSyncing(false)
     }
-  }, [loadSentEmails, notify])
+  }, [loadSentEmails, loadMailSync, notify])
 
-  const loadReplyChain = useCallback(async (emailId) => {
-    // Thrown errors are surfaced by the caller, which owns the modal state.
-    return api.get(`/api/email-reply-chain/${emailId}`)
-  }, [])
+  // Check once when the page opens, including a stale earlier sync. A larger
+  // mailbox needs another explicit check so its backlog stays visible.
+  useEffect(() => {
+    if (
+      accessToken &&
+      user?.mail_connected &&
+      mailSync &&
+      !mailSync.ready &&
+      !mailSync.error &&
+      !syncing &&
+      autoSyncToken.current !== accessToken
+    ) {
+      autoSyncToken.current = accessToken
+      checkReplies()
+    }
+  }, [accessToken, user?.mail_connected, mailSync, syncing, checkReplies])
+
+  const loadReplyChain = useCallback(
+    (emailId) => api.get(`/api/email-reply-chain/${emailId}`),
+    [],
+  )
 
   const setResponded = useCallback(
-    async (emailId, responded) => {
+    async (emailId, value) => {
       try {
-        await api.post('/api/mark-responded', { email_id: emailId, responded })
+        await api.post('/api/mark-responded', {
+          email_id: emailId,
+          responded: value,
+        })
         await loadSentEmails()
-        notify('success', responded ? 'Marked as responded.' : 'Marked as not responded.')
+        notify(
+          'success',
+          value ? 'Marked as responded.' : 'Marked as not responded.',
+        )
       } catch (err) {
         notify('danger', err.message || 'Could not update the email.')
       }
@@ -473,33 +216,21 @@ export function useEmailCenter({ accessToken, user }) {
   )
 
   return {
-    // data
-    schools,
     sentEmails,
-    dueFollowups,
-    schoolCounts,
-    emailCounts,
+    responded,
     isAdmin: Boolean(user?.admin),
-    // ui state
     loading,
     status,
+    mailSync,
+    syncing,
     notify,
     clearStatus,
-    // selectors
-    filterSchools,
-    filterEmails,
-    countOutgoing: (ids, all) => countOutgoing(schools, ids, all),
-    // actions
     reload,
+    loadSentEmails,
     addSchool,
     uploadCsv,
-    deleteSchools,
     deleteSentEmails,
-    sendTemplateEmails,
-    sendCustomEmail,
     sendCustomReply,
-    previewFollowups,
-    sendSelectedFollowups,
     checkReplies,
     loadReplyChain,
     setResponded,

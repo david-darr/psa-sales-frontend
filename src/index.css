@@ -9,7 +9,7 @@
    rules in App.css.
 
    Both sides of that fight are now gone: the base layer simply
-   sets up a full-height, non-centred, dark document.
+   sets up a full-height document using the shared workspace tokens.
    ========================================================= */
 
 @import './styles/tokens.css';
@@ -22,6 +22,9 @@
 
 html {
   overflow-x: hidden;
+  color-scheme: dark;
+  scrollbar-color: var(--color-border-strong) transparent;
+  scrollbar-width: thin;
 }
 
 html,
@@ -69,7 +72,7 @@ ul {
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--color-text);
   text-decoration: none;
   font-weight: var(--weight-medium);
 }
@@ -94,4 +97,86 @@ button {
 
 img {
   max-width: 100%;
+}
+
+/* Dark-native chrome: selection, placeholders, scrollbars, native controls. */
+::selection {
+  background: rgba(255, 77, 94, 0.35);
+  color: #fff;
+}
+
+::placeholder {
+  color: var(--color-text-faint);
+  opacity: 1;
+}
+
+* {
+  scrollbar-color: var(--color-border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border: 2px solid var(--color-bg);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4a52;
+}
+
+input,
+select,
+textarea {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.75);
+  cursor: pointer;
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px var(--color-surface-inset) inset;
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+}
+
+kbd {
+  font-family: var(--font-mono);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

@@ -8,7 +8,7 @@ import Modal from '../components/Modal'
  * @param {() => void}  onClose
  * @param {() => void}  onReply  Switches to the reply composer.
  */
-export default function ReplyChainModal({ chain, loading, onClose, onReply }) {
+export default function ReplyChainModal({ chain, loading, onClose, onReply, canReply }) {
   const hasChain = chain && !chain.error
 
   return (
@@ -19,9 +19,9 @@ export default function ReplyChainModal({ chain, loading, onClose, onReply }) {
       footer={
         hasChain && (
           <>
-            <button className="modern-btn-primary is-success" onClick={onReply}>
+            {canReply && <button className="modern-btn-primary is-success" onClick={onReply}>
                Send Custom Reply
-            </button>
+            </button>}
             <button className="modern-btn-primary is-neutral" onClick={onClose}>
               Close
             </button>

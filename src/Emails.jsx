@@ -1,45 +1,73 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from './AuthContext'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
 import Card from './components/Card'
 import EmptyState from './components/EmptyState'
 import useEmailCenter from './emails/useEmailCenter'
 import AddSchoolsCard from './emails/AddSchoolsCard'
-import SchoolsCard from './emails/SchoolsCard'
-import DueFollowupsCard from './emails/DueFollowupsCard'
-import EmailHistoryCard from './emails/EmailHistoryCard'
-import RespondedCard from './emails/RespondedCard'
 import ReplyChainModal from './emails/ReplyChainModal'
-import CustomEmailModal from './emails/CustomEmailModal'
 import CustomReplyModal from './emails/CustomReplyModal'
-import { EMPTY_CUSTOM_EMAIL, EMPTY_CUSTOM_REPLY } from './emails/constants'
+import { BATCH_ACTIVE, EMPTY_CUSTOM_REPLY, KINDS } from './emails/constants'
+import { useBatchList, useLimits, useRecipients } from './emails/useOutreach'
+import ComposeFlow from './components/outreach/ComposeFlow'
+import HistoryTab from './components/outreach/HistoryTab'
+import InboxTab from './components/outreach/InboxTab'
+import { LimitMeter, MailboxCallout } from './components/outreach/bits'
+import './styles/outreach.css'
 
-/**
- * Email Center.
- *
- * Was a single 3,128-line component with 29 useState hooks and every dialog
- * inlined. Server data and mutations now live in useEmailCenter; each card and
- * dialog is its own component; this file wires them together and owns only the
- * dialog/selection state that spans more than one card.
- */
+const TABS = [
+  ['compose', 'Compose'],
+  ['followups', 'Follow-ups'],
+  ['inbox', 'Inbox'],
+  ['history', 'History'],
+  ['add', 'Add and import'],
+]
+
+const parseIds = (search) => {
+  const params = new URLSearchParams(search)
+  const raw = params.get('school_ids') || params.get('school') || ''
+  const ids = raw
+    .split(',')
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0)
+  return ids.length ? ids : null
+}
+
 export default function Emails() {
   const { user, accessToken } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const center = useEmailCenter({ accessToken, user })
-
-  // Selections live here because the action buttons and the tables that drive
-  // them sit in different cards.
-  const [selectedSchoolIds, setSelectedSchoolIds] = useState([])
-  const [selectedEmailIds, setSelectedEmailIds] = useState([])
-
-  // Dialogs
-  const [replyChain, setReplyChain] = useState(null) // {email, chain, loading} | null
-  const [customEmail, setCustomEmail] = useState(null) // draft | null
-  const [customReply, setCustomReply] = useState(null) // draft | null
+  const limits = useLimits()
+  const [rev, setRev] = useState(0)
+  const [batchId, setBatchId] = useState(null)
+  const [composeKind, setComposeKind] = useState('initial')
+  const [replyChain, setReplyChain] = useState(null)
+  const [customReply, setCustomReply] = useState(null)
   const [sending, setSending] = useState(false)
 
-  /* ---------------- Reply chain ---------------- */
+  const requested = new URLSearchParams(location.search).get('tab')
+  const tab = TABS.some(([id]) => id === requested) ? requested : 'compose'
+  const preselect = useMemo(() => parseIds(location.search), [location.search])
+  const setTab = (id) => navigate({ search: id === 'compose' ? '' : `?tab=${id}` }, { replace: true })
+
+  const due = useRecipients({ kind: 'followup', page: 1, perPage: 1, rev })
+  const recent = useBatchList(5, rev)
+  const resumed = useRef(false)
+  useEffect(() => {
+    if (resumed.current || recent.loading) return
+    resumed.current = true
+    const live = recent.items.find((item) => BATCH_ACTIVE.includes(item.status))
+    if (live) setBatchId(live.id)
+  }, [recent])
+
+  const changed = () => {
+    setRev((n) => n + 1)
+    center.loadSentEmails()
+  }
+
+  const unread = center.responded.filter((email) => email.reply_unread).length
 
   const openReplyChain = async (email) => {
     setReplyChain({ email, chain: null, loading: true })
@@ -56,9 +84,8 @@ export default function Emails() {
   }
 
   const replyFromChain = () => {
-    const chain = replyChain?.chain
-    const email = replyChain?.email
-    if (!email) return
+    const { chain, email } = replyChain || {}
+    if (!email?.is_mine) return
     setCustomReply({
       ...EMPTY_CUSTOM_REPLY,
       email_id: email.id,
@@ -69,45 +96,6 @@ export default function Emails() {
     setReplyChain(null)
   }
 
-  /* ---------------- Composers ---------------- */
-
-  const composeForSchool = (school) =>
-    setCustomEmail({
-      ...EMPTY_CUSTOM_EMAIL,
-      school_id: school.id,
-      school_name: school.school_name,
-      school_email: school.email,
-      all_emails: school.all_emails || [school.email],
-    })
-
-  const composeForSelection = (ids) =>
-    setCustomEmail({
-      ...EMPTY_CUSTOM_EMAIL,
-      school_ids: [...ids],
-      school_name: `${ids.length} Selected School${ids.length === 1 ? '' : 's'}`,
-    })
-
-  const composeReplyTo = (email) =>
-    setCustomReply({
-      ...EMPTY_CUSTOM_REPLY,
-      email_id: email.id,
-      school_email: email.school_email,
-      school_name: email.school_name,
-      subject: 'Re: PSA Programs',
-    })
-
-  const submitCustomEmail = async () => {
-    setSending(true)
-    const ok = await center.sendCustomEmail(customEmail)
-    setSending(false)
-    if (ok) {
-      setCustomEmail(null)
-      // A bulk send consumes the selection; clear it so the next action does
-      // not silently reuse schools that were already contacted.
-      if (customEmail.school_ids.length > 0) setSelectedSchoolIds([])
-    }
-  }
-
   const submitCustomReply = async () => {
     setSending(true)
     const ok = await center.sendCustomReply(customReply)
@@ -115,69 +103,17 @@ export default function Emails() {
     if (ok) setCustomReply(null)
   }
 
-  /* ---------------- Bulk actions ---------------- */
-
-  const deleteSelectedSchools = async () => {
-    if (
-      !window.confirm(
-        `Delete ${selectedSchoolIds.length} school${selectedSchoolIds.length === 1 ? '' : 's'}? This cannot be undone.`,
-      )
-    )
-      return
-    await center.deleteSchools(selectedSchoolIds)
-    setSelectedSchoolIds([])
-  }
-
-  const deleteSelectedEmails = async () => {
-    if (
-      !window.confirm(
-        `Delete ${selectedEmailIds.length} email record${selectedEmailIds.length === 1 ? '' : 's'}?`,
-      )
-    )
-      return
-    await center.deleteSentEmails(selectedEmailIds)
-    setSelectedEmailIds([])
-  }
-
-  const sendTemplate = async ({ selectedIds, sendToAllEmails }) => {
-    const addresses = center.countOutgoing(selectedIds, sendToAllEmails)
-    if (
-      !window.confirm(
-        `Send the template email to ${addresses} address${addresses === 1 ? '' : 'es'} across ${selectedIds.length} school${selectedIds.length === 1 ? '' : 's'}?`,
-      )
-    )
-      return
-    await center.sendTemplateEmails({ selectedIds, sendToAllEmails })
-    setSelectedSchoolIds([])
-  }
-
-  const unmarkResponded = async (email) => {
-    if (!window.confirm(`Mark ${email.school_name} as no longer responded?`)) return
-    await center.setResponded(email.id, false)
-  }
-
-  const copyEmail = async (email) => {
-    try {
-      await navigator.clipboard.writeText(email.school_email)
-      center.notify('success', `Copied ${email.school_name}'s email to the clipboard.`)
-    } catch {
-      center.notify('danger', 'Could not copy to the clipboard.')
-    }
-  }
-
-  /* ---------------- Render ---------------- */
-
   if (!user) {
     return (
-      <AppLayout title="Email center" subtitle="Manage school conversations">
+      <AppLayout title="Outreach" subtitle="Reach more schools with less typing">
         <Card>
           <EmptyState
             icon="🔐"
             title="Authentication Required"
-            message="Please log in to access the Email Center and manage your school communications."
+            message="Please log in to send outreach and manage replies."
             action={
               <button className="modern-btn-primary" onClick={() => navigate('/account')}>
-                 Login to Continue
+                Login to Continue
               </button>
             }
           />
@@ -186,93 +122,91 @@ export default function Emails() {
     )
   }
 
+  const flowProps = {
+    limits,
+    mailSync: center.mailSync,
+    syncing: center.syncing,
+    onCheckReplies: center.checkReplies,
+    batchId,
+    onBatch: setBatchId,
+    onChanged: changed,
+  }
+
   return (
     <AppLayout
-      title="Email center"
-      subtitle="Manage school conversations and outreach"
+      title="Outreach"
+      subtitle="Pick schools, write once, send in one batch."
       actions={
-        <button
-          className="modern-btn-primary is-neutral"
-          onClick={center.reload}
-          disabled={center.loading}
-        >
-           Refresh
+        <button className="ou-btn ou-btn-ghost" onClick={() => { center.reload(); limits.reload(); changed() }} disabled={center.loading}>
+          Refresh
         </button>
       }
     >
-      {center.status && (
-        <div
-          className={`ui-alert is-centered tone-${center.status.tone}`}
-          role={center.status.tone === 'danger' ? 'alert' : 'status'}
-          style={{ marginBottom: 'var(--space-6)' }}
-        >
-          {center.status.text}
-        </div>
-      )}
+      <div className="ou-page">
+        {center.status && (
+          <div
+            className={`ou-callout tone-${center.status.tone === 'info' ? 'neutral' : center.status.tone}`}
+            role={center.status.tone === 'danger' ? 'alert' : 'status'}
+          >
+            {center.status.text}
+          </div>
+        )}
 
-      <nav className="email-section-nav" aria-label="Email center sections">
-        <a href="#email-followups">Due follow-ups ({center.dueFollowups.length})</a>
-        <a href="#email-add-schools">Add schools</a>
-        <a href="#email-schools">School list</a>
-        <a href="#email-history">Sent email</a>
-        <a href="#email-responses">Replies</a>
-      </nav>
+        <LimitMeter limits={limits.limits} error={limits.error} />
+        <MailboxCallout limits={limits.limits} />
 
-      <section id="email-followups" className="email-section">
-        <DueFollowupsCard
-          dueEmails={center.dueFollowups}
-          mailConnected={user.mail_connected === true}
-          loading={center.loading}
-          onPreview={center.previewFollowups}
-          onSend={center.sendSelectedFollowups}
-        />
-      </section>
+        <nav className="ou-tabs" aria-label="Outreach views">
+          {TABS.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`ou-tab${tab === id ? ' is-active' : ''}`}
+              aria-current={tab === id ? 'page' : undefined}
+              onClick={() => setTab(id)}
+            >
+              {label}
+              {id === 'followups' && due.total > 0 && <span className="ou-count is-alert">{due.total}</span>}
+              {id === 'inbox' && unread > 0 && <span className="ou-count is-alert">{unread}</span>}
+            </button>
+          ))}
+        </nav>
 
-      <section id="email-add-schools" className="email-section">
-        <AddSchoolsCard onAddSchool={center.addSchool} onUploadCsv={center.uploadCsv} />
-      </section>
+        {tab === 'compose' && (
+          <>
+            {!batchId && (
+              <div className="ou-seg" role="group" aria-label="Message type" style={{ alignSelf: 'flex-start' }}>
+                {['initial', 'custom'].map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={composeKind === id ? 'is-active' : ''}
+                    onClick={() => setComposeKind(id)}
+                  >
+                    {KINDS[id].label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <ComposeFlow key={composeKind} kind={composeKind} preselect={preselect} {...flowProps} />
+          </>
+        )}
 
-      <section id="email-schools" className="email-section">
-        <SchoolsCard
-        schools={center.schools}
-        counts={center.schoolCounts}
-        isAdmin={center.isAdmin}
-        loading={center.loading}
-        filterSchools={center.filterSchools}
-        countOutgoing={center.countOutgoing}
-        selectedIds={selectedSchoolIds}
-        onSelectionChange={setSelectedSchoolIds}
-        onDeleteSelected={deleteSelectedSchools}
-        onSendTemplate={sendTemplate}
-        onComposeSingle={composeForSchool}
-        onComposeBulk={composeForSelection}
-        />
-      </section>
+        {tab === 'followups' && <ComposeFlow key="followup" kind="followup" {...flowProps} />}
 
-      <section id="email-history" className="email-section">
-        <EmailHistoryCard
-        sentEmails={center.sentEmails}
-        counts={center.emailCounts}
-        isAdmin={center.isAdmin}
-        loading={center.loading}
-        filterEmails={center.filterEmails}
-        selectedIds={selectedEmailIds}
-        onSelectionChange={setSelectedEmailIds}
-        onDeleteSelected={deleteSelectedEmails}
-        onCheckReplies={center.checkReplies}
-        />
-      </section>
+        {tab === 'inbox' && (
+          <InboxTab
+            emails={center.responded}
+            onOpen={openReplyChain}
+            onCheckReplies={center.checkReplies}
+            syncing={center.syncing}
+            mailConnected={user.mail_connected === true}
+          />
+        )}
 
-      <section id="email-responses" className="email-section">
-        <RespondedCard
-        sentEmails={center.sentEmails}
-        isAdmin={center.isAdmin}
-        onViewReply={openReplyChain}
-        onCompose={composeReplyTo}
-        onUnmark={unmarkResponded}
-        onCopyEmail={copyEmail}
-        />
-      </section>
+        {tab === 'history' && <HistoryTab emails={center.sentEmails} rev={rev} />}
+
+        {tab === 'add' && <AddSchoolsCard onAddSchool={center.addSchool} onUploadCsv={center.uploadCsv} />}
+      </div>
 
       {replyChain && (
         <ReplyChainModal
@@ -280,19 +214,9 @@ export default function Emails() {
           loading={replyChain.loading}
           onClose={() => setReplyChain(null)}
           onReply={replyFromChain}
+          canReply={replyChain.email?.is_mine === true}
         />
       )}
-
-      {customEmail && (
-        <CustomEmailModal
-          draft={customEmail}
-          onChange={setCustomEmail}
-          onSubmit={submitCustomEmail}
-          onClose={() => setCustomEmail(null)}
-          sending={sending}
-        />
-      )}
-
       {customReply && (
         <CustomReplyModal
           draft={customReply}

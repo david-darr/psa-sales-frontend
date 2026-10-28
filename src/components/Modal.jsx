@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import '../styles/ui.css'
+import Icon from './Icon'
 
 /**
  * Dialog shell: scrim, panel, titled header with a close button.
@@ -13,12 +14,41 @@ import '../styles/ui.css'
  * @param {'md'|'lg'} [size='md']
  * @param {ReactNode} [footer]
  */
-export default function Modal({ title, onClose, size = 'md', footer, children }) {
+export default function Modal({
+  title,
+  onClose,
+  size = 'md',
+  footer,
+  children,
+}) {
   const panelRef = useRef(null)
 
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key === 'Escape') onClose()
+      if (event.key === 'Tab') {
+        const nodes = [
+          ...(panelRef.current?.querySelectorAll(
+            'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]',
+          ) || []),
+        ].filter((node) => node.offsetParent !== null)
+        const first = nodes[0],
+          last = nodes[nodes.length - 1]
+        if (!first) {
+          event.preventDefault()
+          panelRef.current?.focus()
+        } else if (
+          event.shiftKey &&
+          (document.activeElement === first ||
+            document.activeElement === panelRef.current)
+        ) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -35,7 +65,15 @@ export default function Modal({ title, onClose, size = 'md', footer, children })
 
   // Move focus into the dialog so keyboard users are not left behind it.
   useEffect(() => {
-    panelRef.current?.focus()
+    const previous = document.activeElement
+    const first = panelRef.current?.querySelector(
+      'input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+    )
+    if (first) first.focus()
+    else panelRef.current?.focus()
+    return () => {
+      if (previous?.isConnected) previous.focus()
+    }
   }, [])
 
   return (
@@ -63,7 +101,7 @@ export default function Modal({ title, onClose, size = 'md', footer, children })
             onClick={onClose}
             aria-label="Close dialog"
           >
-            ✕
+            <Icon name="close" size={17} />
           </button>
         </div>
 

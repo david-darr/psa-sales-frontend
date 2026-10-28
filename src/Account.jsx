@@ -1,369 +1,456 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from './AuthContext'
+import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
-import Card from './components/Card'
-import Badge from './components/Badge'
 import EmployeeInvites from './components/EmployeeInvites'
 import MailCredentialMigration from './components/MailCredentialMigration'
 import Icon from './components/Icon'
-import api from './lib/api'
+import { Panel, ErrorNotice } from './components/WorkspaceUI'
 import { UI_PREVIEW } from './lib/previewMode'
-
-const EMPTY_FORM = { name: '', email: '', phone: '', password: '' }
-
-const FEATURES = [
-  {
-    icon: 'school',
-    tone: 'primary',
-    title: 'School Database',
-    body: 'Manage your school contacts and track interactions',
-  },
-  {
-    icon: 'mail',
-    tone: 'success',
-    title: 'Email Campaigns',
-    body: 'Send and track email communications',
-  },
-  {
-    icon: 'map',
-    tone: 'warning',
-    title: 'School Mapping',
-    body: 'Visualize school locations and plan routes',
-  },
-  {
-    icon: 'chart',
-    tone: 'info',
-    title: 'Analytics',
-    body: 'Track your performance and team metrics',
-  },
-]
-
-function initials(name) {
-  return (name || '')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-}
+import { useResource } from './lib/crm'
+import api from './lib/api'
 
 export default function Account() {
-  const { user, login, logout, markMailConnected } = useAuth()
-  const navigate = useNavigate()
+  const { user, login, logout, markMailConnected, updateProfile } = useAuth()
   const location = useLocation()
-  const inviteToken = new URLSearchParams(location.hash.replace(/^#/, '')).get('invite') || ''
-
-  const [isRegister, setIsRegister] = useState(Boolean(inviteToken))
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [submitting, setSubmitting] = useState(false)
-  const [appPassword, setAppPassword] = useState('')
-  const [savingPassword, setSavingPassword] = useState(false)
-
-  // Notices carry their own tone. The previous code inferred it by calling
-  // `.includes("successful")` / `.includes("success")` on the message text,
-  // so any backend error containing that substring rendered as a success.
-  const [authNotice, setAuthNotice] = useState(null)
-  const [emailNotice, setEmailNotice] = useState(null)
-
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setAuthNotice(null)
-    setSubmitting(true)
+  const navigate = useNavigate()
+  const inviteToken =
+    new URLSearchParams(location.hash.replace(/^#/, '')).get('invite') || ''
+  const [register, setRegister] = useState(Boolean(inviteToken))
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    email: '',
+    phone: user?.phone || '',
+    password: '',
+  })
+  const [tab, setTab] = useState('profile')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const sync = useResource(user ? '/api/mail-sync-status' : null)
+  const change = (key, value) => setForm((old) => ({ ...old, [key]: value }))
+  const authenticate = async (event) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      const body = isRegister ? { ...form, invite_token: inviteToken } : form
-      const data = await api.post(isRegister ? '/api/register' : '/api/login', body, {
-        auth: false,
-      })
-
-      if (data?.access_token) {
+      const data = await api.post(
+        register ? '/api/register' : '/api/login',
+        register
+          ? { ...form, invite_token: inviteToken }
+          : { email: form.email, password: form.password },
+        { auth: false },
+      )
+      if (data.access_token) {
         login(data.access_token, data.user)
         navigate(location.state?.from?.pathname || '/', { replace: true })
-        return
-      }
-
-      if (isRegister) {
-        setIsRegister(false)
-        setForm(EMPTY_FORM)
-        setAuthNotice({ tone: 'success', text: 'Registration successful. Please log in.' })
+      } else if (register) {
+        setRegister(false)
+        setForm((old) => ({ ...old, password: '' }))
+        setNotice('Your account is ready. Sign in to get started.')
         navigate('/account', { replace: true })
       }
     } catch (err) {
-      setAuthNotice({ tone: 'danger', text: err.message || 'Unknown error' })
+      setError(err.message)
     } finally {
-      setSubmitting(false)
+      setBusy(false)
     }
   }
-
-  const handleEmailSettings = async (e) => {
-    e.preventDefault()
-    setEmailNotice(null)
-    setSavingPassword(true)
+  const saveProfile = async (event) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      await api.post('/api/email-settings', { email_password: appPassword })
-      markMailConnected()
-      setEmailNotice({ tone: 'success', text: 'Email settings saved successfully.' })
-      setAppPassword('')
+      const data = await api.patch('/api/crm/profile', {
+        name: form.name,
+        phone: form.phone,
+      })
+      updateProfile(data)
+      setNotice('Your profile has been updated.')
     } catch (err) {
-      setEmailNotice({ tone: 'danger', text: err.message || 'Failed to save settings' })
+      setError(err.message)
     } finally {
-      setSavingPassword(false)
+      setBusy(false)
     }
   }
-
-  const handleLogout = () => {
-    logout()
-    navigate('/')
+  const saveMail = async (event) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await api.post('/api/email-settings', {
+        email_password: password.replace(/\s/g, ''),
+      })
+      markMailConnected()
+      setPassword('')
+      sync.reload()
+      setNotice('Email connection saved. Check replies to verify it.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
   }
-
-  /* ---------------- Signed in ---------------- */
-
-  if (user) {
+  const checkMail = async () => {
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const data = await api.post('/api/check-email-replies')
+      sync.reload()
+      setNotice(
+        data.ready
+          ? 'Connection verified. Your reply check is current.'
+          : 'Connected. ' +
+              data.pending_count +
+              ' messages remain to be checked in Outreach.',
+      )
+    } catch (err) {
+      setError(err.message)
+      sync.reload()
+    } finally {
+      setBusy(false)
+    }
+  }
+  if (!user)
     return (
-      <AppLayout title="Account" subtitle="Your profile and email settings">
-        <div className="ui-two-col">
-          <Card title="Profile Information" icon="👤">
-            <div className="ui-profile-head">
-              <div className="ui-profile-avatar" aria-hidden="true">
-                {initials(user.name)}
-              </div>
-              <div>
-                <div className="ui-profile-name">{user.name}</div>
-                <Badge tone={user.admin ? 'warning' : 'info'}>
-                  {user.admin ? 'Administrator' : 'Sales Associate'}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="ui-tile-stack">
-              <div className="ui-info-tile tone-primary">
-                <div className="ui-info-label">Email Address</div>
-                <div className="ui-info-value">{user.email}</div>
-              </div>
-              <div className="ui-info-tile tone-primary">
-                <div className="ui-info-label">Phone Number</div>
-                <div className="ui-info-value">{user.phone || 'Not provided'}</div>
-              </div>
-            </div>
-
-            <button
-              className="modern-btn-primary is-danger is-large ui-block"
-              onClick={handleLogout}
-            >
-              {UI_PREVIEW ? 'Exit preview' : 'Logout'}
-            </button>
-          </Card>
-
-          <Card title="Email Configuration" icon="⚙️" tone="success">
-            {emailNotice && (
-              <div
-                className={`ui-alert is-centered tone-${emailNotice.tone}`}
-                role={emailNotice.tone === 'danger' ? 'alert' : 'status'}
-              >
-                {emailNotice.text}
+      <div className="auth-screen">
+        <section className="auth-brand">
+          <div className="auth-logo">
+            <img src="/PSA_logo.png" alt="Players Sports Academy" />
+            <strong>PSA Sales</strong>
+          </div>
+          <div>
+            <div className="workspace-kicker">BETTER TOGETHER</div>
+            <h1>
+              Build relationships.
+              <br />
+              Create opportunities.
+            </h1>
+            <p>
+              A shared workspace for the people bringing PSA programs to more
+              schools and communities.
+            </p>
+          </div>
+          <small>THE PLAYERS SPORTS ACADEMY</small>
+        </section>
+        <main className="auth-main">
+          <div className="auth-form">
+            <span className="workspace-kicker">YOUR SALES WORKSPACE</span>
+            <h2>
+              {register ? 'Your next chapter starts here.' : 'Welcome back.'}
+            </h2>
+            <p className="workspace-subtle" style={{ margin: '10px 0 28px' }}>
+              {register
+                ? 'Use the email address your PSA administrator invited.'
+                : 'Sign in to pick up where you left off.'}
+            </p>
+            <ErrorNotice error={error} />
+            {notice && (
+              <div className="ui-alert tone-success" role="status">
+                {notice}
               </div>
             )}
-
-            <div className="ui-info-tile tone-warning" style={{ marginBottom: 'var(--space-4)' }}>
-              <div className="ui-info-title">Gmail App Password Required</div>
-              <div className="ui-info-body">
-                To send emails from your account, you need to configure a Gmail App Password.
-                This is different from your regular Gmail password. You can revoke it in your
-                Google Account settings.
-              </div>
-            </div>
-
-            <div
-              style={{
-                color: 'var(--color-text-body)',
-                fontSize: '0.9rem',
-                marginBottom: 'var(--space-4)',
-                lineHeight: 1.6,
-              }}
-            >
-              <strong>How to get your Gmail App Password:</strong>
-              <ol style={{ paddingLeft: 'var(--space-5)', marginTop: 'var(--space-2)' }}>
-                <li>Go to your Google Account settings</li>
-                <li>Enable 2-Step Verification if not already enabled</li>
-                <li>Go to Security → App passwords</li>
-                <li>Generate a new app password for &quot;Mail&quot;</li>
-                <li>Copy and paste that password below</li>
-              </ol>
-            </div>
-
-            <form onSubmit={handleEmailSettings}>
-              <input
-                type="password"
-                className="ui-input"
-                style={{ fontFamily: 'ui-monospace, monospace', marginBottom: 'var(--space-4)' }}
-                placeholder="Gmail App Password (16 characters)"
-                value={appPassword}
-                onChange={(e) => setAppPassword(e.target.value)}
-                autoComplete="off"
-                required
-                aria-label="Gmail app password"
-              />
-              <button
-                type="submit"
-                className="modern-btn-primary is-large ui-block"
-                disabled={savingPassword || !appPassword.trim()}
-              >
-                {savingPassword ? 'Saving...' : 'Save Email Settings'}
+            <form onSubmit={authenticate} className="workspace-form">
+              {register && (
+                <>
+                  <label className="workspace-field">
+                    Full name
+                    <input
+                      autoFocus
+                      className="ui-input"
+                      required
+                      autoComplete="name"
+                      value={form.name}
+                      onChange={(e) => change('name', e.target.value)}
+                    />
+                  </label>
+                  <label className="workspace-field">
+                    Phone (optional)
+                    <input
+                      className="ui-input"
+                      type="tel"
+                      autoComplete="tel"
+                      value={form.phone}
+                      onChange={(e) => change('phone', e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+              <label className="workspace-field">
+                Work email
+                <input
+                  autoFocus={!register}
+                  className="ui-input"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={(e) => change('email', e.target.value)}
+                  placeholder="you@company.com"
+                />
+              </label>
+              <label className="workspace-field">
+                Password
+                <input
+                  className="ui-input"
+                  type="password"
+                  required
+                  autoComplete={register ? 'new-password' : 'current-password'}
+                  value={form.password}
+                  onChange={(e) => change('password', e.target.value)}
+                />
+              </label>
+              <button className="modern-btn-primary is-large" disabled={busy}>
+                {busy
+                  ? 'Please wait...'
+                  : register
+                    ? 'Create account'
+                    : 'Sign in'}
+                <Icon name="arrow" size={15} />
               </button>
             </form>
-
-            <div className="ui-info-tile tone-primary" style={{ marginTop: 'var(--space-5)' }}>
-              <div className="ui-info-title">How this is used</div>
-              <div className="ui-info-body">
-                PSA saves an encrypted copy of this app password to send email and check for replies on your behalf.
-                You can revoke it at any time from your Google Account settings.
-              </div>
-            </div>
-          </Card>
-        </div>
-        {user.admin && <MailCredentialMigration />}
-        {user.admin && <EmployeeInvites />}
-      </AppLayout>
-    )
-  }
-
-  /* ---------------- Signed out ---------------- */
-
-  return (
-    <AppLayout title="Account" subtitle="Sign in to your PSA workspace">
-      <div className="ui-narrow">
-        <Card title={isRegister ? 'Create Account' : 'Login'} icon={isRegister ? '✨' : '🔐'}>
-          {authNotice && (
-            <div
-              className={`ui-alert is-centered tone-${authNotice.tone}`}
-              role={authNotice.tone === 'danger' ? 'alert' : 'status'}
-            >
-              {authNotice.text}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="ui-form-stack">
-            {isRegister && (
-              <>
-                <div className="ui-info-tile tone-primary">
-                  <div className="ui-info-body">
-                    Use the email address your PSA administrator invited.
-                  </div>
-                </div>
-                <input
-                  name="name"
-                  className="ui-input"
-                  placeholder="Full Name"
-                  value={form.name}
-                  onChange={handleChange}
-                  autoComplete="name"
-                  required
-                  aria-label="Full name"
-                />
-                <input
-                  name="phone"
-                  className="ui-input"
-                  placeholder="Phone Number (optional)"
-                  value={form.phone}
-                  onChange={handleChange}
-                  autoComplete="tel"
-                  aria-label="Phone number"
-                />
-              </>
-            )}
-
-            <input
-              name="email"
-              type="email"
-              className="ui-input"
-              placeholder="Email Address"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-              required
-              aria-label="Email address"
-            />
-            <input
-              name="password"
-              type="password"
-              className="ui-input"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
-              required
-              aria-label="Password"
-            />
-
-            <button
-              type="submit"
-              className="modern-btn-primary is-large ui-block"
-              disabled={submitting}
-            >
-              {submitting
-                ? 'Please wait...'
-                : isRegister
-                  ? 'Create Account'
-                  : 'Login'}
-            </button>
-          </form>
-
-          {inviteToken ? (
-            <button
-              type="button"
-              className="modern-btn-primary is-neutral is-large ui-block"
-              style={{ marginTop: 'var(--space-4)' }}
-              onClick={() => {
-                setIsRegister((r) => !r)
-                setAuthNotice(null)
-                setForm(EMPTY_FORM)
-              }}
-            >
-              {isRegister ? 'Already have an account? Login' : 'Use your invitation to register'}
-            </button>
-          ) : (
-            <p className="ui-info-body" style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-              Need an account? Ask your PSA administrator for an invitation link.
+            <p className="workspace-subtle" style={{ marginTop: 23 }}>
+              {inviteToken ? (
+                <button
+                  className="ui-link-button"
+                  onClick={() => {
+                    setRegister(!register)
+                    setError('')
+                  }}
+                >
+                  {register
+                    ? 'Already have an account? Sign in'
+                    : 'Use your employee invitation'}
+                </button>
+              ) : (
+                'New to the team? Ask your PSA administrator for an invitation.'
+              )}
             </p>
-          )}
-
-          {!isRegister && (
-            <div
-              className="ui-info-tile tone-primary"
-              style={{ marginTop: 'var(--space-6)', textAlign: 'center' }}
-            >
-              <div className="ui-info-title" style={{ fontSize: 'var(--text-lg)' }}>
-                 Welcome to PSA Sales Platform
-              </div>
-              <div className="ui-info-body">
-                Your tool for managing school relationships, sending email campaigns, and
-                tracking your sales performance.
+          </div>
+        </main>
+      </div>
+    )
+  return (
+    <AppLayout
+      title="Settings"
+      subtitle="Make your workspace work for you."
+      actions={
+        <button
+          className="modern-btn-primary is-neutral"
+          onClick={() => {
+            logout()
+            navigate('/account')
+          }}
+        >
+          {UI_PREVIEW ? 'Exit demo' : 'Sign out'}
+        </button>
+      }
+    >
+      <ErrorNotice error={error} />
+      {notice && (
+        <div
+          className="ui-alert tone-success"
+          role="status"
+          style={{ marginBottom: 18 }}
+        >
+          {notice}
+        </div>
+      )}
+      <div className="workspace-tabs" aria-label="Settings views">
+        {[
+          ['profile', 'My profile'],
+          ['mail', 'Email connection'],
+          ...(user.admin ? [['admin', 'Administration']] : []),
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            className={tab === key ? 'is-active' : ''}
+            onClick={() => {
+              setTab(key)
+              setError('')
+              setNotice('')
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'profile' && (
+        <div style={{ maxWidth: 760 }}>
+          <Panel
+            title="Your profile"
+            description="Your teammates use these details to recognize and reach you."
+          >
+            <div className="workspace-inline" style={{ marginBottom: 25 }}>
+              <span
+                className="app-avatar"
+                style={{ width: 44, height: 44, fontSize: '.85rem' }}
+              >
+                {user.name
+                  .split(' ')
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join('')}
+              </span>
+              <div>
+                <strong style={{ fontSize: '.88rem' }}>{user.name}</strong>
+                <div className="workspace-subtle">
+                  {user.admin ? 'Administrator' : 'Sales representative'}
+                </div>
               </div>
             </div>
-          )}
-        </Card>
-
-        <Card
-          title="Platform Features"
-          icon="🎯"
-          tone="success"
-          style={{ marginTop: 'var(--space-6)' }}
-        >
-          <div className="ui-feature-grid">
-            {FEATURES.map((feature) => (
-              <div key={feature.title} className={`ui-info-tile tone-${feature.tone}`}>
-                <div className="ui-feature-icon" aria-hidden="true">
-                  <Icon name={feature.icon} size={22} />
-                </div>
-                <div className="ui-feature-title">{feature.title}</div>
-                <div className="ui-info-body">{feature.body}</div>
+            <form onSubmit={saveProfile} className="workspace-form">
+              <div className="workspace-form-grid">
+                <label className="workspace-field">
+                  Full name
+                  <input
+                    className="ui-input"
+                    maxLength={120}
+                    required
+                    value={form.name}
+                    onChange={(e) => change('name', e.target.value)}
+                  />
+                </label>
+                <label className="workspace-field">
+                  Phone
+                  <input
+                    className="ui-input"
+                    type="tel"
+                    maxLength={50}
+                    value={form.phone}
+                    onChange={(e) => change('phone', e.target.value)}
+                  />
+                </label>
               </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+              <label className="workspace-field">
+                Work email
+                <input className="ui-input" value={user.email} readOnly />
+                <span className="workspace-subtle">
+                  Contact your administrator if your email address changes.
+                </span>
+              </label>
+              <div>
+                <button className="modern-btn-primary" disabled={busy}>
+                  {busy ? 'Saving...' : 'Save profile'}
+                </button>
+              </div>
+            </form>
+          </Panel>
+        </div>
+      )}
+      {tab === 'mail' && (
+        <div className="workspace-grid equal">
+          <Panel
+            title="Your Gmail connection"
+            description="Send school outreach from your own mailbox."
+          >
+            <div
+              className="workspace-inline"
+              style={{ justifyContent: 'space-between', marginBottom: 23 }}
+            >
+              <strong style={{ fontSize: '.8rem' }}>{user.email}</strong>
+              <span
+                className={
+                  'stage-badge ' + (sync.data?.ready ? 'stage-partner' : '')
+                }
+              >
+                {sync.data?.ready
+                  ? 'Verified'
+                  : user.mail_connected
+                    ? 'Configured'
+                    : 'Not connected'}
+              </span>
+            </div>
+            <ErrorNotice error={sync.data?.error || sync.error} />
+            <form className="workspace-form" onSubmit={saveMail}>
+              <label className="workspace-field">
+                {user.mail_connected
+                  ? 'Replace Gmail app password'
+                  : 'Gmail app password'}
+                <input
+                  className="ui-input"
+                  type="password"
+                  autoComplete="off"
+                  disabled={UI_PREVIEW}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    UI_PREVIEW
+                      ? 'Credential entry disabled in demo'
+                      : 'Your 16-character app password'
+                  }
+                />
+              </label>
+              <p className="workspace-subtle">
+                PSA stores this app password encrypted. Use a Google app
+                password, separate from the password you use to sign in to
+                Gmail.
+              </p>
+              <div className="workspace-actions">
+                <button
+                  className="modern-btn-primary"
+                  disabled={UI_PREVIEW || busy || !password.trim()}
+                >
+                  {busy ? 'Please wait...' : 'Save connection'}
+                </button>
+                {user.mail_connected && (
+                  <button
+                    type="button"
+                    className="modern-btn-primary is-neutral"
+                    disabled={busy}
+                    onClick={checkMail}
+                  >
+                    Check replies
+                  </button>
+                )}
+              </div>
+            </form>
+          </Panel>
+          <Panel title="Getting connected">
+            <ol
+              className="workspace-form"
+              style={{ paddingLeft: 18, fontSize: '.8rem' }}
+            >
+              <li>
+                Turn on 2-Step Verification for the Google account you use for
+                PSA outreach.
+              </li>
+              <li>
+                Open{' '}
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Google App Passwords
+                </a>{' '}
+                and create a password for PSA Sales.
+              </li>
+              <li>
+                Paste it in the connection field, save it, then check replies to
+                verify the connection.
+              </li>
+            </ol>
+            <p className="workspace-subtle" style={{ marginTop: 23 }}>
+              If app passwords are unavailable on your account, ask your Google
+              Workspace administrator for help. You can revoke access from
+              Google at any time.
+            </p>
+          </Panel>
+        </div>
+      )}
+      {tab === 'admin' && user.admin && (
+        <div className="workspace-form">
+          <EmployeeInvites />
+          <MailCredentialMigration />
+        </div>
+      )}
     </AppLayout>
   )
 }

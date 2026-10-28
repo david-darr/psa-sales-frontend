@@ -1,176 +1,475 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
-import Card from './components/Card'
-import StatCard from './components/StatCard'
-import DataTable from './components/DataTable'
-import EmptyState from './components/EmptyState'
+import Icon from './components/Icon'
+import SchoolDialog from './components/SchoolDialog'
+import {
+  Empty,
+  ErrorNotice,
+  Pagination,
+  StageBadge,
+} from './components/WorkspaceUI'
+import {
+  STAGES,
+  dueLabel,
+  isOverdue,
+  useDebounced,
+  useResource,
+} from './lib/crm'
 import api from './lib/api'
 
+const VIEWS = [
+  ['workspace', 'All schools'],
+  ['mine', 'My schools'],
+  ['overdue', 'Overdue actions'],
+  ['none', 'No next action'],
+  ['directory', 'Reference directory'],
+]
 export default function SchoolsList() {
-  const [schools, setSchools] = useState([])
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const rowRefs = useRef({})
-
-  const fetchSchools = useCallback(async () => {
-    setLoading(true)
-    setError('')
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const view = params.get('view') || 'workspace'
+  const query = params.get('q') || ''
+  const term = useDebounced(query)
+  const page = Number(params.get('page')) || 1
+  const directory = view === 'directory'
+  const [selected, setSelected] = useState([])
+  const [bulkStage, setBulkStage] = useState('')
+  const [bulkOwner, setBulkOwner] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [initialSchool, setInitialSchool] = useState(null)
+  const filters = new URLSearchParams({ q: term, limit: 25, page })
+  if (!directory) {
+    filters.set('scope', !user.admin || view === 'mine' ? 'mine' : 'team')
+    for (const key of ['stage', 'type', 'owner', 'sort'])
+      if (params.get(key)) filters.set(key, params.get(key))
+    if (['overdue', 'none'].includes(view)) filters.set('due', view)
+  }
+  const { data, loading, error, reload } = useResource(
+    '/api/crm/' + (directory ? 'directory' : 'schools') + '?' + filters,
+  )
+  const { data: team } = useResource(user.admin ? '/api/crm/team' : null)
+  const rows = data?.items || []
+  const change = (key, value) => {
+    const next = new URLSearchParams(params)
+    if (value) next.set(key, value)
+    else next.delete(key)
+    if (key !== 'page') next.delete('page')
+    setParams(next, { replace: key === 'q' })
+    setSelected([])
+    setNotice('')
+    setActionError('')
+  }
+  const toggle = (id) =>
+    setSelected((old) =>
+      old.includes(id) ? old.filter((item) => item !== id) : [...old, id],
+    )
+  const updateSelected = async () => {
+    setBusy(true)
+    setActionError('')
+    setNotice('')
     try {
-      const data = await api.get('/api/schools')
-      setSchools(Array.isArray(data) ? data : [])
+      const result = await api.post('/api/crm/schools/bulk', {
+        ids: selected,
+        ...(bulkStage ? { status: bulkStage } : {}),
+        ...(bulkOwner ? { user_id: Number(bulkOwner) } : {}),
+      })
+      setNotice(result.updated + ' schools updated.')
+      setSelected([])
+      setBulkStage('')
+      setBulkOwner('')
+      reload()
     } catch (err) {
-      // Previously this was only console.error'd, so a failed load was
-      // indistinguishable from an empty database.
-      setError(err.message || 'Could not load the school directory.')
-      setSchools([])
+      setActionError(err.message)
     } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchSchools()
-  }, [fetchSchools])
-
-  const term = search.trim().toLowerCase()
-  const filteredSchools = term
-    ? schools.filter((school) =>
-        [school.name, school.address, school.contact, school.email].some((field) =>
-          (field || '').toLowerCase().includes(term),
-        ),
-      )
-    : schools
-
-  function handleSearchKeyDown(event) {
-    if (event.key !== 'Enter') return
-    const match = schools.find((s) => (s.name || '').toLowerCase() === term)
-    if (match && rowRefs.current[match.id]) {
-      rowRefs.current[match.id].scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setBusy(false)
     }
   }
-
-  const columns = [
-    {
-      key: 'name',
-      header: 'School Name',
-      render: (school) => <div className="ui-cell-strong">{school.name}</div>,
-    },
-    { key: 'address', header: 'Address' },
-    { key: 'phone', header: 'Phone', className: 'ui-cell-mono' },
-    { key: 'contact', header: 'Contact' },
-    {
-      key: 'email',
-      header: 'Email',
-      className: 'ui-cell-email',
-      render: (school) => <a href={`mailto:${school.email}`}>{school.email}</a>,
-    },
-  ]
-
-  const refreshButton = (
-    <button className="modern-btn-primary" onClick={fetchSchools} disabled={loading}>
-      {loading ? 'Loading...' : 'Refresh'}
-    </button>
-  )
-
+  const exportPage = () => {
+    const cell = (value) => {
+      let text = String(value ?? '')
+      if (/^[=+\-@\t\r]/.test(text)) text = "'" + text
+      return '"' + text.replaceAll('"', '""') + '"'
+    }
+    const csv = [
+      ['School', 'Email', 'Contact', 'Address', 'Owner', 'Stage'],
+      ...rows.map((row) => [
+        row.school_name || row.name,
+        row.email,
+        row.contact_name || row.contact,
+        row.address,
+        row.user_name || row.owner_name,
+        row.status || '',
+      ]),
+    ]
+      .map((row) => row.map(cell).join(','))
+      .join('\r\n')
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+    )
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'psa-schools-page-' + page + '.csv'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+  const closeDialog = () => {
+    change('new', '')
+    setInitialSchool(null)
+  }
   return (
     <AppLayout
       title="Schools"
-      subtitle="Search the school directory and contact information"
-      actions={refreshButton}
+      subtitle="One relationship record. A clear owner. The whole story."
+      actions={
+        <>
+          <Link
+            to="/emails?tab=add"
+            className="modern-btn-primary is-neutral"
+          >
+            <Icon name="download" size={14} />
+            Import schools
+          </Link>
+          <button
+            className="modern-btn-primary"
+            onClick={() => change('new', '1')}
+          >
+            <Icon name="plus" size={14} />
+            Add school
+          </button>
+        </>
+      }
     >
-      <div className="ui-stat-grid">
-        <StatCard label="Total Schools" icon="🏫" value={schools.length} caption="Schools" />
-        <StatCard
-          label="Search Results"
-          icon="🔍"
-          tone="success"
-          value={filteredSchools.length}
-          caption="Found"
-        />
-        <StatCard
-          label="Database"
-          icon={loading ? '⏳' : error ? '⚠️' : '✅'}
-          tone={loading ? 'warning' : error ? 'danger' : 'success'}
-          value={loading ? 'Loading...' : error ? 'Unavailable' : 'Connected'}
-          caption="Status"
-        />
+      <ErrorNotice error={error || actionError} />
+      {notice && (
+        <div
+          className="ui-alert tone-success"
+          role="status"
+          style={{ marginBottom: 16 }}
+        >
+          {notice}
+        </div>
+      )}
+      <div className="workspace-tabs" aria-label="School views">
+        {VIEWS.map(([key, label]) => (
+          <button
+            key={key}
+            className={view === key ? 'is-active' : ''}
+            onClick={() => {
+              const next = new URLSearchParams()
+              next.set('view', key)
+              setParams(next)
+              setSelected([])
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-
-      <Card title="Schools Directory" icon="📋">
-        <div style={{ marginBottom: 'var(--space-5)' }}>
-          <input
-            type="search"
-            className="ui-input"
-            placeholder="Search by name, address, contact, or email. Press Enter to jump to an exact match."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            aria-label="Search schools"
-          />
-          <div className="ui-field-note">
-            <span>
-              {search
-                ? `Showing ${filteredSchools.length} of ${schools.length} schools`
-                : `${schools.length} schools total`}
-            </span>
-            {search && (
-              <button className="ui-link-button" onClick={() => setSearch('')}>
-                Clear search
-              </button>
-            )}
+      <div className="workspace-panel" aria-busy={loading}>
+        <div className="workspace-toolbar">
+          <label className="workspace-toolbar-search">
+            <Icon name="search" size={15} />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => change('q', e.target.value)}
+              placeholder="Search schools, contacts, or addresses"
+              aria-label="Search schools"
+            />
+          </label>
+          {!directory && (
+            <>
+              <select
+                className="workspace-select"
+                aria-label="Filter stage"
+                value={params.get('stage') || ''}
+                onChange={(e) => change('stage', e.target.value)}
+              >
+                <option value="">All stages</option>
+                {STAGES.map((stage) => (
+                  <option key={stage.id} value={stage.id}>
+                    {stage.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="workspace-select"
+                aria-label="Filter type"
+                value={params.get('type') || ''}
+                onChange={(e) => change('type', e.target.value)}
+              >
+                <option value="">All types</option>
+                <option value="preschool">Preschool</option>
+                <option value="elementary">Elementary</option>
+                <option value="private">Private</option>
+              </select>
+              {user.admin && (
+                <select
+                  className="workspace-select"
+                  aria-label="Filter owner"
+                  value={params.get('owner') || ''}
+                  onChange={(e) => change('owner', e.target.value)}
+                >
+                  <option value="">All owners</option>
+                  {(team || []).map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
+          )}
+          <div className="workspace-toolbar-tail">
+            {loading
+              ? 'Updating...'
+              : (data?.total || 0).toLocaleString() + ' schools'}
+            <button
+              className="modern-btn-primary is-neutral is-small"
+              onClick={exportPage}
+              disabled={!rows.length || loading}
+            >
+              <Icon name="download" size={13} />
+              Export page
+            </button>
+            <button
+              className="ui-link-button"
+              onClick={reload}
+              disabled={loading}
+              aria-label="Refresh schools"
+            >
+              <Icon name="refresh" size={14} />
+            </button>
           </div>
         </div>
-
-        {loading ? (
-          <EmptyState
-            icon="⏳"
-            title="Loading Schools..."
-            message="Fetching the latest school directory data."
-          />
-        ) : error ? (
-          <EmptyState
-            icon="⚠️"
-            title="Could Not Load Schools"
-            message={error}
-            action={
-              <button className="modern-btn-primary" onClick={fetchSchools}>
-                Try Again
-              </button>
-            }
-          />
-        ) : filteredSchools.length === 0 ? (
-          <EmptyState
-            icon={search ? '🔍' : '📚'}
-            title={search ? 'No Schools Found' : 'No Schools Available'}
-            message={
-              search
-                ? `No schools match your search for "${search}".`
-                : 'The school database appears to be empty.'
-            }
-            action={
-              search ? (
-                <button className="modern-btn-primary" onClick={() => setSearch('')}>
-                  Clear Search
-                </button>
-              ) : (
-                <button className="modern-btn-primary" onClick={fetchSchools}>
-                   Refresh Database
-                </button>
-              )
-            }
-          />
+        {!!selected.length && (
+          <div className="workspace-bulk">
+            <strong>{selected.length} selected</strong>
+            <select
+              className="workspace-select"
+              aria-label="New stage for selected schools"
+              value={bulkStage}
+              onChange={(e) => setBulkStage(e.target.value)}
+            >
+              <option value="">Change stage...</option>
+              {STAGES.map((stage) => (
+                <option key={stage.id} value={stage.id}>
+                  {stage.label}
+                </option>
+              ))}
+            </select>
+            {user.admin && (
+              <select
+                className="workspace-select"
+                aria-label="New owner for selected schools"
+                value={bulkOwner}
+                onChange={(e) => setBulkOwner(e.target.value)}
+              >
+                <option value="">Assign owner...</option>
+                {(team || []).map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              className="modern-btn-primary is-small"
+              onClick={updateSelected}
+              disabled={busy || loading || (!bulkStage && !bulkOwner)}
+            >
+              {busy ? 'Updating...' : 'Apply changes'}
+            </button>
+            <button
+              className="ui-link-button"
+              onClick={() => setSelected([])}
+              disabled={busy}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+        {rows.length ? (
+          <div className="workspace-table-wrap">
+            <table className="workspace-table">
+              <thead>
+                <tr>
+                  <th>
+                    {!directory && (
+                      <input
+                        type="checkbox"
+                        aria-label="Select this page"
+                        checked={
+                          rows.length > 0 &&
+                          rows.every((row) => selected.includes(row.id))
+                        }
+                        onChange={(e) =>
+                          setSelected(
+                            e.target.checked ? rows.map((row) => row.id) : [],
+                          )
+                        }
+                        disabled={loading || busy}
+                      />
+                    )}
+                  </th>
+                  <th>School</th>
+                  <th>Primary contact</th>
+                  <th>{directory ? 'Assignment' : 'Stage'}</th>
+                  <th>Owner</th>
+                  <th>{directory ? 'Action' : 'Next action'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((school) => (
+                  <tr key={school.id}>
+                    <td>
+                      {!directory && (
+                        <input
+                          type="checkbox"
+                          aria-label={'Select ' + school.school_name}
+                          checked={selected.includes(school.id)}
+                          onChange={() => toggle(school.id)}
+                          disabled={loading || busy}
+                        />
+                      )}
+                    </td>
+                    <td>
+                      {directory ? (
+                        <div className="record-name">
+                          <span className="record-mark">
+                            <Icon name="school" size={16} />
+                          </span>
+                          <div>
+                            {school.name}
+                            <small>
+                              {school.address || 'Address not recorded'}
+                            </small>
+                          </div>
+                        </div>
+                      ) : (
+                        <Link
+                          className="record-name"
+                          to={'/schools/' + school.id}
+                        >
+                          <span className="record-mark">
+                            <Icon name="school" size={16} />
+                          </span>
+                          <div>
+                            {school.school_name}
+                            <small>
+                              {school.address || 'Address not recorded'}
+                            </small>
+                          </div>
+                        </Link>
+                      )}
+                    </td>
+                    <td>
+                      {school.contact_name ||
+                        school.contact ||
+                        'No contact name'}
+                      <small>{school.email}</small>
+                    </td>
+                    <td>
+                      {directory ? (
+                        <span className="workspace-subtle">
+                          {school.assigned ? 'Assigned' : 'Available'}
+                        </span>
+                      ) : (
+                        <StageBadge stage={school.status} />
+                      )}
+                    </td>
+                    <td>
+                      <span className="workspace-subtle">
+                        {school.user_name || school.owner_name || 'Unassigned'}
+                      </span>
+                    </td>
+                    <td>
+                      {directory ? (
+                        school.sales_school_id ? (
+                          <Link
+                            className="ui-link-button"
+                            to={'/schools/' + school.sales_school_id}
+                          >
+                            Open workspace
+                          </Link>
+                        ) : school.assigned ? (
+                          <span className="workspace-subtle">
+                            Assigned to teammate
+                          </span>
+                        ) : (
+                          <button
+                            className="modern-btn-primary is-neutral is-small"
+                            onClick={() => {
+                              setInitialSchool(school)
+                              change('new', '1')
+                            }}
+                          >
+                            Add to outreach
+                          </button>
+                        )
+                      ) : (
+                        <div style={{ maxWidth: 190 }}>
+                          {school.next_action || (
+                            <span className="workspace-subtle">
+                              No next action
+                            </span>
+                          )}
+                          {school.next_action_at && (
+                            <small
+                              className={
+                                isOverdue(school.next_action_at)
+                                  ? 'workspace-date is-overdue'
+                                  : ''
+                              }
+                            >
+                              {dueLabel(school.next_action_at)}
+                            </small>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <DataTable
-            columns={columns}
-            rows={filteredSchools}
-            rowKey={(school) => school.id}
-            rowRef={(school, el) => {
-              rowRefs.current[school.id] = el
-            }}
+          <Empty
+            title={
+              loading
+                ? 'Loading schools...'
+                : query
+                  ? 'No matching schools'
+                  : 'Your next partnership starts here'
+            }
+            text={
+              query
+                ? 'Try another name, contact, or address.'
+                : 'Add a school or browse the reference directory.'
+            }
+            icon="school"
           />
         )}
-      </Card>
+        <Pagination
+          page={page}
+          limit={25}
+          total={data?.total || 0}
+          onPage={(value) => change('page', String(value))}
+          disabled={loading}
+        />
+      </div>
+      {params.get('new') === '1' && (
+        <SchoolDialog
+          initial={initialSchool || {}}
+          onClose={closeDialog}
+          onSaved={(created) => navigate('/schools/' + created.id)}
+        />
+      )}
     </AppLayout>
   )
 }

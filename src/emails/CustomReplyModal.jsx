@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import Modal from '../components/Modal'
+import { UI_PREVIEW } from '../lib/previewMode'
 import MarkupToolbar from './MarkupToolbar'
 
 /**
@@ -89,9 +90,9 @@ export default function CustomReplyModal({ draft, onChange, onSubmit, onClose, s
           type="submit"
           form="custom-reply-form"
           className="modern-btn-primary ui-grow"
-          disabled={sending}
+          disabled={sending || UI_PREVIEW}
         >
-          {sending ? 'Sending...' : 'Send Reply'}
+          {UI_PREVIEW ? 'Sending disabled in demo' : sending ? 'Sending...' : 'Send Reply'}
         </button>
         <button type="button" className="modern-btn-primary is-neutral" onClick={onClose}>
           Cancel

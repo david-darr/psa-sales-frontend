@@ -9,16 +9,10 @@ export const AVAILABLE_PDFS = [
 ]
 
 export const SCHOOL_TYPES = [
-  { value: 'preschool', label: 'Preschool', display: 'Preschool', tone: 'warning', order: 0 },
-  { value: 'elementary', label: 'Elementary School', display: 'Elementary', tone: 'success', order: 1 },
-  { value: 'private', label: 'Private School', display: 'Private School', tone: 'info', order: 2 },
+  { value: 'preschool', label: 'Preschool' },
+  { value: 'elementary', label: 'Elementary School' },
+  { value: 'private', label: 'Private School' },
 ]
-
-const TYPE_BY_VALUE = new Map(SCHOOL_TYPES.map((t) => [t.value, t]))
-
-export function schoolType(value) {
-  return TYPE_BY_VALUE.get(value) || SCHOOL_TYPES[1]
-}
 
 export const EMPTY_SCHOOL = {
   school_name: '',
@@ -30,17 +24,6 @@ export const EMPTY_SCHOOL = {
   school_type: 'preschool',
 }
 
-export const EMPTY_CUSTOM_EMAIL = {
-  school_id: null,
-  school_ids: [],
-  school_name: '',
-  school_email: '',
-  all_emails: [],
-  subject: '',
-  message: '',
-  pdf_files: [],
-}
-
 export const EMPTY_CUSTOM_REPLY = {
   email_id: null,
   school_email: '',
@@ -49,55 +32,203 @@ export const EMPTY_CUSTOM_REPLY = {
   message: '',
 }
 
+/* ---------------- Outreach vocabulary ---------------- */
+
+/** Message types the batch endpoints understand. */
+export const KINDS = {
+  initial: {
+    label: 'Intro email',
+    blurb: 'First contact with schools you have not emailed yet.',
+  },
+  followup: {
+    label: 'Follow-up',
+    blurb: 'A nudge to schools that have not answered after a week.',
+  },
+  custom: {
+    label: 'Custom email',
+    blurb: 'Write your own message for any school you can contact.',
+  },
+}
+
+/** Why a school cannot be emailed right now, in plain language. */
+export const BLOCKERS = {
+  missing_email: {
+    label: 'Missing email',
+    tone: 'danger',
+    tip: 'This school has no email address on file. Add one on the school page.',
+  },
+  replied: {
+    label: 'Already replied',
+    tone: 'warn',
+    tip: 'This school already answered. Reply from the Inbox instead.',
+  },
+  closed: {
+    label: 'Closed',
+    tone: 'danger',
+    tip: 'This school is closed, a partner or a former client, so outreach is paused.',
+  },
+  recently_contacted: {
+    label: 'Contacted recently',
+    tone: 'warn',
+    tip: 'You emailed this school very recently. Wait a few days before writing again.',
+  },
+  not_due: {
+    label: 'Not due',
+    tone: 'warn',
+    tip: 'Follow-ups unlock seven days after the last email.',
+  },
+  unsubscribed: {
+    label: 'Unsubscribed',
+    tone: 'danger',
+    tip: 'This contact asked not to receive email. They can never be selected.',
+  },
+  no_mailbox: {
+    label: 'No mailbox',
+    tone: 'danger',
+    tip: 'Connect your work mailbox on the Account page to send email.',
+  },
+}
+
+/** Preview warnings. Blocking ones are skipped by the server when sending. */
+export const WARNINGS = {
+  ...BLOCKERS,
+  empty_greeting: {
+    label: 'No contact name',
+    tone: 'warn',
+    tip: 'There is no contact name on file, so the greeting will read "Hello there".',
+  },
+}
+export const BLOCKING_WARNINGS = ['missing_email', 'replied', 'closed', 'unsubscribed']
+
+export const blockerMeta = (key) =>
+  BLOCKERS[key] || { label: key.replace(/_/g, ' '), tone: 'warn', tip: key }
+export const warningMeta = (key) =>
+  WARNINGS[key] || { label: key.replace(/_/g, ' '), tone: 'warn', tip: key }
+
 /**
- * The backend sends one email per (school, address) pair over a single SMTP
- * connection. The frontend still splits large selections into batches so the
- * user gets progress feedback and no single request runs unusually long.
+ * Variables shown as chips in the composer. Authors type the readable form;
+ * it is translated to the bracket placeholders the custom email endpoints
+ * already replace per school ([school_name] and friends) just before preview
+ * and send.
  */
-export const MAX_EMAILS_PER_BATCH = 20
+export const TEMPLATE_VARS = [
+  { token: '{school name}', server: '[school_name]' },
+  { token: '{contact name}', server: '[contact_name]' },
+  { token: '{my name}', server: '[user_name]' },
+  { token: '{my email}', server: '[user_email]' },
+]
 
-/** "Today" / "3 days ago", with a tone that gets warmer as it ages. */
-export function timeAgo(daysAgo = 0) {
-  if (daysAgo === 0) return { text: 'Today', tone: 'success' }
-  if (daysAgo === 1) return { text: 'Yesterday', tone: 'primary' }
-  if (daysAgo <= 7) return { text: `${daysAgo} days ago`, tone: 'warning' }
-  if (daysAgo <= 30) return { text: `${daysAgo} days ago`, tone: 'danger' }
-  return { text: `${daysAgo} days ago`, tone: 'neutral' }
+export function toServerTemplate(text = '') {
+  return TEMPLATE_VARS.reduce(
+    (out, { token, server }) => out.split(token).join(server),
+    text,
+  )
 }
 
-/** Follow-up nudge for an unanswered email, or null if none is warranted. */
-export function followupUrgency(email) {
-  if (email.responded || email.followup_sent) return null
-  const daysAgo = email.days_ago || 0
-  if (daysAgo >= 14) return { text: 'Urgent follow-up', tone: 'danger' }
-  if (daysAgo >= 7) return { text: 'Follow-up due', tone: 'warning' }
-  if (daysAgo >= 3) return { text: 'Follow-up soon', tone: 'primary' }
-  return null
+export const DEFAULT_TEMPLATES = {
+  initial: {
+    subject: "Let's Connect! PSA Programs",
+    body: `Hello {contact name},
+
+My name is {my name}, and I'm with The Players Sports Academy. I'd love to explore bringing on-site sports programs to {school name}.
+
+Would you be open to a short introductory call?
+
+Best,
+{my name}`,
+  },
+  followup: {
+    subject: 'Follow-Up: PSA Programs',
+    body: `Hello {contact name},
+
+I wanted to follow up on my earlier note about PSA sports programs at {school name}. Would a brief call be helpful?
+
+Best,
+{my name}`,
+  },
+  custom: { subject: '', body: '' },
 }
 
-/** Sent-email state as a tone + label. */
-export function emailState(email) {
-  if (email.responded) return { tone: 'success', label: 'Responded' }
-  if (email.followup_sent) return { tone: 'warning', label: 'Follow-up sent' }
-  return { tone: 'neutral', label: 'Pending' }
+export const BATCH_ACTIVE = ['queued', 'sending']
+
+export const BATCH_STATUS = {
+  queued: { label: 'Queued', tone: 'neutral' },
+  sending: { label: 'Sending', tone: 'live' },
+  done: { label: 'Done', tone: 'ok' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' },
+  stalled: { label: 'Stalled', tone: 'danger' },
 }
 
-/** Eligibility comes from the backend's 7-day, reply, and ownership rules. */
-export function canSendFollowup(email) {
-  return email.followup_eligible === true && email.is_mine === true
+export const RECIPIENT_STATUS = {
+  queued: { label: 'Queued', tone: 'neutral' },
+  sending: { label: 'Sending', tone: 'live' },
+  sent: { label: 'Sent', tone: 'ok' },
+  failed: { label: 'Failed', tone: 'danger' },
+  skipped: { label: 'Skipped', tone: 'warn' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' },
 }
+
+/* ---------------- Dates and numbers ---------------- */
 
 /** The backend stores UTC timestamps without a timezone suffix. */
 export function serverDate(value) {
   if (!value) return null
   const withZone = /(Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`
-  return new Date(withZone)
+  const date = new Date(withZone)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
-export function serverDateLabel(value) {
+export function relativeTime(value, now = Date.now()) {
   const date = serverDate(value)
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : 'Unknown'
+  if (!date) return 'Never'
+  const minutes = Math.round((now - date.getTime()) / 60000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  if (days < 30) return `${days}d ago`
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
+
+export function shortDate(value) {
+  const date = serverDate(value)
+  return date
+    ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : 'Unknown'
+}
+
+export function shortTime(value) {
+  const date = serverDate(value)
+  return date
+    ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    : ''
+}
+
+/** "resets 12:00 AM" today or "resets tomorrow 12:00 AM". */
+export function resetLabel(value) {
+  const date = serverDate(value)
+  if (!date) return ''
+  const sameDay = date.toDateString() === new Date().toDateString()
+  return `${sameDay ? '' : 'tomorrow '}${shortTime(value)}`.trim()
+}
+
+/** Due state for a follow-up, most overdue sorts first. */
+export function dueState(dueAt, now = Date.now()) {
+  const date = serverDate(dueAt)
+  if (!date) return { days: null, label: 'No date', tone: 'neutral' }
+  const days = Math.floor((now - date.getTime()) / 86400000)
+  if (days > 0) return { days, label: `${days}d overdue`, tone: 'danger' }
+  if (days === 0 || date.getTime() <= now)
+    return { days: 0, label: 'Due today', tone: 'warn' }
+  const ahead = Math.ceil((date.getTime() - now) / 86400000)
+  return { days: -ahead, label: `Due in ${ahead}d`, tone: 'neutral' }
+}
+
+export const plural = (count, one, many = `${one}s`) =>
+  `${count.toLocaleString()} ${count === 1 ? one : many}`
+
+/* ---------------- CSV template ---------------- */
 
 export const CSV_TEMPLATE = `school_name,email,contact_name,phone,address,school_type
 "ABC Preschool","director@abcpreschool.com","Jane Smith","555-0123","123 Main St, Fairfax VA","preschool"
@@ -114,43 +245,5 @@ export function downloadCsvTemplate() {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-  // The old version never revoked the blob URL, leaking it for the life of
-  // the page every time the template was downloaded.
   URL.revokeObjectURL(url)
-}
-
-/** How many addresses a send will actually hit, given the "all emails" toggle. */
-export function countOutgoing(schools, selectedIds, sendToAllEmails) {
-  const selected = schools.filter((s) => selectedIds.includes(s.id))
-  if (!sendToAllEmails) return selected.length
-  return selected.reduce((total, s) => total + (s.all_emails ? s.all_emails.length : 1), 0)
-}
-
-/**
- * Group selected school ids into batches of at most MAX_EMAILS_PER_BATCH
- * outgoing addresses (not schools), so "send to all emails" on schools with
- * several contacts each does not produce an oversized request.
- */
-export function batchSchoolIds(schools, selectedIds, sendToAllEmails) {
-  const byId = new Map(schools.map((s) => [s.id, s]))
-  const batches = []
-  let current = []
-  let currentCount = 0
-
-  for (const id of selectedIds) {
-    const school = byId.get(id)
-    const emailCount = sendToAllEmails && school?.all_emails ? school.all_emails.length : 1
-
-    if (current.length > 0 && currentCount + emailCount > MAX_EMAILS_PER_BATCH) {
-      batches.push(current)
-      current = [id]
-      currentCount = emailCount
-    } else {
-      current.push(id)
-      currentCount += emailCount
-    }
-  }
-
-  if (current.length > 0) batches.push(current)
-  return batches
 }

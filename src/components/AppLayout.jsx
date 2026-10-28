@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
+import Icon from './Icon'
 import NavigationCard from '../NavigationCard'
 import { useBreakpoint } from '../hooks/useBreakpoint'
 import { UI_PREVIEW, exitUiPreview } from '../lib/previewMode'
 import '../styles/layout.css'
+import '../styles/platform.css'
 
 /**
  * The application shell: sidebar, mobile drawer + hamburger, scrim, and the
@@ -23,8 +26,24 @@ import '../styles/layout.css'
 export default function AppLayout({ title, subtitle, actions, children }) {
   const { isMobile } = useBreakpoint()
   const [navOpen, setNavOpen] = useState(false)
-  const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem('psa-nav-collapsed') === 'true')
+  const [navCollapsed, setNavCollapsed] = useState(
+    () => localStorage.getItem('psa-nav-collapsed') === 'true',
+  )
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const searchRef = useRef(null)
+  const [search, setSearch] = useState('')
+  useEffect(() => {
+    const shortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', shortcut)
+    return () => window.removeEventListener('keydown', shortcut)
+  }, [])
 
   const toggleCollapsed = () => {
     setNavCollapsed((collapsed) => {
@@ -66,7 +85,9 @@ export default function AppLayout({ title, subtitle, actions, children }) {
   }, [navOpen])
 
   return (
-    <div className={`app-shell${!isMobile && navCollapsed ? ' is-collapsed' : ''}`}>
+    <div
+      className={`app-shell${!isMobile && navCollapsed ? ' is-collapsed' : ''}`}
+    >
       {isMobile && (
         <button
           type="button"
@@ -96,27 +117,79 @@ export default function AppLayout({ title, subtitle, actions, children }) {
         id="app-sidebar"
         className={`app-sidebar${isMobile ? ' is-drawer' : ''}${navOpen ? ' is-open' : ''}`}
       >
-        <NavigationCard collapsed={!isMobile && navCollapsed} onToggle={toggleCollapsed} />
+        <NavigationCard
+          collapsed={!isMobile && navCollapsed}
+          onToggle={toggleCollapsed}
+        />
       </aside>
 
       <main className="app-main">
-        {UI_PREVIEW && (
-          <div className="app-preview-banner" role="status">
-            <span><strong>UI preview</strong> · Fictional sample data · Changes and email sending disabled</span>
-            <button type="button" onClick={exitUiPreview}>Exit preview</button>
+        <div className="app-topbar">
+          <div className="app-crumb">
+            <Icon name="school" size={15} />
+            <span>Sales workspace</span>
+            <span>/</span>
+            <strong>{title}</strong>
           </div>
-        )}
-        {(title || subtitle || actions) && (
-          <header className="app-page-header">
-            <div>
-              <div className="app-page-eyebrow">PSA / Sales workspace</div>
-              {title && <h1 className="app-page-title">{title}</h1>}
-              {subtitle && <p className="app-page-subtitle">{subtitle}</p>}
+          <form
+            className="app-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault()
+              navigate(`/schools?q=${encodeURIComponent(search.trim())}`)
+            }}
+          >
+            <Icon name="search" size={15} />
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search schools..."
+              aria-label="Search all accessible schools"
+            />
+            <kbd>Ctrl K</kbd>
+          </form>
+          <div className="app-topbar-actions">
+            <Link to="/tasks" title="Your tasks">
+              <Icon name="calendar" size={18} />
+            </Link>
+            <Link
+              to="/account"
+              className="app-avatar"
+              title={user?.name || 'Account'}
+            >
+              {user?.name
+                ?.split(' ')
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join('') || 'PSA'}
+            </Link>
+          </div>
+        </div>
+        <div className="app-content">
+          {UI_PREVIEW && (
+            <div className="app-preview-banner" role="status">
+              <span>
+                <strong>Demo workspace</strong> · Fictional data. Demo edits
+                reset on refresh. Email sending is disabled.
+              </span>
+              <button type="button" onClick={exitUiPreview}>
+                Exit preview
+              </button>
             </div>
-            {actions && <div className="app-page-actions">{actions}</div>}
-          </header>
-        )}
-        {children}
+          )}
+          {(title || subtitle || actions) && (
+            <header className="app-page-header">
+              <div>
+                <div className="app-page-eyebrow">PSA / Sales workspace</div>
+                {title && <h1 className="app-page-title">{title}</h1>}
+                {subtitle && <p className="app-page-subtitle">{subtitle}</p>}
+              </div>
+              {actions && <div className="app-page-actions">{actions}</div>}
+            </header>
+          )}
+          {children}
+        </div>
       </main>
     </div>
   )

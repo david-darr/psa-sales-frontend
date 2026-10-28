@@ -30,31 +30,31 @@
 .tone-success {
   --tone-color: var(--color-success);
   --tone-soft: var(--color-success-soft);
-  --tone-border: rgba(101, 203, 163, 0.25);
+  --tone-border: var(--color-success-line);
 }
 
 .tone-warning {
   --tone-color: var(--color-warning);
   --tone-soft: var(--color-warning-soft);
-  --tone-border: rgba(238, 194, 123, 0.25);
+  --tone-border: var(--color-warning-line);
 }
 
 .tone-danger {
   --tone-color: var(--color-danger);
   --tone-soft: var(--color-danger-soft);
-  --tone-border: rgba(255, 113, 128, 0.25);
+  --tone-border: var(--color-danger-line);
 }
 
 .tone-info {
   --tone-color: var(--color-info);
   --tone-soft: var(--color-info-soft);
-  --tone-border: rgba(185, 196, 215, 0.25);
+  --tone-border: var(--color-info-line);
 }
 
 /* Not a semantic tone - the deliberate "no signal" grey. */
 .ui-badge-neutral {
   --tone-color: var(--color-text-muted);
-  --tone-soft: rgba(255, 255, 255, 0.06);
+  --tone-soft: var(--color-ghost-hover);
   --tone-border: var(--color-border);
 }
 
@@ -106,7 +106,12 @@
 }
 
 .ui-stat-card .modern-card-title {
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .ui-stat-body {
@@ -117,6 +122,8 @@
 .ui-stat-value {
   font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
   margin-bottom: var(--space-1);
   line-height: 1.1;
@@ -128,10 +135,11 @@
 }
 
 .ui-stat-caption {
-  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 @media (max-width: 768px) {
@@ -152,19 +160,34 @@
 .ui-select,
 .ui-textarea {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: 9px 12px;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
   font-family: inherit;
-  font-size: var(--text-base);
-  transition: border-color var(--transition-fast);
+  font-size: 0.85rem;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ui-input:hover,
+.ui-select:hover,
+.ui-textarea:hover {
+  border-color: var(--color-border-strong);
 }
 
 .ui-input::placeholder,
 .ui-textarea::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-text-faint);
+}
+
+.ui-input:disabled,
+.ui-select:disabled,
+.ui-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* The old pages swapped border colour with onFocus/onBlur handlers that
@@ -174,6 +197,7 @@
 .ui-textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .ui-textarea {
@@ -197,10 +221,16 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--color-primary);
+  color: var(--color-text);
   font-size: 0.85rem;
   text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
   cursor: pointer;
+}
+
+.ui-link-button:hover {
+  text-decoration-color: var(--color-text-muted);
 }
 
 /* ---------------------------------------------------------
@@ -239,13 +269,14 @@
 
 .ui-table-frame {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   overflow: hidden;
 }
 
 .ui-table-toolbar {
   padding: var(--space-4);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -263,15 +294,17 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--color-surface-raised);
-  padding: var(--space-4) var(--space-3);
+  background: var(--color-surface);
+  padding: 12px var(--space-3);
   text-align: left;
   color: var(--color-text-muted);
-  font-size: 0.76rem;
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ui-table th:not(:last-child),
@@ -292,16 +325,16 @@
    onMouseEnter/onMouseLeave handlers that mutated element.style. The old
    handlers also read `index` from a closure, so they restored the wrong
    colour after the list was filtered. */
-.ui-table tbody tr:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.ui-table tbody tr:nth-child(even) {
-  background: rgba(0, 0, 0, 0.08);
+.ui-table tbody tr {
+  transition: background var(--transition-fast);
 }
 
 .ui-table tbody tr:hover {
-  background: var(--color-primary-soft);
+  background: var(--color-surface-raised);
+}
+
+.ui-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 /* Column content helpers */
@@ -312,12 +345,13 @@
 }
 
 .ui-cell-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   color: var(--color-text-muted);
 }
 
 .ui-cell-email {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
   word-break: break-all;
 }
 
@@ -335,19 +369,20 @@
 
 .ui-badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
   background: var(--tone-soft, var(--color-primary-soft-icon));
+  border: 1px solid var(--tone-border, var(--color-primary-soft-border));
   color: var(--tone-color, var(--color-primary));
-  font-size: 0.8rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
   font-weight: var(--weight-semibold);
   white-space: nowrap;
 }
 
 .ui-badge.is-compact {
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--text-xs);
-  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
 }
 
 /* ---------------------------------------------------------
@@ -370,16 +405,19 @@
 .ui-metric-value {
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
   margin-bottom: var(--space-1);
   line-height: 1.1;
 }
 
 .ui-metric-label {
-  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 .ui-summary-panel {
@@ -402,7 +440,7 @@
 }
 
 .ui-summary-panel .ui-metric-label {
-  font-size: 0.8rem;
+  font-size: 0.6875rem;
 }
 
 /* ---------------------------------------------------------
@@ -417,14 +455,14 @@
 
 .ui-person-card {
   padding: var(--space-5);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
 
 .ui-person-card.is-current-user {
-  background: var(--color-primary-soft);
-  border-color: var(--color-primary-soft-border);
+  background: var(--color-surface);
+  border-color: var(--color-accent-line);
 }
 
 .ui-person-head {
@@ -441,15 +479,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-lg);
-  background: #35363b;
-  color: var(--color-text-on-accent);
-  font-weight: var(--weight-bold);
-  font-size: 1.2rem;
+  border-radius: 50%;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  font-size: 1rem;
+  letter-spacing: 0.02em;
 }
 
 .ui-person-card.is-current-user .ui-person-avatar {
-  background: var(--color-primary-gradient);
+  border-color: var(--color-accent-line);
+  color: var(--color-primary);
 }
 
 .ui-person-identity {
@@ -462,15 +503,17 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
-  font-size: var(--text-lg);
+  font-size: 1rem;
   margin-bottom: var(--space-1);
 }
 
 .ui-person-role {
-  font-size: 0.85rem;
-  font-weight: var(--weight-semibold);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
@@ -558,7 +601,7 @@
   gap: var(--space-3);
   padding: var(--space-4);
   margin-bottom: var(--space-3);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -566,12 +609,13 @@
 }
 
 .ui-selectable:hover {
-  border-color: var(--color-primary-soft-border);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-raised);
 }
 
 .ui-selectable.is-selected {
   background: var(--color-primary-soft);
-  border-color: var(--color-primary-soft-border);
+  border-color: var(--color-accent-line);
 }
 
 .ui-selectable input[type='checkbox'] {
@@ -623,7 +667,7 @@
 .ui-panel-title {
   color: var(--tone-color, var(--color-primary));
   margin-bottom: var(--space-4);
-  font-size: var(--text-lg);
+  font-size: 1rem;
   font-weight: var(--weight-semibold);
 }
 
@@ -641,9 +685,12 @@
 
 .ui-field-label {
   display: block;
-  margin-bottom: var(--space-3);
-  font-size: 0.9rem;
-  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
@@ -655,6 +702,7 @@
 }
 
 .ui-map-frame {
+  isolation: isolate;
   height: 400px;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -693,16 +741,17 @@
 .ui-info-tile {
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 
 .ui-info-label {
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
   color: var(--color-text-muted);
   margin-bottom: var(--space-1);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 .ui-info-value {
@@ -769,16 +818,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary-gradient);
-  border-radius: 20px;
-  color: var(--color-text-on-accent);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-2xl);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xl);
+  letter-spacing: 0.02em;
 }
 
 .ui-profile-name {
   font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.03em;
   color: var(--color-text);
   margin-bottom: var(--space-2);
 }
@@ -788,6 +840,7 @@
    --------------------------------------------------------- */
 
 .ui-map-canvas {
+  isolation: isolate;
   height: 60vh;
   min-height: 320px;
   border-radius: var(--radius-lg);
@@ -807,7 +860,7 @@
   gap: var(--space-4);
   margin-bottom: var(--space-4);
   padding: var(--space-4);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -900,7 +953,7 @@
 /* A row in a small list inside a card (recent emails, top team members). */
 .ui-feed-item {
   padding: var(--space-3);
-  background: var(--color-surface-raised);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -936,10 +989,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-on-accent);
-  font-weight: var(--weight-bold);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
 }
 
 .ui-feed-footer {
@@ -982,7 +1036,8 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
 }
 
 .ui-modal {
@@ -990,9 +1045,10 @@
   flex-direction: column;
   width: 100%;
   max-height: 90vh;
-  background: var(--color-surface-gradient);
+  background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   outline: none;
 }
 
@@ -1009,13 +1065,14 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-6) var(--space-6) var(--space-4);
-  border-bottom: 1px solid var(--color-border-strong);
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ui-modal-title {
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
+  font-size: 1.125rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
   color: var(--color-text);
 }
 
@@ -1030,7 +1087,11 @@
   font-size: var(--text-lg);
   cursor: pointer;
 }
-.ui-modal-close:hover { color: var(--color-text); background: #303136; }
+.ui-modal-close:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
 
 /* The body scrolls, so the header and footer stay put on a long reply chain. */
 .ui-modal-body {
@@ -1044,8 +1105,8 @@
   display: flex;
   gap: var(--space-4);
   flex-wrap: wrap;
-  padding: var(--space-4) var(--space-6) var(--space-6);
-  border-top: 1px solid var(--color-border-strong);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--color-border);
 }
 
 .ui-modal-footer > .ui-grow {
@@ -1084,6 +1145,10 @@
   color: var(--color-text);
   font-weight: var(--weight-bold);
   cursor: pointer;
+}
+
+.ui-tool-btn:hover {
+  background: var(--color-surface-hover);
 }
 
 /* Read-only "To:" display for a fixed recipient. */
@@ -1168,8 +1233,8 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   color: var(--color-text-body);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -1276,12 +1341,12 @@
 }
 
 /* Highlight responded rows in the responses table. */
-.ui-table.is-responded tbody tr:nth-child(odd) {
-  background: rgba(16, 185, 129, 0.05);
+.ui-table.is-responded tbody tr {
+  background: var(--color-success-soft);
 }
 
-.ui-table.is-responded tbody tr:nth-child(even) {
-  background: rgba(16, 185, 129, 0.1);
+.ui-table.is-responded tbody tr:hover {
+  background: rgba(62, 207, 142, 0.18);
 }
 
 .ui-btn-row {
@@ -1313,4 +1378,31 @@
   .ui-modal-header, .ui-modal-body, .ui-modal-footer { padding-left: 18px; padding-right: 18px; }
   .email-section-nav { width: 100%; }
   .followup-table-scroll { overflow-x: auto; }
+}
+
+/* ---------------------------------------------------------
+   Toast / dismissible inline notice
+   --------------------------------------------------------- */
+
+.ui-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: calc(var(--z-modal) + 1);
+  max-width: min(380px, calc(100vw - 40px));
+  padding: 12px 16px;
+  border: 1px solid var(--tone-border, var(--color-border-strong));
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  box-shadow: var(--shadow-md);
+}
+
+/* Keyboard focus ring for the shared primitives. */
+.ui-selectable:has(:focus-visible),
+.ui-modal-close:focus-visible,
+.ui-link-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

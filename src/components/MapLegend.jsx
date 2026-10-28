@@ -1,31 +1,44 @@
-import { MAP_LAYERS, countLayers } from '../lib/mapLayers'
-import '../styles/ui.css'
+import { MAP_LAYERS } from '../lib/mapLayers'
 
 /**
- * Marker colour key. Driven by MAP_LAYERS so it cannot drift out of sync with
- * the markers themselves, which is what happened before: Home's legend listed
- * five layers while its mobile map only plotted three.
+ * Marker key for the Territory map. Marker shapes mirror the layer styling in
+ * components/map/TerritoryMap.jsx: solid with a white ring for active clients,
+ * hollow for former clients, a small dot for pipeline accounts.
  *
- * @param {object}  [schools] When given, each row shows a count.
- * @param {boolean} [compact] Tighter type for the dashboard mini map.
+ * @param {boolean} [layers] Also list the prospect layer swatches.
  */
-export default function MapLegend({ schools, compact = false }) {
-  const counts = schools ? countLayers(schools) : null
-
+export default function MapLegend({ layers = false }) {
   return (
-    <div className={`ui-legend${compact ? ' is-compact' : ''}`}>
-      {MAP_LAYERS.map((layer) => {
-        const count = counts?.perLayer.find((entry) => entry.layer.key === layer.key)?.count
-        return (
-          <div key={layer.key} className="ui-legend-item">
-            <span className="ui-legend-swatch" style={{ '--swatch-color': layer.swatch }} />
-            <span className="ui-legend-label">
+    <div className="tm-legend" aria-label="Map legend">
+      <ul>
+        <li>
+          <span className="tm-key tm-key-active" />
+          Active client
+        </li>
+        <li>
+          <span className="tm-key tm-key-former" />
+          Former client
+        </li>
+        <li>
+          <span className="tm-key tm-key-pipeline" />
+          In pipeline
+        </li>
+        <li>
+          <span className="tm-key tm-key-cluster">9</span>
+          Group of points
+        </li>
+        {layers &&
+          MAP_LAYERS.map((layer) => (
+            <li key={layer.key}>
+              <span
+                className="tm-key tm-key-prospect"
+                style={{ '--swatch': layer.swatch }}
+              />
               {layer.legend}
-              {counts ? ` (${count})` : ''}
-            </span>
-          </div>
-        )
-      })}
+            </li>
+          ))}
+      </ul>
+      <p>Dot color shows the rep who owns the account.</p>
     </div>
   )
 }

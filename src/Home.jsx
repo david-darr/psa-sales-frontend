@@ -1,468 +1,379 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer } from 'react-leaflet'
-import { useAuth } from './AuthContext'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
-import Card from './components/Card'
-import Badge from './components/Badge'
-import EmptyState from './components/EmptyState'
-import SchoolMarkers from './components/SchoolMarkers'
-import MapLegend from './components/MapLegend'
 import Icon from './components/Icon'
-import { MAP_CENTER, countLayers } from './lib/mapLayers'
-import { canSendFollowup, serverDateLabel } from './emails/constants'
+import TaskDialog from './components/TaskDialog'
+import { Panel, Empty, ErrorNotice } from './components/WorkspaceUI'
+import { STAGES, dateLabel, dueLabel, isOverdue, useResource } from './lib/crm'
 import api from './lib/api'
-import './styles/home.css'
-
-const RECENT_EMAIL_COUNT = 4
-
-/** Replies / follow-up / nothing-yet, as a tone plus a label. */
-function emailStatus(email) {
-  if (email.responded) return { tone: 'success', label: 'Replied' }
-  if (email.followup_sent) return { tone: 'warning', label: 'Follow-up' }
-  return { tone: 'neutral', label: 'Pending' }
-}
-
-function initials(name) {
-  return (name || '')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-}
 
 export default function Home() {
-  const { user, accessToken } = useAuth()
-  const navigate = useNavigate()
-
-  const [schools, setSchools] = useState([])
-  const [emails, setEmails] = useState([])
-  const [statsLoading, setStatsLoading] = useState(true)
-  const [dataError, setDataError] = useState(false)
-
-  const [team, setTeam] = useState([])
-  const [teamLoading, setTeamLoading] = useState(true)
-
-  const [mapSchools, setMapSchools] = useState({})
-  const [mapLoading, setMapLoading] = useState(true)
-
-  const currentDate = useMemo(
-    () =>
-      new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    [],
+  const { user } = useAuth()
+  const [scope, setScope] = useState(user?.admin ? 'team' : 'mine')
+  const { data, loading, error, reload } = useResource(
+    '/api/crm/overview?scope=' + scope,
   )
-
-  /* ---------------- Data ---------------- */
-
-  // One pair of requests for both the stats tiles and the recent-emails list.
-  // Previously fetchUserStats and fetchRecentEmails each fetched /api/my-schools
-  // and /api/sent-emails separately, so loading the dashboard made four
-  // requests for two resources - and both ran again on every `user` change.
-  const fetchOwnData = useCallback(async () => {
-    if (!accessToken) {
-      setStatsLoading(false)
-      return
-    }
-    setStatsLoading(true)
+  const [newTask, setNewTask] = useState(false)
+  const [taskError, setTaskError] = useState('')
+  const [busy, setBusy] = useState(null)
+  const complete = async (task) => {
+    setBusy(task.id)
+    setTaskError('')
     try {
-      const [schoolsData, emailsData] = await Promise.all([
-        api.get('/api/my-schools'),
-        api.get('/api/sent-emails'),
-      ])
-      setSchools(Array.isArray(schoolsData) ? schoolsData : [])
-      setEmails(Array.isArray(emailsData) ? emailsData : [])
-      setDataError(false)
-    } catch {
-      setSchools([])
-      setEmails([])
-      setDataError(true)
-    } finally {
-      setStatsLoading(false)
-    }
-  }, [accessToken])
-
-  const fetchTeam = useCallback(async () => {
-    if (!accessToken) {
-      setTeamLoading(false)
-      return
-    }
-    setTeamLoading(true)
-    try {
-      const data = await api.get('/api/team-stats')
-      setTeam(Array.isArray(data) ? data : [])
-    } catch {
-      setTeam([])
-    } finally {
-      setTeamLoading(false)
-    }
-  }, [accessToken])
-
-  const fetchMapSchools = useCallback(async () => {
-    setMapLoading(true)
-    try {
-      const data = await api.get('/api/map-schools')
-      setMapSchools(data && typeof data === 'object' ? data : {})
-    } catch {
-      setMapSchools({})
-    } finally {
-      setMapLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchOwnData()
-  }, [fetchOwnData])
-
-  useEffect(() => {
-    fetchTeam()
-  }, [fetchTeam])
-
-  useEffect(() => {
-    fetchMapSchools()
-  }, [fetchMapSchools])
-
-  /* ---------------- Derived ---------------- */
-
-  const stats = useMemo(
-    () => ({
-      totalSchools: schools.length,
-      totalEmails: emails.length,
-      pendingEmails: emails.filter((e) => !e.responded && !e.followup_sent).length,
-      respondedEmails: emails.filter((e) => e.responded).length,
-    }),
-    [schools, emails],
-  )
-
-  // Contact names come from the schools list, matched on email address.
-  const recentEmails = useMemo(() => {
-    const byEmail = new Map(schools.map((s) => [s.email, s]))
-    return [...emails]
-      .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))
-      .slice(0, RECENT_EMAIL_COUNT)
-      .map((email) => {
-        const school = byEmail.get(email.school_email)
-        return {
-          ...email,
-          contact_name: school?.contact_name || 'Unknown',
-          school_display_name: school?.school_name || email.school_name,
-        }
+      await api.patch('/api/crm/tasks/' + task.id, {
+        status: 'completed',
+        version: task.version,
       })
-  }, [emails, schools])
-
-  const topTeam = useMemo(
-    () =>
-      [...team]
-        .sort((a, b) => b.totalSchools + b.totalEmails - (a.totalSchools + a.totalEmails))
-        .slice(0, 4),
-    [team],
+      reload()
+    } catch (err) {
+      setTaskError(err.message)
+    } finally {
+      setBusy(null)
+    }
+  }
+  const value = (key) => (loading && !data ? '—' : (data?.[key] ?? '—'))
+  const chartMax = Math.max(1, ...(data?.trend || []).map((day) => day.sent))
+  const seriesTotal = (data?.trend || []).reduce(
+    (sum, day) => sum + day.sent,
+    0,
   )
-
-  const mapCount = useMemo(() => countLayers(mapSchools).total, [mapSchools])
-
-  const dueEmails = useMemo(
-    () => emails.filter(canSendFollowup).sort((a, b) => a.sent_at.localeCompare(b.sent_at)),
-    [emails],
-  )
-  const hasSentEmail = emails.some((email) => email.is_mine === true)
-  const gettingStartedSteps = [
-    { label: 'Account ready', done: true, detail: 'Your PSA access is active.', path: '/account' },
-    { label: 'Add your first school', done: schools.length > 0, detail: 'Enter a school contact or upload a CSV.', path: '/emails' },
-    { label: 'Set up Gmail', done: user?.mail_connected === true, detail: 'Add an app password to send emails and check replies.', path: '/account' },
-    { label: 'Send first outreach', done: hasSentEmail, detail: 'Choose a school and review your email.', path: '/emails' },
-  ]
-  const showGettingStarted = user && !user.admin && !statsLoading && !dataError &&
-    gettingStartedSteps.some((step) => !step.done)
-
-  const loginPrompt = (label = 'Login') => (
-    <button className="modern-btn-primary ui-block" onClick={() => navigate('/account')}>
-      {label}
-    </button>
-  )
-
+  const pipeline = data?.pipeline || {}
+  const total = data?.schools || 0
+  const firstName = user?.name?.split(' ')[0] || 'there'
   return (
-    <AppLayout title="Home" subtitle={currentDate}>
-      <section className="home-hero" aria-label="Your workspace">
-        <div>
-          <div className="home-hero-kicker">YOUR WORKSPACE</div>
-          <h2>Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''}.</h2>
-          <p>Your schools, conversations, and team activity in one place.</p>
+    <AppLayout
+      title={'Welcome back, ' + firstName}
+      subtitle="Your relationships, priorities, and progress. All in one place."
+      actions={
+        <>
+          <button
+            className="modern-btn-primary is-neutral"
+            onClick={() => setNewTask(true)}
+          >
+            <Icon name="plus" size={14} />
+            New task
+          </button>
+          <Link to="/schools?new=1" className="modern-btn-primary">
+            <Icon name="plus" size={14} />
+            Add school
+          </Link>
+        </>
+      }
+    >
+      <ErrorNotice error={error || taskError} />
+      {user?.admin && (
+        <div
+          className="workspace-inline"
+          style={{ justifyContent: 'space-between', marginBottom: 18 }}
+        >
+          <span className="workspace-kicker" style={{ margin: 0 }}>
+            WORKSPACE OVERVIEW
+          </span>
+          <select
+            className="workspace-select"
+            aria-label="Overview scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+          >
+            <option value="team">Team overview</option>
+            <option value="mine">My overview</option>
+          </select>
         </div>
-        <div className="home-hero-actions">
-          <button className="modern-btn-primary" onClick={() => navigate('/finder')}><Icon name="search" size={16} />Find schools</button>
-          <button className="modern-btn-primary is-neutral" onClick={() => navigate('/emails')}><Icon name="mail" size={16} />Email center</button>
+      )}
+      {!user?.mail_connected && (
+        <div className="workspace-onboarding">
+          <div>
+            <strong>Let’s get your workspace ready.</strong>
+            <p>
+              Add your first school, connect Gmail, and review your first
+              outreach.
+            </p>
+          </div>
+          <Link to="/account" className="modern-btn-primary is-neutral">
+            Complete setup <Icon name="arrow" size={14} />
+          </Link>
         </div>
-      </section>
-
-      <div className="home-metrics" aria-label="Your activity">
+      )}
+      <div className="workspace-metrics">
         {[
-          ['Schools added', stats.totalSchools, 'school'],
-          ['Emails sent', stats.totalEmails, 'mail'],
-          ['Awaiting reply', stats.pendingEmails, 'clock'],
-          ['Responses', stats.respondedEmails, 'check'],
-        ].map(([label, value, icon]) => (
-          <div className="home-metric" key={label}>
-            <div className="home-metric-label"><Icon name={icon} size={16} />{label}</div>
-            <div className="home-metric-value">{statsLoading || dataError ? '—' : value}</div>
+          [
+            'Schools in your workspace',
+            value('schools'),
+            'school',
+            'Across every pipeline stage',
+          ],
+          [
+            'Conversations started',
+            value('sent'),
+            'mail',
+            'Total tracked outreach',
+          ],
+          [
+            'Response rate',
+            data ? data.response_rate + '%' : '—',
+            'chart',
+            (data?.responses ?? '—') + ' conversations with a response',
+          ],
+          [
+            'Open tasks',
+            value('tasks_open'),
+            'check',
+            data?.tasks_overdue
+              ? data.tasks_overdue + ' overdue · take the next step'
+              : 'Keep your next steps moving',
+          ],
+        ].map(([label, amount, icon, caption]) => (
+          <div className="workspace-metric" key={label}>
+            <div className="workspace-metric-head">
+              {label}
+              <Icon name={icon} size={16} />
+            </div>
+            <div className="workspace-metric-value">
+              {typeof amount === 'number' ? amount.toLocaleString() : amount}
+            </div>
+            <div className="workspace-metric-foot">{caption}</div>
           </div>
         ))}
       </div>
-
-      {user && !statsLoading && (
-        <div className={`home-priority-grid ${showGettingStarted ? '' : 'is-single'}`}>
-          {showGettingStarted && (
-            <Card title="Getting started" icon="check">
-              <p className="home-priority-intro">Follow these steps to start using your PSA workspace.</p>
-              <ol className="home-start-list">
-                {gettingStartedSteps.map((step) => (
-                  <li key={step.label}>
-                    <span className={`home-step-status ${step.done ? 'is-done' : ''}`} aria-label={step.done ? 'Complete' : 'To do'}>
-                      {step.done ? '✓' : '○'}
-                    </span>
-                    <div><strong>{step.label}</strong><small>{step.detail}</small></div>
-                    {!step.done && (
-                      <button type="button" className="ui-link-button" onClick={() => navigate(step.path)}>
-                        Open
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </Card>
-          )}
-
-          <Card title={`Due follow-ups (${dueEmails.length})`} icon="clock" tone="warning">
-            {dataError ? (
-              <div className="ui-alert tone-danger" role="alert">
-                Could not load your sales work. <button type="button" className="ui-link-button" onClick={fetchOwnData}>Retry</button>
-              </div>
-            ) : dueEmails.length === 0 ? (
-              <EmptyState icon="check" title="Nothing due today" message="Unanswered emails appear here after seven days." />
-            ) : (
-              <>
-                <p className="home-priority-intro">Review these recipients before sending a follow-up.</p>
-                <div className="home-due-list">
-                  {dueEmails.slice(0, 3).map((email) => (
-                    <div key={email.id}>
-                      <strong>{email.school_name}</strong>
-                      <small>{email.school_email} · due {serverDateLabel(email.followup_due_at)}</small>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {!dataError && (
-              <button type="button" className="modern-btn-primary ui-block" onClick={() => navigate('/emails')}>
-                Open due follow-ups
-              </button>
-            )}
-          </Card>
-        </div>
-      )}
-
-      <div className="home-feature-grid">
-        <Card title="Get to work" icon="→">
-          <div className="home-action-list">
-            <button onClick={() => navigate('/finder')}><Icon name="search" size={18} /><span><strong>Discover schools</strong><small>Search nearby schools and plan routes</small></span><Icon name="arrow" size={16} /></button>
-            <button onClick={() => navigate('/schools')}><Icon name="school" size={18} /><span><strong>Browse directory</strong><small>Review your school records</small></span><Icon name="arrow" size={16} /></button>
-            <button onClick={() => navigate('/emails')}><Icon name="mail" size={18} /><span><strong>Manage outreach</strong><small>Send email and review replies</small></span><Icon name="arrow" size={16} /></button>
+      <div className="workspace-grid">
+        <Panel
+          title="Your pipeline at a glance"
+          description="From a first introduction to a lasting partnership"
+          to="/pipeline"
+          link="Open pipeline"
+        >
+          <div
+            className="pipeline-track"
+            aria-label="School distribution by stage"
+          >
+            {STAGES.map((stage) => (
+              <span
+                key={stage.id}
+                title={stage.label + ': ' + (pipeline[stage.id] || 0)}
+                style={{
+                  flex: pipeline[stage.id] || 0.05,
+                  background: stage.color,
+                }}
+              />
+            ))}
           </div>
-        </Card>
-
-        {/* ---------------- Mini map ----------------
-            One card for every screen size. There used to be two near-identical
-            copies of this, gated on isMobile, and they had drifted: the mobile
-            one plotted only three of the five layers and capped each at 10. */}
-        <Card title="School Locations" icon="🗺️" tone="success">
-          {mapLoading ? (
-            <div
-              className="ui-center"
-              style={{ height: '200px', display: 'grid', placeItems: 'center', color: 'var(--color-text-muted)' }}
-            >
-              Loading map...
-            </div>
-          ) : mapCount === 0 ? (
-            <EmptyState
-              icon="🗺️"
-              title="No school locations available"
-              message="Open the map to refresh school locations."
-            />
-          ) : (
-            <>
-              <div className="ui-map-canvas is-mini">
-                <MapContainer
-                  center={MAP_CENTER}
-                  zoom={9}
-                  style={{ width: '100%', height: '100%' }}
-                  scrollWheelZoom={false}
-                  doubleClickZoom={false}
-                  dragging={false}
-                  zoomControl={false}
-                >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution="&copy; OpenStreetMap contributors"
-                  />
-                  <SchoolMarkers schools={mapSchools} small withPopups={false} />
-                </MapContainer>
+          <div className="pipeline-legend">
+            {STAGES.map((stage) => (
+              <Link key={stage.id} to={'/schools?stage=' + stage.id}>
+                <i style={{ background: stage.color }} />
+                <div>
+                  {stage.label}
+                  <strong>
+                    {loading && !data ? '—' : pipeline[stage.id] || 0}
+                  </strong>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Panel>
+        <section className="workspace-focus">
+          <div>
+            <div className="workspace-kicker">KEEP THE CONVERSATION GOING</div>
+            <h2>
+              {data?.due_followups
+                ? data.due_followups + ' follow-ups ready for review.'
+                : 'Your next connection starts here.'}
+            </h2>
+            <p>
+              {data?.due_followups
+                ? 'A thoughtful follow-up can make all the difference. Check replies, then review your next messages.'
+                : total
+                  ? 'Make the next move on your school relationships. Your outreach workspace has everything you need.'
+                  : 'Discover local schools and turn a promising introduction into your next partnership.'}
+            </p>
+          </div>
+          <Link
+            to={total ? '/emails?tab=followups' : '/finder'}
+            className="modern-btn-primary"
+          >
+            {total ? 'Review outreach' : 'Discover schools'}
+            <Icon name="arrow" size={14} />
+          </Link>
+        </section>
+      </div>
+      <div className="workspace-grid">
+        <Panel
+          title="Outreach activity"
+          description="Emails sent over the last 14 days"
+          to="/emails?tab=history"
+          link="View outreach"
+        >
+          <div className="workspace-chart-total">
+            {loading && !data ? '—' : seriesTotal}
+            <small>emails sent</small>
+          </div>
+          <div
+            className="workspace-chart"
+            role="img"
+            aria-label={'Last 14 days: ' + seriesTotal + ' emails sent'}
+          >
+            {(data?.trend || []).map((day) => (
+              <div
+                key={day.date}
+                className="workspace-chart-col"
+                title={day.date + ': ' + day.sent + ' emails'}
+              >
+                <span>{day.sent || ''}</span>
+                <i
+                  style={{
+                    height: Math.max((day.sent / chartMax) * 100, 1) + '%',
+                  }}
+                />
               </div>
-              <MapLegend schools={mapSchools} compact />
-            </>
+            ))}
+          </div>
+          <div className="workspace-chart-axis">
+            <span>
+              {dateLabel(
+                data?.trend?.[0]?.date
+                  ? data.trend[0].date + 'T12:00:00'
+                  : null,
+              )}
+            </span>
+            <span>Today</span>
+          </div>
+        </Panel>
+        <Panel
+          title="Next on your list"
+          description="Small steps. Stronger relationships."
+          to="/tasks"
+          link="View tasks"
+        >
+          {data?.tasks?.length ? (
+            <ul className="workspace-list">
+              {data.tasks.slice(0, 4).map((task) => (
+                <li className="workspace-list-item" key={task.id}>
+                  <button
+                    className="workspace-check"
+                    disabled={busy === task.id}
+                    onClick={() => complete(task)}
+                    aria-label={'Complete ' + task.title}
+                  />
+                  <div className="grow">
+                    <strong>{task.title}</strong>
+                    <small>{task.school_name || task.owner_name}</small>
+                  </div>
+                  <span
+                    className={
+                      'workspace-date' +
+                      (isOverdue(task.due_at) ? ' is-overdue' : '')
+                    }
+                  >
+                    {dueLabel(task.due_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty
+              title={
+                loading
+                  ? 'Loading your tasks...'
+                  : 'A clear list. A fresh start.'
+              }
+              text="Create a task to keep your next step in sight."
+            />
           )}
           <button
-            className="modern-btn-primary is-success ui-block"
-            onClick={() => navigate('/map')}
+            className="ui-link-button"
+            style={{ marginTop: 18, fontSize: '.72rem' }}
+            onClick={() => setNewTask(true)}
           >
-            View Full Map →
+            + Create a task
           </button>
-        </Card>
+        </Panel>
       </div>
-
-      <div className="ui-two-col">
-        {/* ---------------- Recent emails ---------------- */}
-        <Card title="Recent Emails" icon="📧">
-          {!user ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
-              <p style={{ marginBottom: 'var(--space-4)' }}>Login to view your emails</p>
-              {loginPrompt()}
-            </div>
-          ) : statsLoading ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
-              Loading recent emails...
-            </div>
-          ) : dataError ? (
-            <div className="ui-alert tone-danger" role="alert">Could not load recent emails. Use Retry above.</div>
-          ) : recentEmails.length === 0 ? (
-            <EmptyState
-              icon="📧"
-              title="No emails sent yet"
-              action={
-                <button
-                  className="modern-btn-primary ui-block"
-                  onClick={() => navigate('/emails')}
-                >
-                  Send Your First Email →
-                </button>
-              }
+      <div className="workspace-grid equal">
+        <Panel
+          title="Upcoming school actions"
+          to="/schools?sort=due"
+          link="View schools"
+        >
+          {data?.actions?.length ? (
+            <ul className="workspace-list">
+              {data.actions.map((school) => (
+                <li className="workspace-list-item" key={school.id}>
+                  <span className="record-mark">
+                    <Icon name="school" size={16} />
+                  </span>
+                  <div className="grow">
+                    <Link to={'/schools/' + school.id}>
+                      <strong>{school.school_name}</strong>
+                    </Link>
+                    <small>{school.next_action}</small>
+                  </div>
+                  <span
+                    className={
+                      'workspace-date' +
+                      (isOverdue(school.next_action_at) ? ' is-overdue' : '')
+                    }
+                  >
+                    {dueLabel(school.next_action_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty
+              title="Give every school a next step"
+              text="Set the next action from a school’s workspace."
+              icon="calendar"
             />
-          ) : (
-            <>
-              <div className="ui-field-label">Last {recentEmails.length} emails sent:</div>
-              {recentEmails.map((email) => {
-                const status = emailStatus(email)
-                return (
-                  <div key={email.id} className="ui-feed-item">
-                    <div className="ui-selectable-title">{email.school_display_name}</div>
-                    <div className="ui-selectable-meta"> {email.school_email}</div>
-                    <div className="ui-selectable-meta"> {email.contact_name}</div>
-                    <div className="ui-feed-footer">
-                      <span style={{ color: 'var(--color-text-muted)' }}>
-                         {new Date(email.sent_at).toLocaleDateString()}
-                      </span>
-                      <Badge tone={status.tone} compact>
-                        {status.label}
-                      </Badge>
-                    </div>
-                  </div>
-                )
-              })}
-              <div className="ui-center" style={{ marginTop: 'var(--space-4)' }}>
-                <button className="ui-link-button" onClick={() => navigate('/emails')}>
-                  View all emails
-                </button>
-              </div>
-            </>
           )}
-        </Card>
-
-        {/* ---------------- Team ----------------
-            Real figures from /api/team-stats. This card previously rendered a
-            hardcoded array of four invented people ("John Smith", "Sarah
-            Johnson", "Mike Davis", "Emily Chen") with invented school and
-            email counts, shown to actual staff as if it were live data. */}
-        <Card title="Team" icon="👥" tone="warning">
-          {!user ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
-              <p style={{ marginBottom: 'var(--space-4)' }}>Login to view your team</p>
-              {loginPrompt()}
-            </div>
-          ) : teamLoading ? (
-            <div className="ui-center" style={{ padding: 'var(--space-5) 0', color: 'var(--color-text-muted)' }}>
-              Loading team...
-            </div>
-          ) : topTeam.length === 0 ? (
-            <EmptyState icon="👥" title="No team data available" />
-          ) : (
-            <>
-              <div className="ui-feed-grid">
-                {topTeam.map((member) => (
-                  <div key={member.email || member.name} className="ui-feed-item">
-                    <div className="ui-feed-header">
-                      <div>
-                        <div className="ui-selectable-title">{member.name}</div>
-                        <div className="ui-selectable-meta">{member.role}</div>
-                      </div>
-                      <div className="ui-feed-avatar" aria-hidden="true">
-                        {initials(member.name)}
-                      </div>
-                    </div>
-                    <div className="ui-feed-footer">
-                      <span>
-                        Schools:{' '}
-                        <strong style={{ color: 'var(--color-primary)' }}>
-                          {member.totalSchools}
-                        </strong>
-                      </span>
-                      <span>
-                        Emails:{' '}
-                        <strong style={{ color: 'var(--color-success)' }}>
-                          {member.totalEmails}
-                        </strong>
-                      </span>
-                    </div>
+        </Panel>
+        <Panel
+          title="Recent activity"
+          description={
+            scope === 'team'
+              ? 'The latest updates across your team'
+              : 'The latest updates to your schools'
+          }
+        >
+          {data?.activity?.length ? (
+            <ul className="workspace-list">
+              {data.activity.slice(0, 4).map((item, index) => (
+                <li className="workspace-list-item" key={index}>
+                  <span className="workspace-activity-dot">
+                    <Icon
+                      name={
+                        item.kind === 'call'
+                          ? 'phone'
+                          : item.kind === 'meeting'
+                            ? 'calendar'
+                            : 'check'
+                      }
+                      size={15}
+                    />
+                  </span>
+                  <div className="grow">
+                    <Link to={'/schools/' + item.school_id}>
+                      <strong>{item.school_name}</strong>
+                    </Link>
+                    <small>
+                      {item.actor} · {item.detail}
+                    </small>
                   </div>
-                ))}
-              </div>
-              <button
-                className="modern-btn-primary is-warning ui-block"
-                style={{ marginTop: 'var(--space-4)' }}
-                onClick={() => navigate('/team')}
-              >
-                View Team Analytics →
-              </button>
-            </>
+                  <span className="workspace-date">{dateLabel(item.at)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty
+              title="Your story starts here"
+              text="School notes, calls, and updates will appear here."
+              icon="clock"
+            />
           )}
-        </Card>
+        </Panel>
       </div>
-
-      {!user && (
-        <Card title="Getting Started" icon="🚀">
-          <p style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-lg)' }}>
-            Welcome to the PSA Sales Management Platform! This tool helps you:
-          </p>
-          <ul
-            style={{
-              marginBottom: 'var(--space-5)',
-              paddingLeft: 'var(--space-5)',
-              color: 'var(--color-text-muted)',
-              listStyle: 'disc',
-            }}
-          >
-            <li>Manage your school database and contacts</li>
-            <li>Send and track email campaigns</li>
-            <li>Discover new schools in your area</li>
-            <li>Monitor your sales performance</li>
-            <li>Visualize school locations on interactive maps</li>
-          </ul>
-          <button className="modern-btn-primary" onClick={() => navigate('/account')}>
-            Create Account or Login →
-          </button>
-        </Card>
+      {newTask && (
+        <TaskDialog onClose={() => setNewTask(false)} onSaved={reload} />
       )}
     </AppLayout>
   )

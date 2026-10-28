@@ -1,5 +1,5 @@
 export const DEMO_USER = {
-  id: 'preview-user',
+  id: 1,
   name: 'Alex Morgan',
   email: 'alex@example.test',
   phone: '(555) 010-0140',
@@ -8,7 +8,7 @@ export const DEMO_USER = {
 }
 
 export const NEW_EMPLOYEE_USER = {
-  id: 'preview-new-employee',
+  id: 4,
   name: 'Sam Rivera',
   email: 'sam@example.test',
   phone: '',
@@ -17,7 +17,7 @@ export const NEW_EMPLOYEE_USER = {
 }
 
 export const DEMO_ADMIN_USER = {
-  id: 'preview-admin',
+  id: 3,
   name: 'Jordan Blake',
   email: 'jordan@example.test',
   phone: '',

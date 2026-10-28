@@ -15,6 +15,7 @@ const PSAMap = lazy(() => import('./Map'))
 const Tasks = lazy(() => import('./Tasks'))
 const Pipeline = lazy(() => import('./Pipeline'))
 const Portfolio = lazy(() => import('./Portfolio'))
+const SalesAdmin = lazy(() => import('./SalesAdmin'))
 
 function App() {
   return (
@@ -108,6 +109,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Emails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <SalesAdmin />
                 </ProtectedRoute>
               }
             />

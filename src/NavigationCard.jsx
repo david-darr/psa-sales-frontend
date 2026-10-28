@@ -25,6 +25,7 @@ const groups = [
     label: 'Organization',
     items: [
       { label: 'Team', path: '/team', icon: 'team' },
+      { label: 'Sales admin', path: '/admin', icon: 'shield', admin: true },
       { label: 'Settings', path: '/account', icon: 'settings' },
     ],
   },
@@ -50,7 +51,7 @@ export default function NavigationCard({ collapsed = false, onToggle }) {
           <div className="nav-group" key={group.label}>
             {!collapsed && <div className="nav-group-label">{group.label}</div>}
             <ul className="nav-menu">
-              {group.items.map((item) => (
+              {group.items.filter((item) => !item.admin || user?.admin).map((item) => (
                 <li key={item.path}>
                   <NavLink
                     to={item.path}

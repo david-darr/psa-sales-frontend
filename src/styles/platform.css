@@ -1197,6 +1197,29 @@ input.workspace-select[type='date'] {
   color: var(--color-text);
   margin-bottom: 4px;
 }
+.workspace-checklist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.workspace-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+}
+.workspace-checklist li.is-done {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+.workspace-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 8px 0 10px;
+  color: var(--color-text);
+}
 .workspace-onboarding p {
   color: var(--color-text-muted);
   font-size: 0.78rem;

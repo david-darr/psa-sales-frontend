@@ -6,6 +6,7 @@ import {
 import { NEW_EMPLOYEE_PREVIEW, ADMIN_PREVIEW } from './previewMode'
 import { localToday } from './crm'
 import { portfolioPreview } from './preview/portfolio'
+import { adminPreview } from './preview/admin'
 import { finderPreview } from './preview/finder'
 import { outreachPreview } from './preview/outreach'
 
@@ -303,7 +304,7 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
       return directory
     },
   }
-  for (const handler of [portfolioPreview, finderPreview, outreachPreview]) {
+  for (const handler of [adminPreview, portfolioPreview, finderPreview, outreachPreview]) {
     const result = handler(ctx)
     if (result !== undefined) return result
   }

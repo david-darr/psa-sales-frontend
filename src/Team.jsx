@@ -5,6 +5,7 @@ import AppLayout from './components/AppLayout'
 import Icon from './components/Icon'
 import Modal from './components/Modal'
 import EmployeeInvites from './components/EmployeeInvites'
+import JoinLinks from './components/JoinLinks'
 import { Empty, ErrorNotice } from './components/WorkspaceUI'
 import { useResource } from './lib/crm'
 import api from './lib/api'
@@ -226,6 +227,7 @@ export default function Team() {
           size="lg"
           onClose={() => setInvites(false)}
         >
+          <JoinLinks />
           <EmployeeInvites />
         </Modal>
       )}

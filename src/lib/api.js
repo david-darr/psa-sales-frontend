@@ -95,7 +95,8 @@ export async function apiFetch(path, options = {}) {
     body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
   })
 
-  if (response.status === 401) {
+  // A 401 from sign-in means wrong credentials, not an expired session.
+  if (response.status === 401 && auth && token) {
     notifySessionExpired()
     throw new SessionExpiredError()
   }

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
 import EmployeeInvites from './components/EmployeeInvites'
+import JoinLinks from './components/JoinLinks'
 import MailCredentialMigration from './components/MailCredentialMigration'
 import Icon from './components/Icon'
 import { Panel, ErrorNotice } from './components/WorkspaceUI'
@@ -14,9 +15,19 @@ export default function Account() {
   const { user, login, logout, markMailConnected, updateProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const inviteToken =
-    new URLSearchParams(location.hash.replace(/^#/, '')).get('invite') || ''
-  const [register, setRegister] = useState(Boolean(inviteToken))
+  const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''))
+  const inviteToken = hashParams.get('invite') || ''
+  const joinToken = inviteToken ? '' : hashParams.get('join') || ''
+  const signupToken = inviteToken || joinToken
+  const [register, setRegister] = useState(Boolean(signupToken))
+  const [joinValid, setJoinValid] = useState(null)
+  useEffect(() => {
+    if (!joinToken) return
+    api
+      .post('/api/join-links/check', { token: joinToken }, { auth: false })
+      .then((data) => setJoinValid(Boolean(data?.valid)))
+      .catch(() => setJoinValid(null))
+  }, [joinToken])
   const [form, setForm] = useState({
     name: user?.name || '',
     email: '',
@@ -39,7 +50,7 @@ export default function Account() {
       const data = await api.post(
         register ? '/api/register' : '/api/login',
         register
-          ? { ...form, invite_token: inviteToken }
+          ? { ...form, ...(inviteToken ? { invite_token: inviteToken } : { join_token: joinToken }) }
           : { email: form.email, password: form.password },
         { auth: false },
       )
@@ -47,10 +58,14 @@ export default function Account() {
         login(data.access_token, data.user)
         navigate(location.state?.from?.pathname || '/', { replace: true })
       } else if (register) {
-        setRegister(false)
-        setForm((old) => ({ ...old, password: '' }))
-        setNotice('Your account is ready. Sign in to get started.')
-        navigate('/account', { replace: true })
+        // Sign straight in so a new rep lands on their setup checklist.
+        const session = await api.post(
+          '/api/login',
+          { email: form.email, password: form.password },
+          { auth: false },
+        )
+        login(session.access_token, session.user)
+        navigate('/', { replace: true })
       }
     } catch (err) {
       setError(err.message)
@@ -145,11 +160,19 @@ export default function Account() {
               {register ? 'Your next chapter starts here.' : 'Welcome back.'}
             </h2>
             <p className="workspace-subtle" style={{ margin: '10px 0 28px' }}>
-              {register
-                ? 'Use the email address your PSA administrator invited.'
-                : 'Sign in to pick up where you left off.'}
+              {!register
+                ? 'Sign in to pick up where you left off.'
+                : inviteToken
+                  ? 'Use the email address your PSA administrator invited.'
+                  : 'Create your account with your work email. Use at least 8 characters for your password.'}
             </p>
             <ErrorNotice error={error} />
+            {register && joinValid === false && (
+              <div className="ui-alert tone-danger" role="alert">
+                This sign-up link has expired or was turned off. Ask your PSA
+                administrator for a new one.
+              </div>
+            )}
             {notice && (
               <div className="ui-alert tone-success" role="status">
                 {notice}
@@ -201,6 +224,7 @@ export default function Account() {
                   type="password"
                   required
                   autoComplete={register ? 'new-password' : 'current-password'}
+                  minLength={register ? 8 : undefined}
                   value={form.password}
                   onChange={(e) => change('password', e.target.value)}
                 />
@@ -215,7 +239,7 @@ export default function Account() {
               </button>
             </form>
             <p className="workspace-subtle" style={{ marginTop: 23 }}>
-              {inviteToken ? (
+              {signupToken ? (
                 <button
                   className="ui-link-button"
                   onClick={() => {
@@ -225,10 +249,10 @@ export default function Account() {
                 >
                   {register
                     ? 'Already have an account? Sign in'
-                    : 'Use your employee invitation'}
+                    : 'New here? Create your account'}
                 </button>
               ) : (
-                'New to the team? Ask your PSA administrator for an invitation.'
+                'New to the team? Ask your PSA administrator for the sign-up link.'
               )}
             </p>
           </div>
@@ -447,6 +471,7 @@ export default function Account() {
       )}
       {tab === 'admin' && user.admin && (
         <div className="workspace-form">
+          <JoinLinks />
           <EmployeeInvites />
           <MailCredentialMigration />
         </div>

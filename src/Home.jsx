@@ -81,20 +81,36 @@ export default function Home() {
           </select>
         </div>
       )}
-      {!user?.mail_connected && (
-        <div className="workspace-onboarding">
-          <div>
-            <strong>Let’s get your workspace ready.</strong>
-            <p>
-              Add your first school, connect Gmail, and review your first
-              outreach.
-            </p>
+      {data && !user?.admin && (() => {
+        const steps = [
+          { done: Boolean(user?.mail_connected), label: 'Connect your Gmail so outreach sends from you', to: '/account' },
+          { done: (data.schools || 0) > 0, label: 'Add or claim your first schools', to: '/finder' },
+          { done: (data.sent || 0) > 0, label: 'Send your first intro email', to: '/emails' },
+          { done: (data.tasks_open || 0) > 0 || (data.sent || 0) > 0, label: 'Plan a next step as a task', to: '/tasks' },
+        ]
+        const left = steps.filter((step) => !step.done)
+        if (!left.length) return null
+        return (
+          <div className="workspace-onboarding">
+            <div>
+              <strong>
+                Get set up: {steps.length - left.length} of {steps.length} done
+              </strong>
+              <ol className="workspace-checklist">
+                {steps.map((step) => (
+                  <li key={step.label} className={step.done ? 'is-done' : ''}>
+                    <Icon name={step.done ? 'check' : 'arrow'} size={13} />
+                    {step.done ? step.label : <Link to={step.to}>{step.label}</Link>}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <Link to={left[0].to} className="modern-btn-primary is-neutral">
+              Next step <Icon name="arrow" size={14} />
+            </Link>
           </div>
-          <Link to="/account" className="modern-btn-primary is-neutral">
-            Complete setup <Icon name="arrow" size={14} />
-          </Link>
-        </div>
-      )}
+        )
+      })()}
       <div className="workspace-metrics">
         {[
           [

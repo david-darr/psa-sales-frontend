@@ -5,7 +5,13 @@ import AppLayout from './components/AppLayout'
 import Icon from './components/Icon'
 import TaskDialog from './components/TaskDialog'
 import { Empty, ErrorNotice, Pagination } from './components/WorkspaceUI'
-import { dueLabel, isOverdue, localToday, useResource } from './lib/crm'
+import {
+  dueLabel,
+  isOverdue,
+  localToday,
+  useAutoRefresh,
+  useResource,
+} from './lib/crm'
 import api from './lib/api'
 
 const VIEWS = [
@@ -35,6 +41,7 @@ export default function Tasks() {
         ...(schoolId ? { school_id: schoolId } : {}),
       }),
   )
+  useAutoRefresh(reload, 30000, Boolean(busy) || newTask)
   const update = async (task, changes) => {
     setBusy(task.id)
     setActionError('')

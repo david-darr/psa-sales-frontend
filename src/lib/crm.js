@@ -90,3 +90,20 @@ export function useResource(path) {
   }, [requestPath, revision])
   return { data, error, loading, reload }
 }
+
+// Refetch on an interval while the tab is visible, and when it becomes visible again,
+// so edits made in Taskbar or by teammates appear without a manual refresh.
+export function useAutoRefresh(reload, intervalMs = 30000, paused = false) {
+  useEffect(() => {
+    if (paused) return
+    const tick = () => {
+      if (document.visibilityState === 'visible') reload()
+    }
+    const timer = setInterval(tick, intervalMs)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [reload, intervalMs, paused])
+}

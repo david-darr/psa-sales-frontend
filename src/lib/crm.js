@@ -56,24 +56,44 @@ export function useDebounced(value, delay = 250) {
   return debounced
 }
 
+// Last response per request path for this signed-in session. Revisiting a tab shows
+// it straight away while a fresh copy loads in the background.
+const resourceCache = new Map()
+const CACHE_LIMIT = 80
+
+export function clearResourceCache() {
+  resourceCache.clear()
+}
+
 export function useResource(path) {
   const requestPath = path?.startsWith('/api/crm/')
     ? `${path}${path.includes('?') ? '&' : '?'}today=${localToday()}`
     : path
-  const [data, setData] = useState(null)
+  const [data, setData] = useState(() =>
+    requestPath ? (resourceCache.get(requestPath) ?? null) : null,
+  )
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(Boolean(path))
+  const [loading, setLoading] = useState(
+    Boolean(requestPath) && !resourceCache.has(requestPath),
+  )
   const [revision, setRevision] = useState(0)
   const reload = useCallback(() => setRevision((value) => value + 1), [])
   useEffect(() => {
     if (!requestPath) return
     const controller = new AbortController()
     let active = true
-    setLoading(true)
+    const cached = resourceCache.has(requestPath)
+    if (cached) setData(resourceCache.get(requestPath))
+    // Only show a loading state when there is nothing to show yet.
+    setLoading(!cached)
     setError('')
     api
       .get(requestPath, { signal: controller.signal })
       .then((value) => {
+        resourceCache.delete(requestPath)
+        resourceCache.set(requestPath, value)
+        if (resourceCache.size > CACHE_LIMIT)
+          resourceCache.delete(resourceCache.keys().next().value)
         if (active) setData(value)
       })
       .catch((err) => {

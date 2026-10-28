@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { onSessionExpired } from './lib/api'
+import { clearResourceCache } from './lib/crm'
 import {
   UI_PREVIEW,
   NEW_EMPLOYEE_PREVIEW,
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
     setAccessToken('')
     setUser(null)
     localStorage.removeItem('jwt')
+    clearResourceCache()
   }, [])
 
   // Register once so any 401 from anywhere in the app clears the session.
@@ -78,6 +80,7 @@ export function AuthProvider({ children }) {
 
   const login = (token, userData) => {
     if (UI_PREVIEW) return
+    clearResourceCache()
     localStorage.setItem('jwt', token)
     setAccessToken(token)
     setUser({

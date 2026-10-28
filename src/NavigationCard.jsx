@@ -26,6 +26,7 @@ const groups = [
     items: [
       { label: 'Team', path: '/team', icon: 'team' },
       { label: 'Sales admin', path: '/admin', icon: 'shield', admin: true },
+      { label: 'Support', path: '/support', icon: 'info' },
       { label: 'Settings', path: '/account', icon: 'settings' },
     ],
   },

@@ -29,8 +29,19 @@ function closeOf(ctx, school) {
   }
 }
 
+const reports = []
+
 export function adminPreview(ctx) {
   const { endpoint, method, body, params, user } = ctx
+  if (endpoint === '/api/support' && method === 'POST') {
+    reports.unshift({ id: reports.length + 1, ...body, reporter: user.name, delivered: true,
+      created_at: new Date().toISOString(), message: body.message || '(no description)' })
+    return { id: reports.length, delivered: true, via: 'reporter', support_email: 'davidmichael.darr@gmail.com' }
+  }
+  if (endpoint === '/api/support' && method === 'GET') {
+    if (!user.admin) throw new Error('Administrator access required')
+    return ctx.clone(reports)
+  }
   if (!endpoint.startsWith('/api/admin/') && !endpoint.startsWith('/api/join-links')) return undefined
   if (endpoint === '/api/join-links/check') return { valid: true }
   if (!user.admin) throw new Error('Administrator access required')

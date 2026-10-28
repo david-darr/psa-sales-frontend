@@ -133,6 +133,13 @@ export default function ComposeFlow({
 
   return (
     <div className="ou-page">
+      {kind === 'followup' && (
+        <p className="workspace-subtle" style={{ margin: '0 0 12px' }}>
+          Follow-ups also go out automatically, 3 and 7 days after your first email, on weekdays
+          between 9am and 5pm Eastern. PSA checks your inbox first and skips anyone who replied.
+          Use this tab to send one sooner or change the message.
+        </p>
+      )}
       <div className="ou-steps" role="list" aria-label="Outreach steps">
         {STEPS.map(([id, label], index) => (
           <button

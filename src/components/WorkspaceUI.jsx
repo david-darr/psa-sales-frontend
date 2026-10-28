@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Icon from './Icon'
 import { initials, stageColor, stageLabel } from '../lib/crm'
+import { supportLink } from '../lib/support'
 
 export function StageBadge({ stage }) {
   return (
@@ -77,10 +78,19 @@ export function Empty({ title = 'Nothing here yet', text, icon = 'check' }) {
     </div>
   )
 }
-export function ErrorNotice({ error }) {
+export function ErrorNotice({ error, report = true }) {
+  const location = useLocation()
   return error ? (
     <div className="ui-alert tone-danger" role="alert">
       {error}
+      {report && location.pathname !== '/support' && (
+        <>
+          {' '}
+          <Link className="ui-link-button" to={supportLink(error, location.pathname)}>
+            Report this problem
+          </Link>
+        </>
+      )}
     </div>
   ) : null
 }

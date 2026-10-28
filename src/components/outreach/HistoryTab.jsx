@@ -100,7 +100,7 @@ export default function HistoryTab({ emails, rev }) {
                       {email.responded ? (
                         <Chip tone="ok">Replied</Chip>
                       ) : email.followup_sent ? (
-                        <Chip>Followed up</Chip>
+                        <Chip>{email.followup_count >= 2 ? 'Followed up twice' : 'Followed up once'}</Chip>
                       ) : (
                         <Chip>Awaiting reply</Chip>
                       )}

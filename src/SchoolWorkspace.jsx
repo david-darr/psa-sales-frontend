@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
 import Icon from './components/Icon'
@@ -148,6 +148,25 @@ export default function SchoolWorkspace() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
+  const navigate = useNavigate()
+  const canDelete = Boolean(school && (user.admin || school.user_id === user.id))
+  const deleteSchool = async () => {
+    if (
+      !window.confirm(
+        `Delete ${school.school_name}? Its notes and activity are removed for everyone. Sent emails and tasks are kept without the school link. This cannot be undone.`,
+      )
+    )
+      return
+    setBusy(true)
+    setActionError('')
+    try {
+      await api.post('/api/crm/schools/delete', { ids: [school.id] })
+      navigate('/schools', { replace: true })
+    } catch (err) {
+      setActionError(err.message)
+      setBusy(false)
+    }
+  }
   const refresh = () => {
     reload()
     taskData.reload()
@@ -212,6 +231,15 @@ export default function SchoolWorkspace() {
               onClick={() => setEdit(true)}
             >
               Edit school
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className="modern-btn-primary is-danger"
+              onClick={deleteSchool}
+              disabled={busy}
+            >
+              Delete
             </button>
           )}
         </>

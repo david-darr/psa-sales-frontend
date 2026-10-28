@@ -89,6 +89,32 @@ export default function SchoolsList() {
       setBusy(false)
     }
   }
+  const selectedRows = rows.filter((row) => selected.includes(row.id))
+  const canDeleteSelected =
+    selected.length > 0 &&
+    (user.admin || selectedRows.every((row) => row.user_id === user.id))
+  const deleteSelected = async () => {
+    const count = selected.length
+    if (
+      !window.confirm(
+        `Delete ${count} ${count === 1 ? 'school' : 'schools'}? Their notes and activity are removed for everyone. Sent emails and tasks are kept without the school link. This cannot be undone.`,
+      )
+    )
+      return
+    setBusy(true)
+    setActionError('')
+    setNotice('')
+    try {
+      const result = await api.post('/api/crm/schools/delete', { ids: selected })
+      setNotice(`${result.deleted} ${result.deleted === 1 ? 'school' : 'schools'} deleted.`)
+      setSelected([])
+      reload()
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
   const exportPage = () => {
     const cell = (value) => {
       let text = String(value ?? '')
@@ -285,6 +311,15 @@ export default function SchoolsList() {
             >
               {busy ? 'Updating...' : 'Apply changes'}
             </button>
+            {canDeleteSelected && (
+              <button
+                className="modern-btn-primary is-small is-danger"
+                onClick={deleteSelected}
+                disabled={busy || loading}
+              >
+                Delete
+              </button>
+            )}
             <button
               className="ui-link-button"
               onClick={() => setSelected([])}

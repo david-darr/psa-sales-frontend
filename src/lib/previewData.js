@@ -373,6 +373,20 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
       })
     return paged(rows, params)
   }
+  if (endpoint === '/api/crm/schools/delete') {
+    const rows = schools.filter((school) => body.ids.includes(school.id))
+    if (rows.length !== body.ids.length) throw new Error('School unavailable.')
+    if (rows.some((school) => !user.admin && school.user_id !== user.id))
+      throw new Error('You can only delete schools you own')
+    schools = schools.filter((school) => !body.ids.includes(school.id))
+    tasks
+      .filter((task) => body.ids.includes(task.school_id))
+      .forEach((task) => {
+        task.school_id = null
+        task.version++
+      })
+    return { deleted: rows.length, names: rows.map((school) => school.school_name) }
+  }
   if (endpoint === '/api/crm/schools/bulk') {
     const rows = schools.filter((school) => body.ids.includes(school.id))
     if (

@@ -17,7 +17,7 @@ export const outreachApi = {
   batches: (limit = 10) => api.get(`/api/outreach/batches?limit=${limit}&scope=mine`),
   batch: (id) => api.get(`/api/outreach/batches/${id}`),
   createBatch: (payload) => api.post('/api/outreach/batches', payload),
-  retryBatch: (id) => api.post(`/api/outreach/batches/${id}/retry`, {}),
+  retryBatch: (id, options = {}) => api.post(`/api/outreach/batches/${id}/retry`, options),
   cancelBatch: (id) => api.post(`/api/outreach/batches/${id}/cancel`, {}),
   preview: (payload) => api.post('/api/email-preview', payload),
 }

@@ -8,6 +8,8 @@ The overview, searchable school records, bulk updates, pipeline, tasks, school a
 
 The latest pass restyles the app in a dark theme and adds an Accounts page (schools grouped by sales rep, active and former clients), a rep-colored territory map, a rebuilt Find schools page, a rebuilt Outreach flow, and an admin toggle on the Team page. Two new migrations, `20261029_accounts_portfolio.sql` and `20261029_outreach_batches.sql`, are not applied.
 
+The batch screen also shows an Unconfirmed count for emails whose delivery could not be confirmed, with a button to send them again after checking Sent mail, and the recipient list marks schools that are already sending as "Already sending".
+
 Build checks: `npm run lint`, `npm run build`, `node scripts/check-demo.mjs`, and `node scripts/check-demo.mjs --admin`.
 
 See `psa-due-followups/docs/SALES_WORKSPACE_RELEASE.md` for migrations, release order, the independent mailbox command, verification, and remaining operational limits. No draft changes have been committed or deployed. A rendered browser check is still needed because the computer tool had no connected browser during implementation.

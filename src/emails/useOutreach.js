@@ -189,7 +189,8 @@ export function useBatchPoll(batchId, onSettled) {
     error,
     busy,
     cancel: () => act(outreachApi.cancelBatch),
-    retry: () => act(outreachApi.retryBatch),
+    retry: () => act((id) => outreachApi.retryBatch(id)),
+    resendUnconfirmed: () => act((id) => outreachApi.retryBatch(id, { include_unconfirmed: true })),
   }
 }
 

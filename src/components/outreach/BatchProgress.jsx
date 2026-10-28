@@ -4,7 +4,7 @@ import { Chip, Dot } from './bits'
 
 /** Live view of one send job. Works for finished batches too, where it just stops polling. */
 export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 'Done' }) {
-  const { batch, error, busy, cancel, retry } = useBatchPoll(batchId, onSettled)
+  const { batch, error, busy, cancel, retry, resendUnconfirmed } = useBatchPoll(batchId, onSettled)
 
   if (!batch) {
     return (
@@ -15,7 +15,8 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
   }
 
   const status = BATCH_STATUS[batch.status] || BATCH_STATUS.queued
-  const finished = batch.sent + batch.failed + batch.skipped
+  const unconfirmed = batch.unconfirmed || 0
+  const finished = batch.sent + batch.failed + batch.skipped + unconfirmed
   const pct = batch.total ? Math.round((finished / batch.total) * 100) : 100
   const active = batch.status === 'queued' || batch.status === 'sending'
   const isDone = !active
@@ -56,6 +57,14 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
               {batch.failed}
             </span>
           </div>
+          {unconfirmed > 0 && (
+            <div className="ou-stat">
+              <span className="ou-label">Unconfirmed</span>
+              <span className="ou-stat-num ou-mono" style={{ color: 'var(--color-warning, var(--color-danger))' }}>
+                {unconfirmed}
+              </span>
+            </div>
+          )}
           <div className="ou-stat">
             <span className="ou-label">Skipped</span>
             <span className="ou-stat-num ou-mono">{batch.skipped}</span>
@@ -65,6 +74,12 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
             <span className="ou-stat-num ou-mono">{batch.total}</span>
           </div>
         </div>
+        {unconfirmed > 0 && !active && (
+          <p className="ou-sub" style={{ marginTop: 'var(--space-3)' }}>
+            {plural(unconfirmed, 'email')} may or may not have been delivered because the connection dropped while
+            sending. Check your Sent mail before sending {unconfirmed === 1 ? 'it' : 'them'} again.
+          </p>
+        )}
         {error && <p className="ou-error" style={{ padding: 'var(--space-3) 0 0' }}>{error}</p>}
       </div>
 
@@ -99,6 +114,11 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
           {!active && batch.failed > 0 && (
             <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={retry} disabled={busy}>
               Retry {plural(batch.failed, 'failed email')}
+            </button>
+          )}
+          {!active && unconfirmed > 0 && (
+            <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={resendUnconfirmed} disabled={busy}>
+              Send {plural(unconfirmed, 'unconfirmed email')} again
             </button>
           )}
           {isDone && onDone && (

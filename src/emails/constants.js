@@ -77,6 +77,11 @@ export const BLOCKERS = {
     tone: 'warn',
     tip: 'Follow-ups unlock seven days after the last email.',
   },
+  in_flight: {
+    label: 'Already sending',
+    tone: 'warn',
+    tip: 'This school is already in a send that has not finished. Wait for it, or cancel it first.',
+  },
   unsubscribed: {
     label: 'Unsubscribed',
     tone: 'danger',
@@ -164,6 +169,7 @@ export const RECIPIENT_STATUS = {
   sending: { label: 'Sending', tone: 'live' },
   sent: { label: 'Sent', tone: 'ok' },
   failed: { label: 'Failed', tone: 'danger' },
+  unconfirmed: { label: 'Unconfirmed', tone: 'warn' },
   skipped: { label: 'Skipped', tone: 'warn' },
   cancelled: { label: 'Cancelled', tone: 'neutral' },
 }

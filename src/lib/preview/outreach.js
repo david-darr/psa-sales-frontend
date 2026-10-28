@@ -160,6 +160,7 @@ function counts(batch) {
     sent: tally('sent'),
     failed: tally('failed'),
     skipped: tally('skipped'),
+    unconfirmed: tally('unconfirmed'),
   }
 }
 

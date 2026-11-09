@@ -1,10 +1,21 @@
 import { BATCH_STATUS, KINDS, RECIPIENT_STATUS, plural, relativeTime } from '../../emails/constants'
 import { useBatchPoll } from '../../emails/useOutreach'
 import { Chip, Dot } from './bits'
+import { useEffect, useState } from 'react'
+import api from '../../lib/api'
+import RetryReview from './RetryReview'
 
 /** Live view of one send job. Works for finished batches too, where it just stops polling. */
 export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 'Done' }) {
-  const { batch, error, busy, cancel, retry, resendUnconfirmed } = useBatchPoll(batchId, onSettled)
+  const { batch, error, busy, cancel, retry } = useBatchPoll(batchId, onSettled)
+  const [reviewing, setReviewing] = useState(null)
+  const [worker, setWorker] = useState(null)
+  useEffect(() => {
+    let alive = true
+    const check = () => api.get('/api/outreach/worker').then((data) => alive && setWorker(data)).catch(() => alive && setWorker({ online: false }))
+    check(); const timer = setInterval(check, 15000)
+    return () => { alive = false; clearInterval(timer) }
+  }, [])
 
   if (!batch) {
     return (
@@ -14,12 +25,12 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
     )
   }
 
-  const status = BATCH_STATUS[batch.status] || BATCH_STATUS.queued
+  const status = batch.status === 'paused' ? { tone: 'warn', label: 'Paused for review' } : BATCH_STATUS[batch.status] || BATCH_STATUS.queued
   const unconfirmed = batch.unconfirmed || 0
-  const finished = batch.sent + batch.failed + batch.skipped + unconfirmed
+  const finished = batch.sent + batch.failed + batch.skipped + unconfirmed + (batch.cancelled || 0)
   const pct = batch.total ? Math.round((finished / batch.total) * 100) : 100
   const active = batch.status === 'queued' || batch.status === 'sending'
-  const isDone = !active
+  const isDone = ['done', 'cancelled'].includes(batch.status)
 
   return (
     <div className="ou-card" aria-live="polite">
@@ -36,6 +47,8 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
         </Chip>
       </div>
       <div className="ou-card-body">
+        {active && worker && !worker.online && worker.status !== 'demo' && <p className="ou-callout tone-warning" role="status">The separate worker is offline or not configured. This batch is saved; sending waits for the worker.</p>}
+        {batch.paused_reason && <p className="ou-callout tone-warning" role="status">{batch.paused_reason} {batch.queued} messages remain queued.</p>}
         <div
           className="ou-progress"
           role="progressbar"
@@ -80,6 +93,8 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
             sending. Check your Sent mail before sending {unconfirmed === 1 ? 'it' : 'them'} again.
           </p>
         )}
+        {batch.recipients?.some((row) => row.status !== 'unconfirmed' && row.attempts?.some((attempt) => attempt.status === 'unconfirmed')) &&
+          <p className="ou-callout tone-warning">An earlier send attempt is still unconfirmed. A later successful resend does not prove the first copy failed to arrive.</p>}
         {error && <p className="ou-error" style={{ padding: 'var(--space-3) 0 0' }}>{error}</p>}
       </div>
 
@@ -88,7 +103,7 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
           {batch.recipients.map((row) => {
             const meta = RECIPIENT_STATUS[row.status] || RECIPIENT_STATUS.queued
             return (
-              <li key={row.school_id}>
+              <li key={row.id || `${row.school_id}:${row.email}`}>
                 <Dot tone={meta.tone} />
                 <div className="ou-list-main">
                   <span className="ou-strong" style={{ display: 'inline' }}>
@@ -104,21 +119,21 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
       )}
 
       <div className="ou-pager">
-        <span>{active ? `${plural(batch.total - finished, 'email')} to go` : 'Finished'}</span>
+        <span>{active ? `${plural(batch.total - finished, 'email')} to go` : batch.status === 'paused' ? 'Paused; review before continuing' : batch.status === 'stalled' ? 'Stopped responding; check Sent mail' : 'Finished'}</span>
         <span className="ou-actionbar-buttons">
-          {active && (
+          {(active || batch.status === 'paused' || batch.status === 'stalled') && (
             <button type="button" className="ou-btn ou-btn-danger ou-btn-sm" onClick={cancel} disabled={busy}>
               Cancel remaining
             </button>
           )}
-          {!active && batch.failed > 0 && (
-            <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={retry} disabled={busy}>
-              Retry {plural(batch.failed, 'failed email')}
+          {!active && (batch.failed > 0 || batch.status === 'paused' || batch.status === 'stalled') && (
+            <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={() => setReviewing(false)} disabled={busy}>
+              Review remaining messages
             </button>
           )}
           {!active && unconfirmed > 0 && (
-            <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={resendUnconfirmed} disabled={busy}>
-              Send {plural(unconfirmed, 'unconfirmed email')} again
+            <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={() => setReviewing(true)} disabled={busy}>
+              Review {plural(unconfirmed, 'unconfirmed email')}
             </button>
           )}
           {isDone && onDone && (
@@ -128,6 +143,8 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
           )}
         </span>
       </div>
+      {reviewing !== null && <RetryReview batchId={batchId} include={reviewing} busy={busy}
+        onClose={() => setReviewing(null)} onApprove={async (options) => { if (await retry(options)) setReviewing(null) }} />}
     </div>
   )
 }

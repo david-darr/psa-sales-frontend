@@ -11,6 +11,7 @@ export default function SchoolDialog({ onClose, onSaved, initial = {} }) {
     address: initial.address || '',
     phone: initial.phone || '',
     school_type: 'preschool',
+    shared_contact_confirmed: false,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -128,6 +129,7 @@ export default function SchoolDialog({ onClose, onSaved, initial = {} }) {
             </label>
           </div>
         </details>
+        <label className="workspace-subtle"><input type="checkbox" checked={draft.shared_contact_confirmed} onChange={(e) => change('shared_contact_confirmed', e.target.checked)} /> This is a distinct school sharing a mailbox with another school. Keep their profiles separate; still check name and address matches.</label>
         <p className="workspace-subtle">
           You’ll own this school. PSA checks for existing team assignments
           before adding it.

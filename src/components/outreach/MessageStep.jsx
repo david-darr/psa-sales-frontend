@@ -1,19 +1,23 @@
 import { useRef } from 'react'
+import { useSharedTemplates } from '../../emails/useSharedTemplates'
+import AttachmentPicker from './AttachmentPicker'
 import MarkupToolbar from '../../emails/MarkupToolbar'
 import { DEFAULT_TEMPLATES, KINDS, TEMPLATE_VARS } from '../../emails/constants'
 
 /** Subject, body, variables and attachments. `message.custom` false means the standard template. */
 export default function MessageStep({ kind, message, onChange }) {
   const bodyRef = useRef(null)
+  const library = useSharedTemplates()
   const always = kind === 'custom'
   const editing = always || message.custom
 
   const setMode = (custom) => {
+    const copy = { ...message, template_id: undefined, template_revision: undefined, template_audience: undefined }
     if (custom && !message.subject && !message.body) {
       const seed = DEFAULT_TEMPLATES[kind] || DEFAULT_TEMPLATES.custom
-      onChange({ ...message, custom: true, subject: seed.subject, body: seed.body })
+      onChange({ ...copy, custom: true, subject: seed.subject, body: seed.body })
     } else {
-      onChange({ ...message, custom })
+      onChange({ ...copy, custom })
     }
   }
 
@@ -46,6 +50,15 @@ export default function MessageStep({ kind, message, onChange }) {
         )}
       </div>
       <div className="ou-card-body">
+        {kind !== 'custom' && <label className="ou-field"><span className="ou-label">Shared template</span>
+          <select className="ou-input" value={message.template_id || ''} onChange={(event) => {
+            const chosen = library.items.find((item) => item.id === Number(event.target.value))
+            if (chosen) onChange({ ...message, template_id: chosen.id, template_revision: chosen.revision, template_audience: chosen.audience, custom: true, subject: chosen.subject, body: chosen.body, attachments: false })
+            else onChange({ ...message, template_id: undefined, template_revision: undefined, template_audience: undefined })
+          }}><option value="">Use standard or custom copy</option>{library.items.filter((item) => item.kind === kind && !item.archived).map((item) => <option key={item.id} value={item.id}>{item.name} · v{item.revision}</option>)}</select>
+          {library.error && <span role="alert">{library.error}</span>}
+        </label>}
+        {message.template_id && <p className="ou-muted">Editing a batch copy of version {message.template_revision}. The shared library stays unchanged. Every recipient must be reviewed before sending.</p>}
         {!editing && (
           <p className="ou-muted" style={{ marginTop: 0 }}>
             {KINDS[kind]?.blurb} The standard message fills in each school and contact name. Choose Customize to
@@ -89,15 +102,7 @@ export default function MessageStep({ kind, message, onChange }) {
             </div>
           </>
         )}
-        <label className="ou-checkline">
-          <input
-            type="checkbox"
-            className="ou-check"
-            checked={message.attachments}
-            onChange={(event) => onChange({ ...message, attachments: event.target.checked })}
-          />
-          Attach the PSA program flyers
-        </label>
+        <AttachmentPicker defaults={library.items.find((item) => item.id === message.template_id)?.attachments || []} selected={message.attachment_ids || []} onChange={(attachment_ids) => onChange({ ...message, attachment_ids, attachments: false })} />
       </div>
     </div>
   )

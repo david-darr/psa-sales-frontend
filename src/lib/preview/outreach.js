@@ -1,3 +1,5 @@
+import { renderDemoTemplate, resolveDemoTemplate, demoAttachments } from './templates'
+import { contactsPreview } from './contacts'
 // Demo handlers for the outreach endpoints. Return undefined to fall through to previewRequest.
 //
 // Everything here is in-memory and only reachable when UI_PREVIEW is on (the
@@ -54,7 +56,7 @@ const pageParams = () =>
 const dayStart = (date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
 
-function buildPool(ctx) {
+export function buildPool(ctx) {
   const { user, team } = ctx
   const rows = ctx.scoped(ctx.schools, new URLSearchParams()).map((school) => {
     const sent = ctx.emails.filter((e) => e.sales_school_id === school.id)
@@ -97,7 +99,7 @@ function buildPool(ctx) {
   return rows
 }
 
-function evaluate(row, kind, ctx) {
+export function evaluate(row, kind, ctx) {
   const blockers = []
   if (!ctx.user.mail_connected) blockers.push('no_mailbox')
   if (!row.email) blockers.push('missing_email')
@@ -312,14 +314,15 @@ function fill(template, row, user) {
     .replace(/\[user_email\]/g, user.email)
 }
 
-function previewFor(row, body, ctx) {
+export function previewFor(row, body, ctx) {
   const defaults = DEFAULTS[body.kind] || DEFAULTS.custom
-  const subject = body.subject?.trim()
+  const shared = renderDemoTemplate(body, row, ctx.user)
+  const subject = shared?.subject ?? (body.subject?.trim()
     ? fill(body.subject, row, ctx.user)
-    : defaults.subject
-  const text = body.body?.trim()
+    : defaults.subject)
+  const text = shared?.body ?? (body.body?.trim()
     ? fill(body.body, row, ctx.user)
-    : defaults.body(row, ctx.user)
+    : defaults.body(row, ctx.user))
   const html = escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
     .replace(/\+\+(.+?)\+\+/g, '<span style="font-size:1.25em">$1</span>')
@@ -336,6 +339,7 @@ function previewFor(row, body, ctx) {
     subject,
     body_html: html,
     body_text: text,
+    attachments: demoAttachments(body).map((item)=>item.name),
     warnings: [...new Set(warnings)],
   }
 }
@@ -392,6 +396,8 @@ export function outreachPreview(ctx) {
     const page = Math.max(Number(params.get('page')) || 1, 1)
     const perPage = Math.min(Math.max(Number(params.get('per_page')) || 50, 1), 200)
     let rows = buildPool(ctx)
+    const contactMode = params.get('contact_mode') === '1'
+    if (params.get('scope') === 'mine' || contactMode) rows = rows.filter((row) => row.owner_id === ctx.user.id)
     if (kind === 'followup') rows = rows.filter((row) => row.days !== null)
     rows = rows.filter(
       (row) =>
@@ -400,7 +406,16 @@ export function outreachPreview(ctx) {
         (!stage || row.status === stage) &&
         (!owner || (ctx.user.admin && row.owner_id === owner)),
     )
-    let items = rows.map((row) => toRecipient(row, kind, ctx))
+    let items = rows.map((row) => {
+      const item = toRecipient(row, kind, ctx)
+      if (!contactMode) return item
+      const actual = ctx.schools.find((school) => school.id === row.school_id)
+      const contacts = actual ? contactsPreview({ ...ctx, endpoint: `/api/sales-schools/${actual.id}/contacts`, method: 'GET' }).contacts : [{ email: row.email, do_not_contact: row.unsubscribed }].filter((c) => c.email)
+      const blockers = item.blockers.filter((reason) => !['missing_email', 'recently_contacted', 'not_due', 'unsubscribed'].includes(reason))
+      if (!contacts.length) blockers.push('missing_email')
+      else if (contacts.every((contact) => contact.do_not_contact)) blockers.push('unsubscribed')
+      return { ...item, contact_count: contacts.length, blockers, eligible: !blockers.length }
+    })
     items =
       kind === 'followup'
         ? items.sort((a, b) => a.followup_due_at.localeCompare(b.followup_due_at))
@@ -416,6 +431,10 @@ export function outreachPreview(ctx) {
   if (endpoint === '/api/outreach/batches' && method === 'POST') {
     const ids = Array.isArray(body?.school_ids) ? body.school_ids : []
     if (!ids.length) throw new Error('Choose at least one recipient.')
+    if (resolveDemoTemplate(body) || demoAttachments(body).length) {
+      if (!body.preview_token) throw new Error('Review every shared-template message before sending.')
+      for (const id of ids) { const row = buildPool(ctx).find((item) => item.school_id === id); if (row) renderDemoTemplate(body, row, ctx.user) }
+    }
     if (!['initial', 'followup', 'custom'].includes(body.kind))
       throw new Error('Unknown message type.')
     if (!ctx.user.mail_connected)

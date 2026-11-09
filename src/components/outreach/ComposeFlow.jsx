@@ -6,6 +6,8 @@ import BatchProgress from './BatchProgress'
 import MessageStep from './MessageStep'
 import PreviewPane from './PreviewPane'
 import RecipientPicker from './RecipientPicker'
+import SelfTest from './SelfTest'
+import CampaignCreate from './CampaignCreate'
 
 const STEPS = [
   ['recipients', 'Recipients'],
@@ -18,6 +20,7 @@ const emptyMessage = (kind) => ({
   subject: DEFAULT_TEMPLATES[kind]?.subject ?? '',
   body: DEFAULT_TEMPLATES[kind]?.body ?? '',
   attachments: false,
+  attachment_ids: [],
 })
 
 export default function ComposeFlow({
@@ -38,6 +41,14 @@ export default function ComposeFlow({
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
   const [note, setNote] = useState('')
+  const [audience, setAudience] = useState('all')
+  const [campaignId, setCampaignId] = useState('standard')
+  const [campaigns, setCampaigns] = useState([])
+  const [contexts, setContexts] = useState({})
+
+  useEffect(() => {
+    outreachApi.campaigns().then((data) => setCampaigns(data.items)).catch((err) => setSendError(err.message))
+  }, [])
 
   const ids = useMemo(() => [...selected.keys()], [selected])
   const editing = kind === 'custom' || message.custom
@@ -72,6 +83,10 @@ export default function ComposeFlow({
     subject: message.subject,
     body: message.body,
     attachments: message.attachments,
+    attachmentIds: message.attachment_ids,
+    templateId: message.template_id, templateRevision: message.template_revision,
+    audience: message.template_audience && message.template_audience !== 'general' ? message.template_audience : audience,
+    campaignId, contexts,
     enabled: step !== 'recipients' && ids.length > 0,
   })
 
@@ -91,10 +106,10 @@ export default function ComposeFlow({
     )
   }
 
-  const remaining = limits.limits?.remaining ?? null
+  const remaining = limits.limits ? Math.min(limits.limits.remaining, preview.remaining ?? Infinity) : null
   const mailbox = limits.limits ? limits.limits.mailbox_connected : true
   const skipped = preview.previews.filter((item) => item.eligible === false).length
-  const ready = ids.length - skipped
+  const ready = preview.previews.length - skipped
   const overLimit = remaining !== null && ready > remaining
   const inboxBlocked = kind === 'followup' && !mailSync?.ready
   const blockers = []
@@ -104,12 +119,17 @@ export default function ComposeFlow({
   if (overLimit) blockers.push(`You can send ${remaining} more today. Deselect ${ready - remaining} to continue.`)
   if (remaining === 0) blockers.push('You have reached today\'s sending limit.')
   if (!ready) blockers.push('Select at least one recipient who is ready.')
+  if (preview.truncated || !preview.token) blockers.push('Review every contact. Select at most 100 schools and 100 contact mailboxes per batch.')
+  if (preview.previews.some((row) => row.context_required)) blockers.push('Choose a school context for each shared mailbox.')
   const canSend = !blockers.length && !sending && !preview.loading && !preview.error
 
   const send = async () => {
     setSending(true)
     setSendError('')
-    const payload = { kind, school_ids: ids }
+    const payload = { kind, school_ids: ids, attachment_ids: message.attachment_ids || [], contact_mode: true,
+      audience: message.template_audience && message.template_audience !== 'general' ? message.template_audience : audience,
+      campaign_id: campaignId, contact_contexts: contexts }
+    if (message.template_id) { payload.template_id = message.template_id; payload.template_revision = message.template_revision }
     if (editing) {
       payload.subject = toServerTemplate(message.subject)
       payload.body = toServerTemplate(message.body)
@@ -135,9 +155,8 @@ export default function ComposeFlow({
     <div className="ou-page">
       {kind === 'followup' && (
         <p className="workspace-subtle" style={{ margin: '0 0 12px' }}>
-          Follow-ups also go out automatically, 3 and 7 days after your first email, on weekdays
-          between 9am and 5pm Eastern. PSA checks your inbox first and skips anyone who replied.
-          Use this tab to send one sooner or change the message.
+          Review mode: choose and approve each follow-up. PSA checks that your inbox is current and skips
+          contacts who replied or asked to stop. Automatic campaigns will require separate authorization.
         </p>
       )}
       <div className="ou-steps" role="list" aria-label="Outreach steps">
@@ -155,6 +174,31 @@ export default function ComposeFlow({
             {label}
           </button>
         ))}
+      </div>
+
+      <div className="ou-card ou-card-body" style={{ marginBottom: 'var(--space-4)' }}>
+        <div className="ou-compose">
+          <label className="ou-field"><span className="ou-label">Campaign</span>
+            <select className="ou-select" value={campaignId} onChange={(event) => setCampaignId(event.target.value)}>
+              <option value="standard">Standard outreach</option>
+              {campaigns.filter((row) => row.id !== 'standard').map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}
+            </select>
+          </label>
+          <label className="ou-field"><span className="ou-label">Contact audience</span>
+            <select className="ou-select" value={message.template_audience && message.template_audience !== 'general' ? message.template_audience : audience}
+              disabled={Boolean(message.template_audience && message.template_audience !== 'general')}
+              onChange={(event) => setAudience(event.target.value)}>
+              <option value="all">All school contacts, including unknown roles</option>
+              <option value="principal_ap">Principals and assistant principals</option>
+              <option value="pta_pto">PTA / PTO</option><option value="enrichment">Enrichment coordinators</option>
+              <option value="trunk_or_treat">Trunk-or-Treat tagged contacts</option>
+            </select>
+          </label>
+        </div>
+        <p className="ou-muted">One email per matching mailbox. Shared mailboxes are deduplicated across reps in this campaign.
+          Your daily allowance resets at midnight Eastern.</p>
+        <CampaignCreate onCreated={(campaign) => { setCampaigns((rows) => [...rows, campaign]); setCampaignId(campaign.id) }} />
+        <details><summary className="ou-muted">How sending pauses</summary><p className="ou-muted">PSA checks your inbox between groups of five messages. Detected hard bounces, stop requests and complaints pause remaining outreach. Inbox checks must complete before continuing. Gmail complaints are not a connected feedback feed; record a phone request or reported complaint from the contact’s school page. A message already being sent may still finish.</p></details>
       </div>
 
       {note && (
@@ -187,6 +231,7 @@ export default function ComposeFlow({
             error={preview.error}
             truncated={preview.truncated}
             onRetry={preview.reload}
+            onContext={(id, school) => setContexts((value) => ({ ...value, [id]: school }))}
           />
         </div>
       )}
@@ -219,7 +264,10 @@ export default function ComposeFlow({
             error={preview.error}
             truncated={preview.truncated}
             onRetry={preview.reload}
+            onContext={(id, school) => setContexts((value) => ({ ...value, [id]: school }))}
           />
+          {preview.unmatched?.length > 0 && <p className="ou-callout tone-warning" role="status">{preview.unmatched.length} selected schools have no contacts matching this audience. Add contacts on the school page or choose a different audience.</p>}
+          {ids.length === 1 && <SelfTest kind={kind} schoolId={ids[0]} message={message} editing={editing} onChanged={limits.reload} />}
           {blockers.length > 0 && (
             <div className="ou-callout tone-danger" role="alert">
               <span>{blockers[0]}</span>

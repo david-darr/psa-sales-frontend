@@ -720,3 +720,13 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Shared library: compact, readable cards and one focused editor. */
+.template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 10px; }
+.template-tile { text-align: left; display: grid; gap: 8px; padding: 16px; border: 1px solid var(--color-border); border-radius: 10px; color: inherit; background: var(--color-surface); cursor: pointer; overflow-wrap: anywhere; }
+.template-tile span { font-size: 12px; opacity: .75; }
+.template-tile.is-active { border-color: #e53935; }
+.template-editor { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.template-history { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+
+.template-actions { display: flex; flex-wrap: wrap; gap: 8px; }

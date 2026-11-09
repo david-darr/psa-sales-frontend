@@ -10,6 +10,10 @@ import ReplyChainModal from './emails/ReplyChainModal'
 import CustomReplyModal from './emails/CustomReplyModal'
 import { BATCH_ACTIVE, EMPTY_CUSTOM_REPLY, KINDS } from './emails/constants'
 import { useBatchList, useLimits, useRecipients } from './emails/useOutreach'
+import AttachmentCatalog from './components/outreach/AttachmentCatalog'
+import TemplateLibrary from './components/outreach/TemplateLibrary'
+import SequencesPanel from './components/outreach/SequencesPanel'
+import AgentApprovals from './components/outreach/AgentApprovals'
 import ComposeFlow from './components/outreach/ComposeFlow'
 import HistoryTab from './components/outreach/HistoryTab'
 import InboxTab from './components/outreach/InboxTab'
@@ -19,9 +23,13 @@ import './styles/outreach.css'
 const TABS = [
   ['compose', 'Compose'],
   ['followups', 'Follow-ups'],
+  ['sequences', 'Sequences'],
+  ['approvals', 'Agent approvals'],
   ['inbox', 'Inbox'],
   ['history', 'History'],
   ['add', 'Add and import'],
+  ['templates', 'Templates'],
+  ['attachments', 'Attachments'],
 ]
 
 const parseIds = (search) => {
@@ -96,9 +104,9 @@ export default function Emails() {
     setReplyChain(null)
   }
 
-  const submitCustomReply = async () => {
+  const submitCustomReply = async (proof) => {
     setSending(true)
-    const ok = await center.sendCustomReply(customReply)
+    const ok = await center.sendCustomReply({ ...customReply, preview_token: proof })
     setSending(false)
     if (ok) setCustomReply(null)
   }
@@ -192,6 +200,8 @@ export default function Emails() {
         )}
 
         {tab === 'followups' && <ComposeFlow key="followup" kind="followup" {...flowProps} />}
+        {tab === 'sequences' && <SequencesPanel />}
+        {tab === 'approvals' && <AgentApprovals />}
 
         {tab === 'inbox' && (
           <InboxTab
@@ -205,6 +215,8 @@ export default function Emails() {
 
         {tab === 'history' && <HistoryTab emails={center.sentEmails} rev={rev} />}
 
+        {tab === 'attachments' && <AttachmentCatalog />}
+        {tab === 'templates' && <TemplateLibrary />}
         {tab === 'add' && <AddSchoolsCard onAddSchool={center.addSchool} onUploadCsv={center.uploadCsv} />}
       </div>
 

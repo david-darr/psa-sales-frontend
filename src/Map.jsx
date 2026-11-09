@@ -25,6 +25,7 @@ function Territory() {
   const { user } = useAuth()
   const [params] = useSearchParams()
   const ownerParam = params.get('owner')
+  const poolScope = params.get('scope') === 'unassigned'
   const schoolParam = params.get('school')
 
   const [repSel, setRepSel] = useState(() => (ownerParam ? [String(ownerParam)] : []))
@@ -53,7 +54,7 @@ function Territory() {
     const id = ++requestId.current
     const stages = ['partner', 'former', ...(includePipeline ? PIPELINE_STAGES : [])]
     try {
-      const result = await api.get(`/api/crm/map-accounts?stages=${stages.join(',')}`)
+      const result = await api.get(`/api/crm/map-accounts?stages=${stages.join(',')}${poolScope ? '&scope=unassigned' : ''}`)
       if (id === requestId.current) {
         setData(result)
         setError('')
@@ -63,7 +64,7 @@ function Territory() {
     } finally {
       if (id === requestId.current) setLoading(false)
     }
-  }, [includePipeline])
+  }, [includePipeline, poolScope])
 
   const loadProspects = useCallback(async () => {
     try {
@@ -100,7 +101,7 @@ function Territory() {
   const visibleAccounts = useMemo(
     () =>
       repSel.length
-        ? inGroups.filter((row) => repSel.includes(String(row.owner_id)))
+        ? inGroups.filter((row) => repSel.includes(String(row.owner_id ?? 0)))
         : inGroups,
     [inGroups, repSel],
   )
@@ -119,7 +120,7 @@ function Territory() {
   const stageCounts = useMemo(() => {
     const out = { active: 0, former: 0, pipeline: 0 }
     for (const row of accounts) {
-      if (repSel.length && !repSel.includes(String(row.owner_id))) continue
+      if (repSel.length && !repSel.includes(String(row.owner_id ?? 0))) continue
       const group = stageGroup(row.status)
       if (group in out) out[group] += 1
     }
@@ -129,7 +130,7 @@ function Territory() {
   const reps = useMemo(() => {
     const counts = new Map()
     for (const row of inGroups) {
-      const key = String(row.owner_id)
+      const key = String(row.owner_id ?? 0)
       counts.set(key, (counts.get(key) || 0) + 1)
     }
     return (data?.reps || [])
@@ -172,7 +173,7 @@ function Territory() {
   }, [loading, data, schoolParam, accountFC, prospectFC, fitTo])
 
   const fitMine = () => {
-    const mine = visibleAccounts.filter((row) => String(row.owner_id) === String(user?.id))
+    const mine = visibleAccounts.filter((row) => String(row.owner_id ?? 0) === String(user?.id))
     fitTo(accountFeatures(mine.length ? mine : visibleAccounts).features)
   }
 

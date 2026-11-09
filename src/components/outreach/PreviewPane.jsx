@@ -3,7 +3,7 @@ import { warningMeta } from '../../emails/constants'
 import { Chip } from './bits'
 
 /** One rendered email at a time, with a picker to flip through recipients. */
-export default function PreviewPane({ previews, loading, error, truncated, onRetry }) {
+export default function PreviewPane({ previews, loading, error, truncated, onRetry, onContext }) {
   const [index, setIndex] = useState(0)
   const item = previews[Math.min(index, previews.length - 1)]
 
@@ -39,14 +39,21 @@ export default function PreviewPane({ previews, loading, error, truncated, onRet
           style={{ maxWidth: '100%', flex: 1 }}
         >
           {previews.map((entry, i) => (
-            <option key={entry.school_id} value={i}>
-              {i + 1}. {entry.school_name}
+            <option key={entry.contact_id || entry.school_id} value={i}>
+              {i + 1}. {entry.contact_name || entry.email || entry.school_name} · {entry.school_name}
             </option>
           ))}
         </select>
         {loading && <span className="ou-muted ou-mono">Updating</span>}
       </div>
       <div className="ou-card-body">
+        {item.contexts?.length > 1 && <label className="ou-field"><span className="ou-label">School context for this shared mailbox</span>
+          <select className="ou-select" aria-label="School context for shared mailbox" value={item.context_required ? '' : item.school_id}
+            disabled={loading} onChange={(event) => event.target.value && onContext?.(item.contact_id, Number(event.target.value))}>
+            <option value="">Choose which school this message refers to</option>
+            {item.contexts.map((context) => <option key={context.school_id} value={context.school_id}>{context.school_name} · {context.contact_name || 'No contact name'}</option>)}
+          </select>
+        </label>}
         <div className="ou-mail">
           <div className="ou-mail-head">
             <span className="ou-muted">To {item.email || 'no email on file'}</span>
@@ -73,8 +80,7 @@ export default function PreviewPane({ previews, loading, error, truncated, onRet
         </div>
         {truncated && (
           <p className="ou-sub" style={{ marginTop: 'var(--space-3)' }}>
-            Previewing the first 100 recipients. Every recipient gets the same message with their own details filled
-            in.
+            Only the first 100 schools are previewed. Reduce your selection before sending so every contact is reviewed.
           </p>
         )}
         {error && (

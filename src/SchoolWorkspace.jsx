@@ -5,6 +5,7 @@ import AppLayout from './components/AppLayout'
 import Icon from './components/Icon'
 import Modal from './components/Modal'
 import TaskDialog from './components/TaskDialog'
+import SchoolContacts from './components/SchoolContacts'
 import { Panel, Empty, ErrorNotice } from './components/WorkspaceUI'
 import { STAGES, dateLabel, dueLabel, useResource } from './lib/crm'
 import api from './lib/api'
@@ -23,6 +24,7 @@ function EditSchool({ school, onClose, onSave }) {
     ['email', 'Primary email'],
     ['phone', 'Phone'],
     ['address', 'Address'],
+    ['county', 'County'],
   ]
   const change = (key, value) => setDraft((old) => ({ ...old, [key]: value }))
   const submit = async (event) => {
@@ -390,6 +392,7 @@ export default function SchoolWorkspace() {
                   </div>
                 </div>
               </Panel>
+              <SchoolContacts schoolId={id} onChanged={reload} />
               <Panel title="Next action">
                 <p style={{ fontSize: '.8rem', color: 'var(--color-text)' }}>
                   {school.next_action || 'What’s the next step?'}

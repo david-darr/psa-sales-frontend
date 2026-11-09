@@ -36,6 +36,8 @@ export const EMPTY_CUSTOM_REPLY = {
 
 /** Message types the batch endpoints understand. */
 export const KINDS = {
+  reply: { label: 'Conversation reply' },
+  test: { label: 'Test to myself' },
   initial: {
     label: 'Intro email',
     blurb: 'First contact with schools you have not emailed yet.',
@@ -52,6 +54,10 @@ export const KINDS = {
 
 /** Why a school cannot be emailed right now, in plain language. */
 export const BLOCKERS = {
+  choose_school_context: { label: 'Choose a school', tone: 'warn', tip: 'This mailbox belongs to several selected schools. Choose which school the message refers to.' },
+  campaign_already_contacted: { label: 'Already in this campaign', tone: 'warn', tip: 'This campaign already reserved or contacted this mailbox. Use the existing conversation or ask an admin to review a distinct campaign.' },
+  no_campaign_intro: { label: 'No campaign intro', tone: 'warn', tip: 'A follow-up needs an intro in the same campaign.' },
+  conversation_context_changed: { label: 'Use the original school', tone: 'warn', tip: 'Follow up from the original sender and school conversation.' },
   missing_email: {
     label: 'Missing email',
     tone: 'danger',
@@ -162,6 +168,7 @@ export const BATCH_STATUS = {
   done: { label: 'Done', tone: 'ok' },
   cancelled: { label: 'Cancelled', tone: 'neutral' },
   stalled: { label: 'Stalled', tone: 'danger' },
+  paused: { label: 'Paused for review', tone: 'warn' },
 }
 
 export const RECIPIENT_STATUS = {

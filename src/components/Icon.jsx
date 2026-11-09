@@ -31,6 +31,9 @@ export default function Icon({ name = 'grid', size = 18, className = '' }) {
         <path d="M3 6h18M6 12h12M9 18h6" />
       </>
     ),
+    upload: (
+      <><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5" /></>
+    ),
     download: (
       <>
         <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />

@@ -2,31 +2,32 @@ import { useRef, useState } from 'react'
 import Modal from '../components/Modal'
 import { UI_PREVIEW } from '../lib/previewMode'
 import MarkupToolbar from './MarkupToolbar'
+import api from '../lib/api'
 
-/**
- * Reply to a school that has responded.
- *
- * This dialog did not previously exist. `showCustomReplyModal` was declared
- * and set to true from the reply-chain modal's "Send Custom Reply" button, but
- * no JSX ever read it - so that button closed the thread view and nothing
- * opened. `handleSendCustomReply` was likewise unreachable (eslint flagged
- * both as unused), which left the backend's /api/send-custom-reply endpoint
- * with no way to be called from the UI at all.
- */
+/** Review a reply to the server-selected original contact before queueing it. */
 export default function CustomReplyModal({ draft, onChange, onSubmit, onClose, sending }) {
   const messageRef = useRef(null)
   const [error, setError] = useState('')
+  const [review, setReview] = useState(null)
+  const [reviewing, setReviewing] = useState(false)
+  const contentKey = JSON.stringify([draft.email_id, draft.subject, draft.message])
+  const current = review?.key === contentKey ? review : null
 
   const set = (field) => (e) => onChange({ ...draft, [field]: e.target.value })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!draft.message.trim()) {
       setError('Please write a reply message.')
       return
     }
     setError('')
-    onSubmit()
+    if (current) { onSubmit(current.preview_token); return }
+    setReviewing(true)
+    try {
+      const result = await api.post('/api/outreach/reply-preview', { email_id: draft.email_id, subject: draft.subject, message: draft.message })
+      setReview({ ...result, key: contentKey })
+    } catch (err) { setError(err.message) } finally { setReviewing(false) }
   }
 
   return (
@@ -78,6 +79,8 @@ export default function CustomReplyModal({ draft, onChange, onSubmit, onClose, s
           </div>
         </div>
 
+        {current && <div className="ou-mail"><div className="ou-mail-head"><span>Reply to {current.email}</span><strong>{current.subject}</strong></div>
+          <div className="ou-mail-body" style={{ whiteSpace: 'pre-wrap' }}>{current.body_text}</div></div>}
         {error && (
           <div className="ui-alert tone-danger" role="alert">
             {error}
@@ -90,9 +93,9 @@ export default function CustomReplyModal({ draft, onChange, onSubmit, onClose, s
           type="submit"
           form="custom-reply-form"
           className="modern-btn-primary ui-grow"
-          disabled={sending || UI_PREVIEW}
+          disabled={sending || reviewing || UI_PREVIEW}
         >
-          {UI_PREVIEW ? 'Sending disabled in demo' : sending ? 'Sending...' : 'Send Reply'}
+          {UI_PREVIEW ? 'Sending disabled in demo' : sending ? 'Queuing...' : reviewing ? 'Preparing review...' : current ? 'Approve and queue reply' : 'Review reply'}
         </button>
         <button type="button" className="modern-btn-primary is-neutral" onClick={onClose}>
           Cancel

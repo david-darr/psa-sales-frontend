@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import AppLayout from './components/AppLayout'
 import Icon from './components/Icon'
+import AssignmentDialog from './components/AssignmentDialog'
 import SchoolDialog from './components/SchoolDialog'
 import {
   Empty,
@@ -22,6 +23,7 @@ import api from './lib/api'
 const VIEWS = [
   ['workspace', 'All schools'],
   ['mine', 'My schools'],
+  ['unassigned', 'Unassigned pool'],
   ['overdue', 'Overdue actions'],
   ['none', 'No next action'],
   ['directory', 'Reference directory'],
@@ -37,15 +39,15 @@ export default function SchoolsList() {
   const directory = view === 'directory'
   const [selected, setSelected] = useState([])
   const [bulkStage, setBulkStage] = useState('')
-  const [bulkOwner, setBulkOwner] = useState('')
+  const [assignment, setAssignment] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
   const [initialSchool, setInitialSchool] = useState(null)
   const filters = new URLSearchParams({ q: term, limit: 25, page })
   if (!directory) {
-    filters.set('scope', !user.admin || view === 'mine' ? 'mine' : 'team')
-    for (const key of ['stage', 'type', 'owner', 'sort'])
+    filters.set('scope', view === 'unassigned' ? 'unassigned' : !user.admin || view === 'mine' ? 'mine' : 'team')
+    for (const key of ['stage', 'type', 'owner', 'sort', 'county'])
       if (params.get(key)) filters.set(key, params.get(key))
     if (['overdue', 'none'].includes(view)) filters.set('due', view)
   }
@@ -76,18 +78,24 @@ export default function SchoolsList() {
       const result = await api.post('/api/crm/schools/bulk', {
         ids: selected,
         ...(bulkStage ? { status: bulkStage } : {}),
-        ...(bulkOwner ? { user_id: Number(bulkOwner) } : {}),
       })
       setNotice(result.updated + ' schools updated.')
       setSelected([])
       setBulkStage('')
-      setBulkOwner('')
       reload()
     } catch (err) {
       setActionError(err.message)
     } finally {
       setBusy(false)
     }
+  }
+  const claim = async (school) => {
+    setBusy(true); setActionError('')
+    try {
+      await api.post(`/api/crm/schools/${school.id}/claim`, {})
+      navigate('/schools/' + school.id)
+    } catch (err) { setActionError(err.message); reload() }
+    finally { setBusy(false) }
   }
   const selectedRows = rows.filter((row) => selected.includes(row.id))
   const canDeleteSelected =
@@ -171,6 +179,8 @@ export default function SchoolsList() {
       }
     >
       <ErrorNotice error={error || actionError} />
+      {view === 'unassigned' && <p className="workspace-subtle">Claim a school to become its owner before editing it or sending outreach. <Link to="/map?scope=unassigned&stages=pending,contacted,replied,meeting,partner,former">View the pool on the map</Link></p>}
+      {assignment && <AssignmentDialog {...assignment} team={team || []} onClose={() => setAssignment(null)} onSaved={(result) => { setAssignment(null); setSelected([]); setNotice(`${result.updated} schools reassigned.`); reload() }} />}
       {notice && (
         <div
           className="ui-alert tone-success"
@@ -251,6 +261,8 @@ export default function SchoolsList() {
               )}
             </>
           )}
+          {!directory && <input className="workspace-select" aria-label="Filter county" placeholder="County" value={params.get('county') || ''} onChange={(event) => change('county', event.target.value)} />}
+          {!directory && user.admin && <button className="modern-btn-primary is-neutral is-small" disabled={busy || loading || !data?.total} onClick={() => setAssignment({ filters: Object.fromEntries([...filters].filter(([key]) => !['page','limit','sort'].includes(key))) })}>Assign all matching</button>}
           <div className="workspace-toolbar-tail">
             {loading
               ? 'Updating...'
@@ -273,7 +285,7 @@ export default function SchoolsList() {
             </button>
           </div>
         </div>
-        {!!selected.length && (
+        {!!selected.length && (user.admin || view !== 'unassigned') && (
           <div className="workspace-bulk">
             <strong>{selected.length} selected</strong>
             <select
@@ -289,25 +301,11 @@ export default function SchoolsList() {
                 </option>
               ))}
             </select>
-            {user.admin && (
-              <select
-                className="workspace-select"
-                aria-label="New owner for selected schools"
-                value={bulkOwner}
-                onChange={(e) => setBulkOwner(e.target.value)}
-              >
-                <option value="">Assign owner...</option>
-                {(team || []).map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            {user.admin && <button className="modern-btn-primary is-neutral is-small" disabled={busy || loading} onClick={() => setAssignment({ ids: selected })}>Review owner assignment</button>}
             <button
               className="modern-btn-primary is-small"
               onClick={updateSelected}
-              disabled={busy || loading || (!bulkStage && !bulkOwner)}
+              disabled={busy || loading || !bulkStage}
             >
               {busy ? 'Updating...' : 'Apply changes'}
             </button>
@@ -348,7 +346,7 @@ export default function SchoolsList() {
                             e.target.checked ? rows.map((row) => row.id) : [],
                           )
                         }
-                        disabled={loading || busy}
+                        disabled={loading || busy || (!user.admin && view === 'unassigned')}
                       />
                     )}
                   </th>
@@ -369,7 +367,7 @@ export default function SchoolsList() {
                           aria-label={'Select ' + school.school_name}
                           checked={selected.includes(school.id)}
                           onChange={() => toggle(school.id)}
-                          disabled={loading || busy}
+                          disabled={loading || busy || (!user.admin && view === 'unassigned')}
                         />
                       )}
                     </td>
@@ -386,6 +384,8 @@ export default function SchoolsList() {
                             </small>
                           </div>
                         </div>
+                      ) : school.user_id == null && !user.admin ? (
+                        <div className="record-name"><div>{school.school_name}<small>{school.address || 'Address not recorded'}</small></div></div>
                       ) : (
                         <Link
                           className="record-name"
@@ -447,6 +447,8 @@ export default function SchoolsList() {
                             Add to outreach
                           </button>
                         )
+                      ) : school.user_id == null ? (
+                        <button className="modern-btn-primary is-small" disabled={busy} onClick={() => claim(school)}>Claim school</button>
                       ) : (
                         <div style={{ maxWidth: 190 }}>
                           {school.next_action || (

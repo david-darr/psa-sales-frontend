@@ -15,7 +15,7 @@ export default function HistoryTab({ emails, rev }) {
     <div className="ou-page">
       <div className="ou-card">
         <div className="ou-card-head">
-          <h3 className="ou-card-title">Send jobs</h3>
+          <h3 className="ou-card-title">Email sends</h3>
         </div>
         {list.error && <div className="ou-error">{list.error}</div>}
         {!list.loading && !list.items.length && !list.error && (

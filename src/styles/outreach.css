@@ -730,3 +730,26 @@
 .template-history { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 
 .template-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Task-based navigation and guidance, shared with the existing PSA palette. */
+.ou-primary-nav { flex-wrap: wrap; overflow: visible; }
+.ou-primary-nav .ou-tab, .ou-subnav .ou-btn { min-height: 44px; white-space: normal; text-align: center; }
+.ou-subnav { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ou-view-help h2, .ou-guide h2 { margin: 0 0 var(--space-2); font-size: var(--text-xl); }
+.ou-view-help p, .ou-guide p { margin: 0; max-width: 75ch; color: var(--color-text-muted); line-height: 1.6; }
+.ou-guide { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); display: grid; gap: var(--space-4); }
+.ou-get-started { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; margin: 0; gap: var(--space-4); list-style: none; }
+.ou-get-started li { display: grid; align-content: start; gap: var(--space-2); line-height: 1.6; min-width: 0; }
+.ou-get-started span { color: var(--color-text-muted); }
+.ou-task-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.ou-task-card { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; min-width: 0; }
+.ou-task-card h3, .ou-task-card p { margin: 0; line-height: 1.6; }
+.ou-task-card p { color: var(--color-text-muted); }
+.ou-task-card .ou-btn { margin-top: auto; min-height: 44px; }
+.ou-guide .ou-callout { flex-wrap: wrap; }
+.ou-guide .ou-link { min-height: 44px; text-decoration: underline; }
+@media (max-width: 900px) { .ou-task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .ou-get-started, .ou-task-grid { grid-template-columns: 1fr; } .ou-primary-nav .ou-tab { flex: 1 1 40%; } .ou-guide { padding: var(--space-4); } }
+.ou-guide .ou-link { appearance:none; background:none; border:0; padding:0; color:var(--color-primary); font:inherit; cursor:pointer; text-align:left; } .ou-guide .ou-link:focus-visible { outline:2px solid var(--color-primary); outline-offset:3px; border-radius:3px; }
+
+#outreach-start-title:focus-visible,#outreach-view-title:focus-visible { outline:2px solid var(--color-primary);outline-offset:4px; }

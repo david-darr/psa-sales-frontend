@@ -14,23 +14,15 @@ import AttachmentCatalog from './components/outreach/AttachmentCatalog'
 import TemplateLibrary from './components/outreach/TemplateLibrary'
 import SequencesPanel from './components/outreach/SequencesPanel'
 import AgentApprovals from './components/outreach/AgentApprovals'
+import OutreachStart from './components/outreach/OutreachStart'
+import { OUTREACH_VIEWS, OUTREACH_SECTIONS, outreachView } from './emails/outreachNavigation'
 import ComposeFlow from './components/outreach/ComposeFlow'
 import HistoryTab from './components/outreach/HistoryTab'
 import InboxTab from './components/outreach/InboxTab'
 import { LimitMeter, MailboxCallout } from './components/outreach/bits'
 import './styles/outreach.css'
 
-const TABS = [
-  ['compose', 'Compose'],
-  ['followups', 'Follow-ups'],
-  ['sequences', 'Sequences'],
-  ['approvals', 'Agent approvals'],
-  ['inbox', 'Inbox'],
-  ['history', 'History'],
-  ['add', 'Add and import'],
-  ['templates', 'Templates'],
-  ['attachments', 'Attachments'],
-]
+
 
 const parseIds = (search) => {
   const params = new URLSearchParams(search)
@@ -54,11 +46,21 @@ export default function Emails() {
   const [replyChain, setReplyChain] = useState(null)
   const [customReply, setCustomReply] = useState(null)
   const [sending, setSending] = useState(false)
+  const navigationIntent = useRef(false)
 
   const requested = new URLSearchParams(location.search).get('tab')
-  const tab = TABS.some(([id]) => id === requested) ? requested : 'compose'
+  const view = outreachView(requested, Boolean(parseIds(location.search)))
+  const tab = view.id
+  const siblingViews = OUTREACH_VIEWS.filter((item) => item.group === view.group)
   const preselect = useMemo(() => parseIds(location.search), [location.search])
-  const setTab = (id) => navigate({ search: id === 'compose' ? '' : `?tab=${id}` }, { replace: true })
+  const setTab = (id) => { navigationIntent.current = true; navigate({ search: id === 'home' ? '' : `?tab=${id}` }, { replace: true }) }
+  useEffect(() => {
+    if (!navigationIntent.current) return
+    navigationIntent.current = false
+    const heading = document.getElementById(tab === 'home' ? 'outreach-start-title' : 'outreach-view-title')
+    heading?.focus({ preventScroll: true })
+    heading?.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }, [tab])
 
   const due = useRecipients({ kind: 'followup', page: 1, perPage: 1, rev })
   const recent = useBatchList(5, rev)
@@ -143,7 +145,7 @@ export default function Emails() {
   return (
     <AppLayout
       title="Outreach"
-      subtitle="Pick schools, write once, send in one batch."
+      subtitle="Prepare emails, review replies and keep your team on track."
       actions={
         <button className="ou-btn ou-btn-ghost" onClick={() => { center.reload(); limits.reload(); changed() }} disabled={center.loading}>
           Refresh
@@ -163,21 +165,12 @@ export default function Emails() {
         <LimitMeter limits={limits.limits} error={limits.error} />
         <MailboxCallout limits={limits.limits} />
 
-        <nav className="ou-tabs" aria-label="Outreach views">
-          {TABS.map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className={`ou-tab${tab === id ? ' is-active' : ''}`}
-              aria-current={tab === id ? 'page' : undefined}
-              onClick={() => setTab(id)}
-            >
-              {label}
-              {id === 'followups' && due.total > 0 && <span className="ou-count is-alert">{due.total}</span>}
-              {id === 'inbox' && unread > 0 && <span className="ou-count is-alert">{unread}</span>}
-            </button>
-          ))}
+        <nav className="ou-tabs ou-primary-nav" aria-label="Outreach sections">
+          {OUTREACH_SECTIONS.map((section) => <button key={section.id} type="button" className={`ou-tab${view.group === section.id ? ' is-active' : ''}`} aria-current={view.group === section.id ? 'page' : undefined} onClick={() => setTab(section.target)}>{section.label}</button>)}
         </nav>
+        {siblingViews.length > 1 && <nav className="ou-subnav" aria-label="Actions in this section">{siblingViews.map((item) => <button type="button" key={item.id} className={`ou-btn ${tab === item.id ? 'ou-btn-solid' : 'ou-btn-ghost'}`} aria-current={tab === item.id ? 'page' : undefined} onClick={() => setTab(item.id)}>{item.label}{item.id === 'followups' && due.total > 0 && <span className="ou-count is-alert">{due.total}</span>}{item.id === 'inbox' && unread > 0 && <span className="ou-count is-alert">{unread}</span>}</button>)}</nav>}
+        {tab !== 'home' && <section className="ou-view-help" aria-labelledby="outreach-view-title"><h2 id="outreach-view-title" tabIndex={-1}>{view.label}</h2><p>{view.description}</p></section>}
+        {tab === 'home' && <OutreachStart onOpen={setTab} onAccount={() => navigate('/account')} mailConnected={user.mail_connected === true} admin={user.admin} />}
 
         {tab === 'compose' && (
           <>

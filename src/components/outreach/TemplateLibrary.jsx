@@ -87,12 +87,12 @@ export default function TemplateLibrary() {
             }} />{asset.name} ({(asset.bytes / 1048576).toFixed(1)} MB)</label>
           })}
           <label className="ou-field"><span>Existing PSA flyer (optional)</span><select className="ou-input" value={draft.attachment_file || ''} onChange={(event) => field('attachment_file', event.target.value || null)}><option value="">None</option>{assets.map((asset) => <option key={asset.filename} value={asset.filename}>{asset.filename}</option>)}</select></label>
-          <span className="ou-muted">Up to three PDFs, 10 MB each and 15 MB combined. Saving preserves the file bytes for every reviewed send.</span>
+          <span className="ou-muted">Up to three PDFs, 10 MB each and 15 MB combined. Saved emails keep the PDFs you reviewed, even if the library changes later.</span>
         </fieldset>}
         {!user?.admin && <p>Attachments: {draft.attachments?.map((item) => item.name).join(', ') || 'none'}</p>}
-        <p className="ou-muted">Merge fields: {'{school name}, {contact name}, {my name}, {my email}'}. Missing values block sending.</p>
+        <p className="ou-muted">Personalized details: {'{school name}, {contact name}, {my name}, {my email}'}. These are filled in for each school. Missing information must be completed before sending.</p>
         {user?.admin && <><label className="ou-checkline"><input type="checkbox" checked={draft.archived} disabled={busy} onChange={(event) => field('archived', event.target.checked)} />Archive for future selections</label>
-          <div className="template-actions"><button className="ou-btn ou-btn-primary" disabled={busy} onClick={save}>{busy ? 'Working...' : 'Save new version'}</button>{draft.id && <button className="ou-btn ou-btn-ghost" disabled={busy} onClick={() => act(async () => setHistory((await api.get(`/api/outreach/templates/${draft.id}/versions`)).items))}>Version history</button>}<button className="ou-btn ou-btn-ghost" disabled={busy} onClick={() => { library.reload(); setDraft(null) }}>Close</button></div></>}
+          <div className="template-actions"><button className="ou-btn ou-btn-primary" disabled={busy} onClick={save}>{busy ? 'Working...' : 'Save template'}</button>{draft.id && <button className="ou-btn ou-btn-ghost" disabled={busy} onClick={() => act(async () => setHistory((await api.get(`/api/outreach/templates/${draft.id}/versions`)).items))}>Previous versions</button>}<button className="ou-btn ou-btn-ghost" disabled={busy} onClick={() => { library.reload(); setDraft(null) }}>Close</button></div></>}
         {history && <ol>{history.map((version) => <li key={version.revision}><details><summary>Version {version.revision} · {new Date(version.created_at).toLocaleString()}{version.archived ? ' · Archived' : ''}</summary><p>{version.subject}</p><p>Attachments: {version.attachments?.map((item) => item.name).join(', ') || 'none'}</p><pre className="template-history">{version.body}</pre></details></li>)}</ol>}
       </div>}
     </div>

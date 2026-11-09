@@ -81,7 +81,7 @@ export const BLOCKERS = {
   not_due: {
     label: 'Not due',
     tone: 'warn',
-    tip: 'Follow-ups unlock 3 and 7 days after the first email.',
+    tip: 'This reminder is not due yet. Scheduled follow-ups use the dates shown in their plan.',
   },
   in_flight: {
     label: 'Already sending',

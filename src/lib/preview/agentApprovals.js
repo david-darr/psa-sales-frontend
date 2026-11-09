@@ -8,7 +8,7 @@ function seed(ctx) {
   const settings = { contact_mode: true, school_ids: [id], kind: 'custom', audience: 'all', subject: 'PSA programs for [school_name]', body: 'Hello [contact_name],\n\nHere is the fictional outreach your agent prepared for review.', attachment_ids: [] }
   const result = contactOutreachPreview({ ...ctx, endpoint: '/api/email-preview', method: 'POST', body: settings })
   const { preview_token: _proof, ...preview } = result
-  drafts.push({ id: 'demo-agent-draft', user_id: ctx.user.id, sender_id: ctx.user.id, key_id: 1, key_name: 'Kairos preview', key_active: true, can_execute: true, status: 'awaiting', revision: 1, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 900000).toISOString(), preview, settings })
+  drafts.push({ id: 'demo-agent-draft', user_id: ctx.user.id, sender_id: ctx.user.id, key_id: 1, key_name: 'AI preview', key_active: true, can_execute: true, status: 'awaiting', revision: 1, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 900000).toISOString(), preview, settings })
 }
 export function agentApprovalsPreview(ctx) {
   const { endpoint, method, body } = ctx

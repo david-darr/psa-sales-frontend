@@ -24,7 +24,7 @@ export default function AttachmentCatalog() {
   }
   const publish = async () => {
     setError('');setNotice('');setBusy(true)
-    try { const asset=await api.post('/api/outreach/template-assets/publish',{filename:existing});setNotice(`${asset.name} is now in the shared catalog.`);setExisting('');catalog.reload() }
+    try { const asset=await api.post('/api/outreach/template-assets/publish',{filename:existing});setNotice(`${asset.name} is now in the shared PDF library.`);setExisting('');catalog.reload() }
     catch(err) { setError(err.message) }
     finally { setBusy(false) }
   }
@@ -33,11 +33,11 @@ export default function AttachmentCatalog() {
     try { await downloadCatalogPdf(asset) } catch (err) { setError(err.message) }
   }
   return <section className="ou-card">
-    <div className="ou-card-head"><h3 className="ou-card-title">Attachment catalog</h3><button className="ou-btn ou-btn-ghost" onClick={catalog.reload}>Refresh</button></div>
+    <div className="ou-card-head"><h3 className="ou-card-title">Shared PDF library</h3><button className="ou-btn ou-btn-ghost" onClick={catalog.reload}>Refresh</button></div>
     <div className="ou-card-body">
-      <p>Pick catalog PDFs in Compose or Follow-ups. Template defaults stay included; additional selections apply only to that batch.</p>
-      {user?.admin && <FileUpload label="Upload a PDF for the sales team" hint="PDF, up to 10 MB. Available in the shared catalog without creating a template." accept=".pdf,application/pdf" buttonLabel="Upload PDF" busy={busy} onFileSelect={upload} />}
-      {user?.admin && !!catalog.available.length && <div className="ou-field"><label className="ou-label" htmlFor="catalog-existing-pdf">Add an existing PSA PDF</label><select id="catalog-existing-pdf" className="ou-input" value={existing} disabled={busy} onChange={(event)=>setExisting(event.target.value)}><option value="">Choose a PSA file</option>{catalog.available.map((asset)=><option key={asset.filename} value={asset.filename}>{asset.filename}</option>)}</select><button className="ou-btn ou-btn-ghost" disabled={busy||!existing} onClick={publish}>Add to shared catalog</button></div>}
+      <p>Choose these PDFs when preparing a new email or a one-time follow-up. Uploading a PDF does not send it. PDFs saved on a template are included automatically; any extras you choose apply only to that send.</p>
+      {user?.admin && <FileUpload label="Upload a PDF for the sales team" hint="PDF, up to 10 MB. Available in the shared PDF library without creating a template." accept=".pdf,application/pdf" buttonLabel="Upload PDF" busy={busy} onFileSelect={upload} />}
+      {user?.admin && !!catalog.available.length && <div className="ou-field"><label className="ou-label" htmlFor="catalog-existing-pdf">Add an existing PSA PDF</label><select id="catalog-existing-pdf" className="ou-input" value={existing} disabled={busy} onChange={(event)=>setExisting(event.target.value)}><option value="">Choose a PSA file</option>{catalog.available.map((asset)=><option key={asset.filename} value={asset.filename}>{asset.filename}</option>)}</select><button className="ou-btn ou-btn-ghost" disabled={busy||!existing} onClick={publish}>Add to PDF library</button></div>}
       {(error || catalog.error) && <p className="ou-callout tone-danger" role="alert">{error || catalog.error}</p>}
       {notice && <p className="ou-callout tone-success" role="status">{notice}</p>}
       <label className="ou-field"><span className="ou-label">Find a PDF</span><input className="ou-input" value={query} onChange={(event)=>setQuery(event.target.value)} /></label>

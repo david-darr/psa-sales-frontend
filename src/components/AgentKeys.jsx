@@ -3,7 +3,7 @@ import { Panel, ErrorNotice } from './WorkspaceUI'
 import api from '../lib/api'
 
 const EXPIRY = [7, 30, 90]
-const CAPABILITIES = { 'schools:import': 'Preview and import schools and contacts', 'outreach:read': 'Read templates, attachment catalog and my replies', 'outreach:prepare': 'Prepare batches and check my inbox', 'outreach:send': 'Execute batches I approve in the site' }
+const CAPABILITIES = { 'schools:import': 'Preview and import schools and contacts', 'outreach:read': 'Read templates, attachment catalog and my replies', 'outreach:prepare': 'Prepare batches and check my inbox', 'outreach:send': 'Execute batches I explicitly approve', 'library:manage': 'Manage shared templates, PDFs and follow-up definitions (admin)', 'commissions:manage': 'Create and correct seasonal commissions (admin)', 'team:manage': 'Manage team access and employee invitations (admin)' }
 
 function when(value) {
   return value ? new Date(value).toLocaleDateString() : 'Never'
@@ -84,8 +84,8 @@ export default function AgentKeys({ admin }) {
         title="API keys for AI assistants"
         description={
           admin
-            ? 'Let Kairos or another assistant work in PSA Sales as you. Your key sees the whole team because you are an administrator.'
-            : 'Let Kairos or another assistant work in PSA Sales as you. A key sees only your own schools and tasks.'
+            ? 'Let an AI assistant work in PSA Sales as you. Your key sees the whole team because you are an administrator.'
+            : 'Let an AI assistant work in PSA Sales as you. A key sees only your own schools and tasks.'
         }
       >
         <ErrorNotice error={error} />
@@ -123,7 +123,7 @@ export default function AgentKeys({ admin }) {
             Key name
             <input
               className="ui-input"
-              placeholder="Kairos on my laptop"
+              placeholder="AI on my laptop"
               maxLength={80}
               value={form.name}
               onChange={(event) => setForm((old) => ({ ...old, name: event.target.value }))}
@@ -160,7 +160,7 @@ export default function AgentKeys({ admin }) {
             </label>
           </div>
           <fieldset className="workspace-form"><legend>Optional agent permissions</legend><p className="workspace-subtle">Existing read/update access does not include these permissions. Choose only the work you want to delegate.</p>
-            {Object.entries(CAPABILITIES).map(([cap, label]) => <label key={cap} className="workspace-field"><span><input type="checkbox" checked={form.capabilities.includes(cap)} onChange={(e) => setForm((old) => ({ ...old, capabilities: e.target.checked ? [...old.capabilities, cap] : old.capabilities.filter((c) => c !== cap), confirm_send: false }))} /> {label}</span></label>)}
+            {Object.entries(CAPABILITIES).filter(([cap]) => admin || !cap.endsWith(':manage')).map(([cap, label]) => <label key={cap} className="workspace-field"><span><input type="checkbox" checked={form.capabilities.includes(cap)} onChange={(e) => setForm((old) => ({ ...old, capabilities: e.target.checked ? [...old.capabilities, cap] : old.capabilities.filter((c) => c !== cap), confirm_send: false }))} /> {label}</span></label>)}
             {form.capabilities.includes('outreach:send') && <label className="workspace-field"><span><input type="checkbox" required checked={form.confirm_send} onChange={(e) => setForm({ ...form, confirm_send: e.target.checked })} /> I delegate execution of my human-approved batches. This key cannot approve messages itself or send as another employee.</span></label>}
           </fieldset>
           <div className="workspace-actions">
@@ -211,11 +211,11 @@ export default function AgentKeys({ admin }) {
               </div>
             )}
           </li>
-          <li>In Kairos, open the PSA Command tab and paste both under Connections.</li>
+          <li>In your AI app, add this connection using its private integration settings.</li>
           <li>Switch to a read and update key only when you want the assistant to make changes.</li>
         </ol>
         <p className="workspace-subtle" style={{ marginTop: 18 }}>
-          Assistants can queue only specific batches you approve under Outreach &gt; Agent approvals,
+          Assistants can queue only specific batches you approve under Outreach &gt; AI requests,
           and only with a separately delegated approved-send permission. No existing key gains it automatically.
           Requests record the key and time; batch approval and delivery outcomes remain auditable.
         </p>

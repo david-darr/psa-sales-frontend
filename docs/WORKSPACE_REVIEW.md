@@ -1,3 +1,7 @@
+# Current release checkpoint: 2026-11-09
+
+Backend 579484c and frontend 791f76f are committed and pushed to feature/contact-foundation. Latest checks: 350 backend tests, nine bridge tests, frontend build/lint and admin/rep approval demos pass. The PSA Command desktop/phone fixture is reviewed with one mobile selector interaction pending; actual signed-in acceptance and live Gmail are not complete. Production and Store publication are unchanged. The backend docs/RELEASE_20261109.md is the authoritative migration, worker and rollback checklist. Older checkpoint sections below are historical and may describe superseded behavior.
+
 # PSA workspace review
 
 ## Latest local checkpoint: agent approval, 2026-11-05

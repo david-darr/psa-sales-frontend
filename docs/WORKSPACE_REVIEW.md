@@ -49,3 +49,8 @@ Build/lint, admin/employee approval demos, templates, PDF catalog and follow-up 
 ### AI-neutral terminology (local draft)
 
 Outreach and connection setup now refer to AI assistants, AI requests and generic private integration settings. Website source/demo copy no longer assumes Kairos. Provider-specific actions remain only in the separate PSA Command custom tab. Existing request URLs, delegation and approval rules are unchanged. No source deployment or real sends were performed.
+
+
+## 2026-11-10 release
+
+Backend production SMTP/IMAP/TLS connectivity was measured successfully. This release reuses existing compute and app-password mail rather than activating Gmail OAuth. The backend has an authenticated due-work cloud clock; free-host startup and service limits can delay scheduled work. The new contacts, library, ownership, reviewed sending and private AI approval flows require the compatible backend release before this frontend is merged. No paid worker is provisioned. Campaign automation remains off pending controlled acceptance.

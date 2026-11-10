@@ -47,7 +47,8 @@ export default function BatchProgress({ batchId, onSettled, onDone, doneLabel = 
         </Chip>
       </div>
       <div className="ou-card-body">
-        {active && worker && !worker.online && worker.status !== 'demo' && <p className="ou-callout tone-warning" role="status">The separate worker is offline or not configured. This batch is saved; sending waits for the worker.</p>}
+        {active && worker && !worker.online && worker.status !== 'demo' && <p className="ou-callout tone-warning" role="status">The sending service is unavailable. This batch is saved and will wait until the service is available.</p>}
+        {active && worker?.mode === 'web' && <p className="ou-callout tone-neutral">Sending uses the existing site. Host startup or service limits can delay scheduled emails; saved progress is retained.</p>}
         {batch.paused_reason && <p className="ou-callout tone-warning" role="status">{batch.paused_reason} {batch.queued} messages remain queued.</p>}
         <div
           className="ou-progress"

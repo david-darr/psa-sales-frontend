@@ -79,6 +79,7 @@ export default function SequencesPanel() {
       <span>{state.worker?.status === 'demo' ? 'Demo scheduling only. No messages will be sent.' : state.worker?.online ? 'Email sending service is available' : 'Sending service is unavailable. Your saved emails will wait until it is available.'}{state.worker?.last_seen_at && ` · Last seen ${date(state.worker.last_seen_at)}`}</span>
       <button className="ou-btn ou-btn-ghost ou-btn-sm" onClick={load}>Refresh</button>
     </div>
+    {state.worker?.mode === 'web' && <p className="ou-callout tone-neutral">Sending uses the existing site. Scheduled reminders can be delayed by host startup or service limits.</p>}
     {error && <p className="ou-callout tone-danger" role="alert">{error}</p>}
     {note && <p role="status" className="ou-callout tone-neutral">{note}</p>}
     <Editor sequences={state.sequences} onSaved={load} />

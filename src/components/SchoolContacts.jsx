@@ -14,13 +14,13 @@ function ContactEditor({ schoolId, contact, onClose, onSaved }) {
   const [draft, setDraft] = useState({ email: contact?.email || '', name: contact?.name || '',
     roles: contact?.roles || ['unknown'], tags: (contact?.tags || []).join('; '),
     is_primary: contact?.is_primary || false, do_not_contact: contact?.do_not_contact || false,
-    suppression_reason: contact?.suppression_reason || '' })
+    suppression_reason: contact?.suppression_reason || '', school_do_not_contact:contact?.school_do_not_contact || false, school_suppression_reason:contact?.school_suppression_reason || '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const set = (field, value) => setDraft((old) => ({ ...old, [field]: value }))
   async function save(event) {
     event.preventDefault(); setBusy(true); setError('')
-    const body = { name: draft.name, roles: draft.roles.length ? draft.roles : ['unknown'], tags: draft.tags.split(';').map((value) => value.trim()).filter(Boolean), do_not_contact: draft.do_not_contact, suppression_reason: draft.suppression_reason }
+    const body = { name: draft.name, roles: draft.roles.length ? draft.roles : ['unknown'], tags: draft.tags.split(';').map((value) => value.trim()).filter(Boolean), do_not_contact: draft.do_not_contact, suppression_reason: draft.suppression_reason, school_do_not_contact:draft.school_do_not_contact, school_suppression_reason:draft.school_suppression_reason }
     if (draft.is_primary) body.is_primary = true
     try {
       if (contact) await api.patch(`/api/sales-schools/${schoolId}/contacts/${contact.id}`, {
@@ -40,9 +40,11 @@ function ContactEditor({ schoolId, contact, onClose, onSaved }) {
       <fieldset className="workspace-field"><legend>Roles at this school</legend>{Object.entries(CONTACT_ROLES).map(([role, label]) => <label key={role} style={{ display: 'flex', gap: 8 }}><input type="checkbox" checked={draft.roles.includes(role)} onChange={(e) => set('roles', e.target.checked ? (role === 'unknown' ? ['unknown'] : [...draft.roles.filter((value) => value !== 'unknown'), role]) : draft.roles.filter((value) => value !== role))} />{label}</label>)}</fieldset>
       <label className="workspace-field">Audience tags<input className="ui-input" value={draft.tags} onChange={(e) => set('tags', e.target.value)} placeholder="Separate with semicolons, e.g. trunk_or_treat" /></label>
       <label style={{ display: 'flex', gap: 8 }}><input type="checkbox" checked={draft.is_primary} disabled={contact?.is_primary} onChange={(e) => set('is_primary', e.target.checked)} />Primary school email</label>
-      <label style={{ display: 'flex', gap: 8 }}><input type="checkbox" checked={draft.do_not_contact} disabled={contact?.do_not_contact && !user?.admin} onChange={(e) => set('do_not_contact', e.target.checked)} />Do not contact this mailbox</label>
-      <label className="workspace-field">Suppression reason<input className="ui-input" maxLength={500} required={draft.do_not_contact !== (contact?.do_not_contact || false)} value={draft.suppression_reason} onChange={(e) => set('suppression_reason', e.target.value)} /></label>
-      <p className="workspace-subtle">Roles and names apply to this school. Do-not-contact applies to this email across every linked school. Only an administrator can clear it. Adding a contact does not send email or enroll it in follow-ups.</p>
+      <label style={{ display: 'flex', gap: 8 }}><input type="checkbox" checked={draft.do_not_contact} disabled={contact?.do_not_contact && !user?.admin} onChange={(e) => set('do_not_contact', e.target.checked)} />Stop all outreach to this email address (every school)</label>
+      <label className="workspace-field">Reason for stopping this email everywhere<input className="ui-input" maxLength={500} required={draft.do_not_contact !== (contact?.do_not_contact || false)} value={draft.suppression_reason} onChange={(e) => set('suppression_reason', e.target.value)} /></label>
+      <label style={{ display: 'flex', gap: 8 }}><input type="checkbox" checked={draft.school_do_not_contact} onChange={(e) => set('school_do_not_contact',e.target.checked)} />Stop outreach for this school only</label>
+      <label className="workspace-field">Reason for this school<input className="ui-input" maxLength={500} required={draft.school_do_not_contact !== Boolean(contact?.school_do_not_contact)} value={draft.school_suppression_reason} onChange={(e)=>set('school_suppression_reason',e.target.value)} /></label>
+      <p className="workspace-subtle">A school-only stop does not block this contact at other schools. An opt-out or complaint blocks the email everywhere; only an admin can clear that global stop. Adding or editing a contact never sends mail.</p>
     </form>
   </Modal>
 }
@@ -62,7 +64,8 @@ export default function SchoolContacts({ schoolId, onChanged }) {
         <strong style={{ overflowWrap: 'anywhere' }}>{contact.email}</strong>{contact.is_primary && <span className="workspace-subtle"> · Primary</span>}
         <p>{contact.name || 'Name not recorded'} · {contact.roles.map((role) => CONTACT_ROLES[role] || role).join(', ')}</p>
         {contact.tags.length > 0 && <p className="workspace-subtle">Tags: {contact.tags.join(', ')}</p>}
-        {contact.do_not_contact && <p style={{ color: 'var(--color-danger)' }}>Do not contact: {contact.suppression_reason}</p>}
+        {contact.do_not_contact && <p style={{ color: 'var(--color-danger)' }}>Stopped for every school: {contact.suppression_reason}</p>}
+        {contact.school_do_not_contact && <p style={{ color: 'var(--color-danger)' }}>Stopped for this school: {contact.school_suppression_reason}</p>}
         {contact.linked_school_count > 1 && <p className="workspace-subtle">Shared mailbox, {contact.linked_school_count} schools. {(contact.shared_schools || []).filter((school) => school.id !== Number(schoolId)).map((school) => <Link key={school.id} to={`/schools/${school.id}`} style={{ marginRight: 8 }}>{school.name}</Link>)}</p>}
       </div>
       <button className="ui-link-button" onClick={() => setEditing(contact)}>Edit</button>

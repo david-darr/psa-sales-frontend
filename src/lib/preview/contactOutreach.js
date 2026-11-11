@@ -27,7 +27,7 @@ function rowsFor(ctx, body) {
     const contextRequired = group.length > 1 && !choice
     const candidate = { ...school, contact_name: contact.name, email: contact.email }
     const blockers = evaluate(candidate, body.kind, ctx)
-    if (contact.do_not_contact) blockers.push('unsubscribed')
+    if (contact.do_not_contact || contact.school_do_not_contact) blockers.push('unsubscribed')
     if (contextRequired) blockers.push('choose_school_context')
     const ledgerKey = `${body.campaign_id || 'standard'}:${contact.email}:${body.kind === 'followup' ? 'followup-1' : 'intro'}`
     if (ledger.has(ledgerKey)) blockers.push('campaign_already_contacted')

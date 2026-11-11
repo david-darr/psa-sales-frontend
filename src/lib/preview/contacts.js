@@ -18,7 +18,7 @@ function addLink(school, email, name = '', roles = ['unknown']) {
   const contact = contactFor(email)
   const existing = [...links.values()].find((l) => l.school_id === school.id && l.contact_id === contact.id)
   if (existing) return existing
-  const link = { id: nextLink++, school_id: school.id, contact_id: contact.id, name, roles, tags: [], is_primary: email.toLowerCase() === school.email.toLowerCase(), version: 1 }
+  const link = { id: nextLink++, school_id: school.id, contact_id: contact.id, name, roles, tags: [], is_primary: email.toLowerCase() === school.email.toLowerCase(), do_not_contact:false,suppression_reason:'',version: 1 }
   links.set(link.id, link); return link
 }
 function parseCsv(input) {
@@ -48,7 +48,7 @@ export function contactsPreview(ctx) {
     const contact = [...contacts.values()].find((c) => c.id === link.contact_id)
     const schools = ctx.schools.filter((s) => [...links.values()].some((l) => l.school_id === s.id && l.contact_id === contact.id))
     return { ...ctx.clone(link), email: contact.email, contact_version: contact.version, do_not_contact: contact.do_not_contact,
-      suppression_reason: contact.suppression_reason, linked_school_count: schools.length,
+      suppression_reason: contact.suppression_reason,school_do_not_contact:link.do_not_contact,school_suppression_reason:link.suppression_reason,effective_do_not_contact:contact.do_not_contact || link.do_not_contact, linked_school_count: schools.length,
       shared_schools: schools.filter((s) => user.admin || s.user_id === user.id).map((s) => ({ id: s.id, name: s.school_name })) }
   }
   const project = (school) => {
@@ -73,10 +73,12 @@ export function contactsPreview(ctx) {
       const c = contacts.get(serialize(link).email)
       if (link.version !== body.version || c.version !== body.contact_version) throw new Error('This contact changed. Refresh before saving.')
       if (c.do_not_contact && body.do_not_contact === false && !user.admin) throw new Error('Only administrators can clear do-not-contact')
-      if (body.do_not_contact !== c.do_not_contact && !body.suppression_reason) throw new Error('Record a reason')
-      c.do_not_contact = body.do_not_contact ?? c.do_not_contact; c.suppression_reason = body.suppression_reason || c.suppression_reason; c.version++
+      if (body.do_not_contact !== undefined && body.do_not_contact !== c.do_not_contact && !body.suppression_reason) throw new Error('Record a reason')
+      if ((body.do_not_contact !== undefined && body.do_not_contact !== c.do_not_contact) || (body.suppression_reason !== undefined && body.suppression_reason !== c.suppression_reason)) {c.do_not_contact=body.do_not_contact ?? c.do_not_contact;c.suppression_reason=body.suppression_reason ?? c.suppression_reason;c.version++}
     }
-    link.name = body.name || ''; link.roles = normalizeRoles(body.roles || ['unknown']); link.tags = body.tags || []; link.version++
+    if (body.school_do_not_contact !== undefined && body.school_do_not_contact !== link.do_not_contact && !body.school_suppression_reason) throw new Error('Record a school-specific reason')
+    link.do_not_contact=body.school_do_not_contact ?? link.do_not_contact;link.suppression_reason=body.school_suppression_reason ?? link.suppression_reason
+    link.name = body.name ?? link.name; link.roles = normalizeRoles(body.roles || ['unknown']); link.tags = body.tags || []; link.version++
     if (body.do_not_contact) { const c = contacts.get(serialize(link).email); c.do_not_contact = true; c.suppression_reason = body.suppression_reason || 'Requested no outreach' }
     if (body.is_primary) { for (const l of links.values()) if (l.school_id === school.id) l.is_primary = false; link.is_primary = true }
     project(school); return ctx.clone(serialize(link))

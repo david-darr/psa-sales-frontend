@@ -11,6 +11,11 @@ try {
   const school = api('/api/crm/schools').items[0]
   const contact = api(`/api/sales-schools/${school.id}/contacts`).contacts[0]
   const url = `/api/sales-schools/${school.id}/contacts/${contact.id}`
+  const local = api(url, { method: 'PATCH', body: {version:contact.version, contact_version:contact.contact_version,school_do_not_contact:true,school_suppression_reason:'This school only'} })
+  assert.equal(local.school_do_not_contact,true)
+  assert.equal(local.do_not_contact,false)
+  assert.equal(local.effective_do_not_contact,true)
+  Object.assign(contact,local)
   const body = { version: contact.version, contact_version: contact.contact_version, roles: ['pta_pto'], do_not_contact: true, suppression_reason: 'Asked to stop', name: 'Alex' }
   assert.equal(api(url, { method: 'PATCH', body }).do_not_contact, true)
   assert.throws(() => api(url, { method: 'PATCH', body }), /changed/)

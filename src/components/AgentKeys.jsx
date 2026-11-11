@@ -16,7 +16,7 @@ export default function AgentKeys({ admin }) {
   const [keys, setKeys] = useState([])
   const [baseUrl, setBaseUrl] = useState('')
   const [loaded, setLoaded] = useState(false)
-  const [form, setForm] = useState({ name: '', scope: 'read', expires_in_days: 30, capabilities: [], confirm_send: false })
+  const [form, setForm] = useState({ name: '', scope: 'full', expires_in_days: 30, capabilities: [], confirm_send: false })
   const [created, setCreated] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -51,6 +51,21 @@ export default function AgentKeys({ admin }) {
       await refresh()
     } catch (err) {
       setError(err.message || 'Could not create the key.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function enableFullAccess(key) {
+    if (!window.confirm(`Give "${key.name}" full access within your PSA role? This includes execution of messages you approve, but never approval itself. Existing AI connections keep using the same key.`)) return
+    setBusy(true)
+    setError('')
+    try {
+      await api.post(`/api/agent-keys/${key.id}/full-access`, { confirm_full_access: true })
+      await refresh()
+      setNotice('Full access enabled. Your AI can keep using the same connection.')
+    } catch (err) {
+      setError(err.message || 'Could not update this connection.')
     } finally {
       setBusy(false)
     }
@@ -138,7 +153,8 @@ export default function AgentKeys({ admin }) {
                 value={form.scope}
                 onChange={(event) => setForm((old) => ({ ...old, scope: event.target.value }))}
               >
-                <option value="read">Read only</option>
+                <option value="full">Full access for my PSA role (recommended)</option>
+                <option value="read">Custom read-only access</option>
                 <option value="write">Read and update (tasks, stages, activity)</option>
               </select>
             </label>
@@ -159,10 +175,10 @@ export default function AgentKeys({ admin }) {
               </select>
             </label>
           </div>
-          <fieldset className="workspace-form"><legend>Optional agent permissions</legend><p className="workspace-subtle">Existing read/update access does not include these permissions. Choose only the work you want to delegate.</p>
+          {form.scope === 'full' ? <p className="workspace-subtle">Grants reading and editing, imports, outreach preparation and execution of messages you approve, plus management tools allowed by your current PSA role. Your AI cannot approve sending itself or gain administrator rights.</p> : <fieldset className="workspace-form"><legend>Optional agent permissions</legend><p className="workspace-subtle">Existing read/update access does not include these permissions. Choose only the work you want to delegate.</p>
             {Object.entries(CAPABILITIES).filter(([cap]) => admin || !cap.endsWith(':manage')).map(([cap, label]) => <label key={cap} className="workspace-field"><span><input type="checkbox" checked={form.capabilities.includes(cap)} onChange={(e) => setForm((old) => ({ ...old, capabilities: e.target.checked ? [...old.capabilities, cap] : old.capabilities.filter((c) => c !== cap), confirm_send: false }))} /> {label}</span></label>)}
             {form.capabilities.includes('outreach:send') && <label className="workspace-field"><span><input type="checkbox" required checked={form.confirm_send} onChange={(e) => setForm({ ...form, confirm_send: e.target.checked })} /> I delegate execution of my human-approved batches. This key cannot approve messages itself or send as another employee.</span></label>}
-          </fieldset>
+          </fieldset>}
           <div className="workspace-actions">
             <button className="modern-btn-primary" disabled={busy || !form.name.trim()}>
               {busy ? 'Creating...' : 'Create key'}
@@ -173,7 +189,7 @@ export default function AgentKeys({ admin }) {
       <Panel title="Your keys" description="Revoke a key you no longer use, or if it may have been exposed.">
         {!loaded && <p className="workspace-subtle">Loading keys...</p>}
         {loaded && !error && keys.length === 0 && (
-          <p className="workspace-subtle">No keys yet. Start with a read-only key to test your assistant.</p>
+          <p className="workspace-subtle">No connections yet. Create a full-access key to let your AI work within your PSA role.</p>
         )}
         {keys.length > 0 && (
           <div className="workspace-list">
@@ -188,6 +204,9 @@ export default function AgentKeys({ admin }) {
                     {!!key.capabilities?.length && <> · {key.capabilities.join(', ')}</>}
                   </small>
                 </div>
+                {!key.expired && <button className="modern-btn-primary is-neutral is-small" type="button" disabled={busy} onClick={() => enableFullAccess(key)}>
+                  Enable full access
+                </button>}
                 <button className="modern-btn-primary is-danger is-small" type="button" onClick={() => revoke(key)}>
                   Revoke
                 </button>
@@ -198,7 +217,7 @@ export default function AgentKeys({ admin }) {
       </Panel>
       <Panel title="Connecting an assistant">
         <ol className="workspace-form" style={{ paddingLeft: 18, fontSize: '.8rem' }}>
-          <li>Create a read-only key first and check that your assistant can see your pipeline.</li>
+          <li>Create a full-access key for your PSA role, or choose custom access to limit it.</li>
           <li>
             Give the assistant this API address and your key through its private connection
             settings:
@@ -212,11 +231,11 @@ export default function AgentKeys({ admin }) {
             )}
           </li>
           <li>In your AI app, add this connection using its private integration settings.</li>
-          <li>Switch to a read and update key only when you want the assistant to make changes.</li>
+          <li>Keep final sending approvals private. Revoke a connection when you stop using it.</li>
         </ol>
         <p className="workspace-subtle" style={{ marginTop: 18 }}>
           Assistants can queue only specific batches you approve under Outreach &gt; AI requests,
-          and only with a separately delegated approved-send permission. No existing key gains it automatically.
+          with approved-send permission included in full access. Existing limited keys can be upgraded using Enable full access below.
           Requests record the key and time; batch approval and delivery outcomes remain auditable.
         </p>
       </Panel>

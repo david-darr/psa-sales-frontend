@@ -105,6 +105,7 @@ export default function Team() {
           </div>
         ))}
       </div>
+      {user.admin && <p className="workspace-subtle">New employees join as sales reps. Use invitations or a join link, then grant admin access separately for management responsibilities. <Link to="/schools?view=unassigned">Review unassigned schools</Link> before allocating territories.</p>}
       <section className="workspace-panel">
         <div className="workspace-toolbar">
           <label className="workspace-toolbar-search">

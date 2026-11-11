@@ -63,7 +63,7 @@ const PREVIEW_CAP = 100
  * Rendered previews for the selected schools. Subject and body edits are
  * debounced so typing does not hammer the endpoint.
  */
-export function usePreviews({ ids, kind, custom, subject, body, attachments, enabled }) {
+export function usePreviews({ ids, kind, custom, subject, body, attachments, templateId, templateRevision, attachmentIds, audience = 'all', campaignId = 'standard', contexts = {}, enabled }) {
   const [state, setState] = useState({
     previews: [],
     token: null,
@@ -77,7 +77,7 @@ export function usePreviews({ ids, kind, custom, subject, body, attachments, ena
     kind,
     subject: custom ? subject : null,
     body: custom ? body : null,
-    attachments,
+    attachments, templateId, templateRevision, attachmentIds, audience, campaignId, contexts,
   })
   const settled = useDebounced(request, 450)
   const [retry, setRetry] = useState(0)
@@ -88,7 +88,9 @@ export function usePreviews({ ids, kind, custom, subject, body, attachments, ena
     if (!req.ids.length) return
     let alive = true
     setState((current) => ({ ...current, loading: true, error: '' }))
-    const payload = { school_ids: req.ids, kind: req.kind }
+    const payload = { school_ids: req.ids, kind: req.kind, contact_mode: true, audience: req.audience, campaign_id: req.campaignId, contact_contexts: req.contexts }
+    if (req.attachmentIds !== undefined) payload.attachment_ids = req.attachmentIds
+    if (req.templateId) { payload.template_id = req.templateId; payload.template_revision = req.templateRevision }
     if (req.subject !== null) payload.subject = toServerTemplate(req.subject)
     if (req.body !== null) payload.body = toServerTemplate(req.body)
     if (req.attachments) payload.attachments = true
@@ -102,12 +104,15 @@ export function usePreviews({ ids, kind, custom, subject, body, attachments, ena
           loading: false,
           error: '',
           truncated: req.total > PREVIEW_CAP,
+          unmatched: data.unmatched_school_ids || [],
+          remaining: data.remaining ?? null,
         })
       })
       .catch((err) => {
         if (!alive) return
         setState((current) => ({
           ...current,
+          previews: [], token: null,
           loading: false,
           error: err.message || 'Could not build the preview.',
         }))
@@ -175,8 +180,10 @@ export function useBatchPoll(batchId, onSettled) {
         setBatch(next)
         setError('')
         setRun((n) => n + 1)
+        return true
       } catch (err) {
         setError(err.message || 'That did not work. Try again.')
+        return false
       } finally {
         setBusy(false)
       }
@@ -189,8 +196,7 @@ export function useBatchPoll(batchId, onSettled) {
     error,
     busy,
     cancel: () => act(outreachApi.cancelBatch),
-    retry: () => act((id) => outreachApi.retryBatch(id)),
-    resendUnconfirmed: () => act((id) => outreachApi.retryBatch(id, { include_unconfirmed: true })),
+    retry: (options) => act((id) => outreachApi.retryBatch(id, options)),
   }
 }
 

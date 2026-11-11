@@ -24,6 +24,7 @@ const hasCoords = (school) =>
   school.lat != null && school.lng != null && !unlocated.has(school.id)
 
 const visible = (ctx) => {
+  if (ctx.params.get('scope') === 'unassigned') return ctx.schools.filter((school) => school.user_id == null)
   const own = ctx.params.get('scope') === 'mine' || !ctx.user.admin
   return ctx.schools.filter((school) => !own || school.user_id === ctx.user.id)
 }
@@ -32,7 +33,8 @@ function portfolio(ctx) {
   const all = ctx.user.admin && ctx.params.get('scope') !== 'mine'
   const pool = visible(ctx)
   const cutoff = Date.now() - 90 * DAY
-  const people = ctx.team
+  const members = all && pool.some((school) => school.user_id == null) ? [...ctx.team, { id: null, name: 'Unassigned', email: '', admin: false }] : ctx.team
+  const people = members
     .filter((member) => all || member.id === ctx.user.id)
     .map((member) => {
       const own = pool.filter((school) => school.user_id === member.id)
@@ -41,7 +43,7 @@ function portfolio(ctx) {
         .sort((a, b) => new Date(b.closed_at || 0) - new Date(a.closed_at || 0))
       const count = (status) => own.filter((school) => school.status === status).length
       return {
-        id: member.id,
+        id: member.id ?? 0,
         name: member.name,
         email: member.email,
         admin: !!member.admin,
@@ -80,7 +82,7 @@ function portfolio(ctx) {
   return {
     scope: all ? 'all' : 'self',
     totals: {
-      reps: people.length,
+      reps: people.filter((rep) => rep.id !== 0).length,
       total_schools: sum((rep) => rep.counts.total),
       active_clients: sum((rep) => rep.counts.active),
       former_clients: sum((rep) => rep.counts.former),
@@ -99,8 +101,8 @@ function mapAccounts(ctx) {
   const byRep = new Map()
   for (const school of rows) {
     const entry = byRep.get(school.user_id) || {
-      id: school.user_id,
-      name: school.user_name,
+      id: school.user_id ?? 0,
+      name: school.user_name || 'Unassigned',
       count: 0,
     }
     entry.count += 1
@@ -109,7 +111,7 @@ function mapAccounts(ctx) {
   const reps = [...byRep.values()].sort(
     (a, b) => b.count - a.count || a.name.localeCompare(b.name) || a.id - b.id,
   )
-  const scoped = owner ? rows.filter((school) => school.user_id === Number(owner)) : rows
+  const scoped = owner ? rows.filter((school) => school.user_id === (owner === 'unassigned' || owner === '0' ? null : Number(owner))) : rows
   const accounts = scoped.filter(hasCoords).map((school) => ({
     id: school.id,
     school_name: school.school_name,

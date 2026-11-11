@@ -1,19 +1,15 @@
 import { useState } from 'react'
 import Card from '../components/Card'
-import { EMPTY_SCHOOL, SCHOOL_TYPES, downloadCsvTemplate } from './constants'
+import ContactImport from '../components/ContactImport'
+import { EMPTY_SCHOOL, SCHOOL_TYPES } from './constants'
 
 /**
  * Manual school entry and CSV import, as two mutually exclusive panels.
  */
-export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
+export default function AddSchoolsCard({ onAddSchool }) {
   const [mode, setMode] = useState(null) // null | 'manual' | 'csv'
   const [draft, setDraft] = useState(EMPTY_SCHOOL)
   const [submitting, setSubmitting] = useState(false)
-
-  const [csvFile, setCsvFile] = useState(null)
-  const [csvUploading, setCsvUploading] = useState(false)
-  const [csvResult, setCsvResult] = useState(null)
-  const [csvError, setCsvError] = useState('')
 
   const update = (field) => (e) => setDraft((d) => ({ ...d, [field]: e.target.value }))
 
@@ -40,32 +36,6 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
     if (ok) {
       setDraft(EMPTY_SCHOOL)
       setMode(null)
-    }
-  }
-
-  const handleCsvChange = (e) => {
-    const file = e.target.files?.[0]
-    setCsvError('')
-    if (!file) return
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setCsvError('Please choose a .csv file.')
-      setCsvFile(null)
-      return
-    }
-    setCsvFile(file)
-  }
-
-  const handleCsvSubmit = async (e) => {
-    e.preventDefault()
-    if (!csvFile) return
-    setCsvUploading(true)
-    const result = await onUploadCsv(csvFile)
-    setCsvUploading(false)
-    if (result) {
-      // Results stay visible after a successful import so the added/skipped
-      // counts and any per-row errors can actually be read.
-      setCsvResult(result)
-      setCsvFile(null)
     }
   }
 
@@ -192,6 +162,7 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
             </select>
           </div>
 
+          <label className="workspace-subtle"><input type="checkbox" checked={draft.shared_contact_confirmed || false} onChange={(e) => setDraft((old) => ({ ...old, shared_contact_confirmed: e.target.checked }))} /> Distinct school sharing a mailbox. Keep profiles separate; still check name and address.</label>
           <button
             type="submit"
             className="modern-btn-primary ui-block"
@@ -202,112 +173,7 @@ export default function AddSchoolsCard({ onAddSchool, onUploadCsv }) {
         </form>
       )}
 
-      {mode === 'csv' && (
-        <div>
-          <div className="ui-info-tile tone-primary" style={{ marginBottom: 'var(--space-5)' }}>
-            <div className="ui-info-title">CSV Format Requirements</div>
-            <div className="ui-info-body">
-              <p>
-                <strong>Required columns:</strong> school_name, email
-              </p>
-              <p>
-                <strong>Optional columns:</strong> contact_name, phone, address, school_type
-              </p>
-              <p>
-                <strong>School types:</strong>{' '}
-                {SCHOOL_TYPES.map((t) => `"${t.value}"`).join(', ')} (defaults to preschool)
-              </p>
-              <p>
-                <strong>Multiple emails:</strong> use a separate row per address, repeating the
-                school name. Rows sharing a name are merged into one school.
-              </p>
-              <p style={{ color: 'var(--color-text-muted)' }}>
-                Column names are flexible: variations like &quot;School Name&quot; and
-                &quot;Contact Name&quot; are matched automatically.
-              </p>
-            </div>
-          </div>
-
-          <div className="ui-info-tile tone-success" style={{ marginBottom: 'var(--space-5)' }}>
-            <div className="ui-info-title">Sample CSV Template</div>
-            <div className="ui-info-body" style={{ marginBottom: 'var(--space-3)' }}>
-              Download a sample file to see the expected format:
-            </div>
-            <button className="modern-btn-primary is-success is-small" onClick={downloadCsvTemplate}>
-               Download Template
-            </button>
-          </div>
-
-          <form onSubmit={handleCsvSubmit}>
-            <input
-              type="file"
-              accept=".csv"
-              className="ui-input"
-              onChange={handleCsvChange}
-              aria-label="CSV file"
-              style={{ marginBottom: 'var(--space-4)' }}
-            />
-
-            {csvError && (
-              <div className="ui-alert tone-danger" role="alert">
-                {csvError}
-              </div>
-            )}
-
-            {csvFile && (
-              <div className="ui-alert tone-warning">Selected file: {csvFile.name}</div>
-            )}
-
-            <button
-              type="submit"
-              className="modern-btn-primary ui-block"
-              disabled={!csvFile || csvUploading}
-            >
-              {csvUploading ? 'Uploading...' : 'Upload CSV File'}
-            </button>
-          </form>
-
-          {csvResult && (
-            <div className="ui-info-tile tone-success" style={{ marginTop: 'var(--space-5)' }}>
-              <div className="ui-info-title">Upload Results</div>
-              <div className="ui-info-body">
-                <p>
-                  Schools added:{' '}
-                  <strong style={{ color: 'var(--color-success)' }}>
-                    {csvResult.schools_added}
-                  </strong>
-                </p>
-                <p>
-                  Schools skipped:{' '}
-                  <strong style={{ color: 'var(--color-warning)' }}>
-                    {csvResult.schools_skipped}
-                  </strong>
-                </p>
-                {csvResult.errors?.length > 0 && (
-                  <div style={{ marginTop: 'var(--space-3)' }}>
-                    <p style={{ color: 'var(--color-danger)', fontWeight: 600 }}>Row errors:</p>
-                    <ul
-                      style={{
-                        marginLeft: 'var(--space-4)',
-                        color: 'var(--color-danger)',
-                        fontSize: '0.8rem',
-                        listStyle: 'disc',
-                      }}
-                    >
-                      {csvResult.errors.slice(0, 5).map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                      {csvResult.errors.length > 5 && (
-                        <li>...and {csvResult.errors.length - 5} more</li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {mode === 'csv' && <ContactImport />}
     </Card>
   )
 }

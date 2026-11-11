@@ -101,6 +101,8 @@ export async function apiFetch(path, options = {}) {
     throw new SessionExpiredError()
   }
 
+  if (response.ok && options.responseType === 'blob') return response.blob()
+
   // Some endpoints return an empty body on success; others return JSON even on
   // error. Parse defensively so a non-JSON error page cannot throw a confusing
   // SyntaxError in place of the real status.

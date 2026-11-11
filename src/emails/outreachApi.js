@@ -11,8 +11,9 @@ const query = (values) => {
 
 /** Thin wrappers over the outreach batch endpoints. */
 export const outreachApi = {
+  campaigns: () => api.get('/api/outreach/campaigns'),
   recipients: (params, options) =>
-    api.get(`/api/outreach/recipients?${query(params)}`, options),
+    api.get(`/api/outreach/recipients?${query({ ...params, contact_mode: 1 })}`, options),
   limits: () => api.get('/api/outreach/limits'),
   batches: (limit = 10) => api.get(`/api/outreach/batches?limit=${limit}&scope=mine`),
   batch: (id) => api.get(`/api/outreach/batches/${id}`),

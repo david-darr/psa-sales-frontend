@@ -9,6 +9,12 @@ import { portfolioPreview } from './preview/portfolio'
 import { adminPreview } from './preview/admin'
 import { finderPreview } from './preview/finder'
 import { outreachPreview } from './preview/outreach'
+import { ownershipPreview } from './preview/ownership'
+import { templatesPreview } from './preview/templates'
+import { contactsPreview } from './preview/contacts'
+import { contactOutreachPreview } from './preview/contactOutreach'
+import { sequencesPreview } from './preview/sequences'
+import { agentApprovalsPreview } from './preview/agentApprovals'
 
 const user = ADMIN_PREVIEW
   ? DEMO_ADMIN_USER
@@ -119,6 +125,8 @@ let schools = names.map((name, index) => {
     closed_by_name: CLOSED_STAGES.includes(stages[index]) ? owner.name : null,
   }
 })
+// A fictional lead released for claiming; no production records are modified.
+schools.push({ ...schools[0], id: 901, school_name: 'Fairfax Community Learning', email: 'pool@example.test', county: 'Fairfax', user_id: null, user_name: 'Unassigned', owner_name: 'Unassigned', ownership_version: 0, status: 'pending', closed_at: null, closed_by_id: null, closed_by_name: null, notes: '', next_action: '', next_action_at: null })
 let emails = schools
   .filter((school) => school.status !== 'pending')
   .flatMap((school, index) =>
@@ -236,8 +244,7 @@ const mapSchools = {
 const scoped = (items, params) =>
   items.filter(
     (item) =>
-      (user.admin && params.get('scope') !== 'mine') ||
-      item.user_id === user.id,
+      params.get('scope') === 'unassigned' ? item.user_id == null : (user.admin && params.get('scope') !== 'mine') || item.user_id === user.id,
   )
 const accessible = (school) =>
   school && (user.admin || school.user_id === user.id)
@@ -277,7 +284,7 @@ const teamStats = () =>
     ).length,
   }))
 
-export function previewRequest(path, { method = 'GET', body = {} } = {}) {
+export function previewRequest(path, { method = 'GET', body = {}, formData } = {}) {
   const url = new URL(path, 'http://demo.invalid'),
     endpoint = url.pathname,
     params = url.searchParams
@@ -286,6 +293,7 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
     method,
     body,
     params,
+    formData,
     user,
     team,
     ago,
@@ -294,6 +302,7 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
     paged,
     accessible,
     log,
+    get tasks() { return tasks },
     get schools() {
       return schools
     },
@@ -304,7 +313,7 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
       return directory
     },
   }
-  for (const handler of [adminPreview, portfolioPreview, finderPreview, outreachPreview]) {
+  for (const handler of [ownershipPreview, templatesPreview, contactsPreview, adminPreview, portfolioPreview, finderPreview, sequencesPreview, agentApprovalsPreview, contactOutreachPreview, outreachPreview]) {
     const result = handler(ctx)
     if (result !== undefined) return result
   }
@@ -338,6 +347,7 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
       rows = rows.filter((row) => row.status === params.get('stage'))
     if (params.get('owner'))
       rows = rows.filter((row) => row.user_id === Number(params.get('owner')))
+    if (params.get('county')) rows = rows.filter((row) => (row.county || '').toLowerCase() === params.get('county').toLowerCase())
     if (params.get('type'))
       rows = rows.filter((row) => row.school_type === params.get('type'))
     if (params.get('due') === 'overdue')
@@ -639,7 +649,7 @@ export function previewRequest(path, { method = 'GET', body = {} } = {}) {
   if (endpoint === '/api/invitations' && method === 'GET') return []
   if (endpoint === '/api/agent-keys' && method === 'GET')
     return {
-      items: [{ id: 1, name: 'Kairos on my laptop', hint: 'psak_1a2b...9f0e', scope: 'read',
+      items: [{ id: 1, name: 'AI on my laptop', hint: 'psak_1a2b...9f0e', scope: 'read',
         expires_at: ago(-20), last_used_at: ago(0), expired: false }],
       base_url: 'https://demo.invalid/api/agent/v1',
     }

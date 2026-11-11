@@ -134,14 +134,14 @@ export function useEmailCenter({ accessToken, user }) {
     async (draft) => {
       setLoading(true)
       try {
-        await api.post('/api/send-custom-reply', {
+        const result = await api.post('/api/outreach/reply-send', {
           email_id: draft.email_id,
-          to_email: draft.school_email,
           subject: draft.subject,
           message: draft.message,
+          preview_token: draft.preview_token,
         })
         await loadSentEmails()
-        notify('success', 'Reply sent.')
+        notify('success', `Reply queued as batch #${result.batch_id}. Check History for delivery status.`)
         return true
       } catch (err) {
         notify('danger', err.message || 'Failed to send reply.')

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { STAGES, stageColor, stageLabel, useDebounced } from '../../lib/crm'
 import { loadAllRecipients } from '../../emails/outreachApi'
 import { useRecipients } from '../../emails/useOutreach'
@@ -6,6 +7,7 @@ import { plural, relativeTime } from '../../emails/constants'
 import { BlockerChips } from './bits'
 
 const PER_PAGE = 25
+const SCHOOL_CAP = 100
 
 /**
  * Searchable, selectable recipient table. Selection is a Map keyed by school id
@@ -37,7 +39,8 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
   const toggle = (row) => {
     const next = new Map(selected)
     if (next.has(row.school_id)) next.delete(row.school_id)
-    else next.set(row.school_id, row)
+    else if (next.size < SCHOOL_CAP) next.set(row.school_id, row)
+    else setBulkNote('Select up to 100 schools, then review their matching contacts.')
     onSelect(next)
   }
 
@@ -45,7 +48,7 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
     const next = new Map(selected)
     pageEligible.forEach((row) => {
       if (allOnPage) next.delete(row.school_id)
-      else next.set(row.school_id, row)
+      else if (next.size < SCHOOL_CAP) next.set(row.school_id, row)
     })
     onSelect(next)
   }
@@ -56,14 +59,14 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
     try {
       const { items: all, total: count, truncated } = await loadAllRecipients(
         { kind, q: term, stage, scope: 'mine' },
-        { cap: 500 },
+        { cap: SCHOOL_CAP },
       )
       const next = new Map(selected)
-      all.filter((row) => row.eligible).forEach((row) => next.set(row.school_id, row))
+      all.filter((row) => row.eligible).forEach((row) => { if (next.size < SCHOOL_CAP) next.set(row.school_id, row) })
       onSelect(next)
       setBulkNote(
         truncated
-          ? `Selected the first 500 of ${count.toLocaleString()} matches.`
+          ? `Selected up to 100 schools from ${count.toLocaleString()} matches. Review their contacts next.`
           : `Selected every eligible match (${next.size.toLocaleString()} total).`,
       )
     } catch (err) {
@@ -75,6 +78,7 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
 
   return (
     <div className="ou-card">
+      <p className="ou-muted" style={{ padding: 'var(--space-4)', margin: 0 }}>Choose schools first. Your audience determines which contacts receive messages in the review step. A school may have several matching mailboxes.</p>
       <div className="ou-toolbar">
         <input
           className="ou-input"
@@ -161,8 +165,9 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
                     />
                   </td>
                   <td>
-                    <span className="ou-strong">{row.school_name}</span>
+                    <Link className="ou-strong" to={`/schools/${row.school_id}`}>{row.school_name}</Link>
                     <span className="ou-sub">{row.email || 'No email on file'}</span>
+                    {row.contact_count != null && <span className="ou-sub">{plural(row.contact_count, 'contact')} on file</span>}
                   </td>
                   <td className="ou-hide-sm">{row.contact_name || <span className="ou-muted">None</span>}</td>
                   <td className="ou-hide-sm">
@@ -190,7 +195,7 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
             {kind === 'followup' ? 'No follow-ups are due.' : 'No schools match.'}
           </strong>
           {kind === 'followup'
-            ? 'Schools show up here a week after you email them, until they reply.'
+            ? 'Current follow-ups become due 3 and 7 days after the intro, unless the school replies or asks to stop.'
             : 'Try a different search or stage, or find new schools to add.'}
         </div>
       )}

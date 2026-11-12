@@ -1,3 +1,4 @@
+import { salesText } from '../../lib/salesWorkspace'
 import Glyph from './icons'
 import { MAX_ROUTE_STOPS } from './finderUtils'
 
@@ -23,7 +24,7 @@ export default function BulkBar({
   const routeHint = tooMany
     ? `Routes support up to ${MAX_ROUTE_STOPS} stops`
     : selectedCount < 2
-      ? 'Select at least 2 schools to plan a route'
+      ? salesText("Select at least 2 schools to plan a route")
       : ''
   const alreadySaved = selectedCount - saveCount
 

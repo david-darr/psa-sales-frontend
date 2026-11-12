@@ -1,3 +1,4 @@
+import { salesText } from '../../lib/salesWorkspace'
 import { useState } from 'react'
 import Modal from '../Modal'
 import { BATCH_STATUS, KINDS, relativeTime } from '../../emails/constants'
@@ -84,7 +85,7 @@ export default function HistoryTab({ emails, rev }) {
             <table className="ou-table">
               <thead>
                 <tr>
-                  <th>School</th>
+                  <th>{salesText("School")}</th>
                   <th>Status</th>
                   <th>Sent</th>
                 </tr>

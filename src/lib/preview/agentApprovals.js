@@ -1,16 +1,18 @@
 import { contactOutreachPreview } from './contactOutreach'
+function createAreaPreview(){
+
 const drafts = []
 const clone = (value) => structuredClone(value)
 function seed(ctx) {
   if (drafts.length) return
   const id = Math.max(...ctx.schools.map((s) => s.id)) + 1
-  ctx.schools.push({ id, school_name: 'Agent Approval Preview Academy', email: 'principal@agent-preview.example.test', contact_name: 'Taylor', additional_emails: [], status: 'pending', user_id: ctx.user.id, user_name: ctx.user.name, school_type: 'elementary', county: 'Demo County', address: '' })
+  ctx.schools.push({ id, school_name: ctx.area === 'business' ? 'Agent Preview Business' : 'Agent Approval Preview Academy', email: 'principal@agent-preview.example.test', contact_name: 'Taylor', additional_emails: [], status: 'pending', user_id: ctx.user.id, user_name: ctx.user.name, sales_workspace: ctx.area || 'school', school_type: ctx.area === 'business' ? 'business' : 'elementary', county: 'Demo County', address: '' })
   const settings = { contact_mode: true, school_ids: [id], kind: 'custom', audience: 'all', subject: 'PSA programs for [school_name]', body: 'Hello [contact_name],\n\nHere is the fictional outreach your agent prepared for review.', attachment_ids: [] }
   const result = contactOutreachPreview({ ...ctx, endpoint: '/api/email-preview', method: 'POST', body: settings })
   const { preview_token: _proof, ...preview } = result
   drafts.push({ id: 'demo-agent-draft', user_id: ctx.user.id, sender_id: ctx.user.id, key_id: 1, key_name: 'AI preview', key_active: true, can_execute: true, status: 'awaiting', revision: 1, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 900000).toISOString(), preview, settings })
 }
-export function agentApprovalsPreview(ctx) {
+function agentApprovalsPreview(ctx) {
   const { endpoint, method, body } = ctx
   if (!endpoint.startsWith('/api/agent-outreach-drafts')) return undefined
   seed(ctx)
@@ -33,3 +35,9 @@ export function agentApprovalsPreview(ctx) {
   } else throw new Error('Unknown action')
   return clone(draft)
 }
+
+return {agentApprovalsPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function agentApprovalsPreview(...args){return areaStore(args[0]).agentApprovalsPreview(...args)}

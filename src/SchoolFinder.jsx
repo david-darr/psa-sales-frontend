@@ -1,3 +1,4 @@
+import { salesText } from './lib/salesWorkspace'
 import {
   Suspense,
   lazy,
@@ -20,7 +21,7 @@ import Glyph from './components/finder/icons'
 import useFinderSearch from './components/finder/useFinderSearch'
 import useSchoolDetails from './components/finder/useSchoolDetails'
 import {
-  DEFAULT_KEYWORDS,
+  defaultKeywords,
   DEFAULT_RADIUS,
   MY_LOCATION_LABEL,
   guessSchoolType,
@@ -55,7 +56,7 @@ export default function SchoolFinder() {
       address: url?.address ?? last?.address ?? '',
       keywords:
         url?.keywords ??
-        (last?.keywords?.length ? last.keywords : DEFAULT_KEYWORDS),
+        (last?.keywords?.length ? last.keywords : defaultKeywords()),
       radius: url?.radius ?? last?.radius ?? DEFAULT_RADIUS,
     }
   })
@@ -462,7 +463,7 @@ export default function SchoolFinder() {
 
   return (
     <AppLayout
-      title="Discover schools"
+      title={salesText("Discover schools")}
       subtitle="Search an area, save promising leads, and plan the visit."
     >
       <div className="fd-page">
@@ -485,12 +486,8 @@ export default function SchoolFinder() {
             <span className="fd-state-icon">
               <Glyph name="pin" size={20} />
             </span>
-            <h2>Find schools near any address</h2>
-            <p>
-              Search by address, city or ZIP, or tap Use my location while you
-              are in the field. Results show who already owns each school so
-              nobody gets poached.
-            </p>
+            <h2>{salesText("Find schools near any address")}</h2>
+            <p>{salesText(" Search by address, city or ZIP, or tap Use my location while you are in the field. Results show who already owns each school so nobody gets poached. ")}</p>
             <div className="fd-chips fd-examples">
               {EXAMPLES.map((example) => (
                 <button

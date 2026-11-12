@@ -1,3 +1,5 @@
+
+function createAreaPreview(){
 // Demo handlers for the school finder endpoints. Return undefined to fall through to previewRequest.
 // Everything is deterministic and in-memory; nothing here can reach Google or production.
 
@@ -63,7 +65,7 @@ function centerFrom(body) {
 }
 
 function candidates(center, radiusKm, ctx) {
-  const rows = NAMES.map((name, index) => {
+  const rows = (ctx.area === 'business' ? ['Main Street Coffee', 'Community Dental', 'Local Grocery', 'Town Fitness', 'Neighborhood Bank', 'Valley Auto Repair', 'Family Hardware', 'Corner Bakery'] : NAMES).map((name, index) => {
     const angle = rand(index + 1) * Math.PI * 2
     const dist = 0.6 + rand(index + 40) * radiusKm * 0.92
     const lat = center.lat + (Math.sin(angle) * dist) / 111
@@ -162,7 +164,7 @@ function saveBatch(ctx) {
       all_emails: item.email ? [item.email] : [],
       phone: item.phone || '',
       address: item.address || '',
-      school_type: item.school_type || 'preschool',
+      sales_workspace: ctx.area || 'school', school_type: item.school_type || (ctx.area === 'business' ? 'business' : 'preschool'),
       status: 'pending',
       user_id: assignee.id,
       user_name: assignee.name,
@@ -180,10 +182,16 @@ function saveBatch(ctx) {
   return { created, skipped }
 }
 
-export function finderPreview(ctx) {
+function finderPreview(ctx) {
   if (ctx.method !== 'POST') return undefined
   if (ctx.endpoint === '/api/find-schools') return search(ctx)
   if (ctx.endpoint === '/api/find-schools/details') return details(ctx)
   if (ctx.endpoint === '/api/find-schools/save-batch') return saveBatch(ctx)
   return undefined
 }
+
+return {finderPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function finderPreview(...args){return areaStore(args[0]).finderPreview(...args)}

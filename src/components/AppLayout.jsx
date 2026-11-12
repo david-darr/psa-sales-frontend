@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import Icon from './Icon'
+import { salesWorkspace, salesPath } from '../lib/salesWorkspace'
 import NavigationCard from '../NavigationCard'
 import { useBreakpoint } from '../hooks/useBreakpoint'
 import { UI_PREVIEW, exitUiPreview } from '../lib/previewMode'
@@ -24,6 +25,7 @@ import '../styles/platform.css'
  * @param {ReactNode} children    Page content.
  */
 export default function AppLayout({ title, subtitle, actions, children }) {
+  const business = salesWorkspace() === 'business'
   const { isMobile } = useBreakpoint()
   const [navOpen, setNavOpen] = useState(false)
   const [navCollapsed, setNavCollapsed] = useState(
@@ -127,7 +129,7 @@ export default function AppLayout({ title, subtitle, actions, children }) {
         <div className="app-topbar">
           <div className="app-crumb">
             <Icon name="school" size={15} />
-            <span>Sales workspace</span>
+            <span>{business ? 'Business Sales' : 'School Sales'}</span>
             <span>/</span>
             <strong>{title}</strong>
           </div>
@@ -136,7 +138,7 @@ export default function AppLayout({ title, subtitle, actions, children }) {
             role="search"
             onSubmit={(event) => {
               event.preventDefault()
-              navigate(`/schools?q=${encodeURIComponent(search.trim())}`)
+              navigate(`${salesPath('/schools')}?q=${encodeURIComponent(search.trim())}`)
             }}
           >
             <Icon name="search" size={15} />
@@ -144,17 +146,17 @@ export default function AppLayout({ title, subtitle, actions, children }) {
               ref={searchRef}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search schools..."
-              aria-label="Search all accessible schools"
+              placeholder={business ? 'Search businesses...' : 'Search schools...'}
+              aria-label={business ? 'Search accessible businesses' : 'Search accessible schools'}
             />
             <kbd>Ctrl K</kbd>
           </form>
           <div className="app-topbar-actions">
-            <Link to="/tasks" title="Your tasks">
+            <Link to={salesPath('/tasks')} title="Your tasks">
               <Icon name="calendar" size={18} />
             </Link>
             <Link
-              to="/account"
+              to={business ? '/businesses/settings' : '/account'}
               className="app-avatar"
               title={user?.name || 'Account'}
             >
@@ -181,7 +183,7 @@ export default function AppLayout({ title, subtitle, actions, children }) {
           {(title || subtitle || actions) && (
             <header className="app-page-header">
               <div>
-                <div className="app-page-eyebrow">PSA / Sales workspace</div>
+                <div className="app-page-eyebrow">PSA / {business ? 'Business Sales' : 'School Sales'}</div>
                 {title && <h1 className="app-page-title">{title}</h1>}
                 {subtitle && <p className="app-page-subtitle">{subtitle}</p>}
               </div>

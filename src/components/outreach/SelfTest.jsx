@@ -1,3 +1,4 @@
+import { salesText } from '../../lib/salesWorkspace'
 import { useState } from 'react'
 import api from '../../lib/api'
 import { toServerTemplate } from '../../emails/constants'
@@ -23,7 +24,7 @@ export default function SelfTest({ kind, schoolId, message, editing, onChanged }
   }
   return <div className="ou-card ou-card-body" style={{ marginTop: 'var(--space-4)' }}>
     <h3 className="ou-card-title">Send a test to myself</h3>
-    <p className="ou-muted">Uses this school as an example. The server sends only to your signed-in mailbox, counts one email against your allowance, and leaves the school history unchanged.</p>
+    <p className="ou-muted">{salesText("Uses this school as an example. The server sends only to your signed-in mailbox, counts one email against your allowance, and leaves the school history unchanged.")}</p>
     {current && <div className="ou-mail"><div className="ou-mail-head"><span>To {current.email}</span><strong>{current.subject}</strong></div>
       <div className="ou-mail-body" style={{ whiteSpace: 'pre-wrap' }}>{current.body_text}</div>
       <p className="ou-muted">{current.attachments.join(', ') || 'No attachments'}</p></div>}

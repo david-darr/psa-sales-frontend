@@ -1,3 +1,5 @@
+
+function createAreaPreview(){
 // Fictional assignment reviews and claims. Never touches the live database.
 const reviews = new Map()
 let seq = 0
@@ -22,7 +24,7 @@ const assign = (ctx, school, target) => {
   ctx.log(school, 'Owner changed to ' + school.user_name)
   return true
 }
-export function ownershipPreview(ctx) {
+function ownershipPreview(ctx) {
   const { endpoint, method, body, user } = ctx
   if (method !== 'POST') return undefined
   const claim = endpoint.match(/^\/api\/crm\/schools\/(\d+)\/claim$/)
@@ -54,3 +56,9 @@ export function ownershipPreview(ctx) {
   return { id:review.id,total:rows.length,changed:rows.filter((row)=>row.user_id!==body.user_id).length,target_name:ctx.team.find((rep)=>rep.id===body.user_id)?.name || 'Unassigned',counties,owners,
     sample:rows.slice(0,20).map((row)=>({id:row.id,school_name:row.school_name,owner_name:row.user_name || 'Unassigned',county:row.county || ''})) }
 }
+
+return {ownershipPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function ownershipPreview(...args){return areaStore(args[0]).ownershipPreview(...args)}

@@ -123,6 +123,7 @@ export const warningMeta = (key) =>
  * and send.
  */
 export const TEMPLATE_VARS = [
+  { token: '{business name}', server: '[business_name]' },
   { token: '{school name}', server: '[school_name]' },
   { token: '{contact name}', server: '[contact_name]' },
   { token: '{my name}', server: '[user_name]' },

@@ -2,6 +2,8 @@
 import { templatesPreview, renderDemoTemplate } from './templates'
 import { contactsPreview } from './contacts'
 import { nominalSequenceDue, nextSequenceWindow, sequenceDate } from '../sequenceTime'
+function createAreaPreview(){
+
 
 const sequences = [], enrollments = [], reviews = new Map()
 let serial = 1, seeded = false
@@ -9,6 +11,7 @@ const clone = (value) => structuredClone(value)
 const hash = (value) => JSON.stringify(value)
 const time = (days = 0) => new Date(Date.now() + days * 86400000).toISOString()
 function seed(ctx) {
+  if (ctx.area === 'business') { seeded = true; return }
   if (seeded) return
   seeded = true
   const library = templatesPreview({ ...ctx, endpoint: '/api/outreach/templates', method: 'GET' }).items
@@ -57,7 +60,7 @@ function prepare(ctx, body) {
   })
   return { sequence_id: sequence.id, revision: sequence.revision, mode: body.mode || 'review', rows, starts_at: sequenceDate(body.start_date, sequence.start_hour).toISOString(), ends_at: sequenceDate(body.end_date, sequence.end_hour).toISOString(), definition: clone(sequence) }
 }
-export function sequencesPreview(ctx) {
+function sequencesPreview(ctx) {
   const { endpoint, method, body } = ctx
   if (!/^\/api\/outreach\/(sequences|sequence-|worker)/.test(endpoint)) return undefined
   seed(ctx)
@@ -132,3 +135,9 @@ export function sequencesPreview(ctx) {
   }
   return undefined
 }
+
+return {sequencesPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function sequencesPreview(...args){return areaStore(args[0]).sequencesPreview(...args)}

@@ -1,7 +1,10 @@
-// Fictional in-browser data only. These handlers never contact production.
-const contacts = new Map(), links = new Map(), previews = new Map()
+
+const contacts = new Map()
 let nextContact = 1, nextLink = 1
-const ROLES = ['unknown', 'principal_ap', 'pta_pto', 'enrichment', 'other_staff']
+function createAreaPreview(){
+// Fictional in-browser data only. These handlers never contact production.
+const links = new Map(), previews = new Map()
+const ROLES = ['unknown', 'principal_ap', 'pta_pto', 'enrichment', 'other_staff', 'marketing', 'decision_maker', 'community_relations']
 const keyOf = (row) => [row.school_name, row.address || '', row.county || ''].map((v) => v.trim().toLowerCase()).join('|')
 const normalizeRoles = (value) => {
   const aliases = { principal: 'principal_ap', ap: 'principal_ap', pta: 'pta_pto', pto: 'pta_pto', asep: 'enrichment' }
@@ -34,11 +37,11 @@ function parseCsv(input) {
   }
   if (quoted) throw new Error('Unclosed CSV quotation')
   if (row.length || cell) { row.push(cell); rows.push(row) }
-  const headers = (rows.shift() || []).map((s) => s.trim().toLowerCase().replace(/ /g, '_'))
+  const headers = (rows.shift() || []).map((s) => s.trim().toLowerCase().replace(/ /g, '_').replace(/^(business_name|company_name)$/, 'school_name'))
   if (!headers.includes('school_name') || !headers.includes('email')) throw new Error('CSV requires school_name and email')
   return rows.filter((r) => r.some(Boolean)).map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] || ''])))
 }
-export function contactsPreview(ctx) {
+function contactsPreview(ctx) {
   const { endpoint, method, body, user } = ctx
   const match = endpoint.match(/^\/api\/sales-schools\/(\d+)\/contacts(?:\/(\d+))?$/)
   if (!match && !endpoint.startsWith('/api/contact-imports')) return undefined
@@ -122,7 +125,7 @@ export function contactsPreview(ctx) {
       let school = ctx.schools.find((s) => s.id === group.school_id)
       const first = group.rows[0]
       if (group.action === 'existing') { if (!school || (!user.admin && school.user_id !== user.id)) throw new Error('School unavailable'); result.schools_updated++ }
-      else { school = { id: Math.max(...ctx.schools.map((s) => s.id), 0) + 1, school_name: group.school_name, email: first.email, additional_emails: [], address: group.address, county: group.county, status: first.stage || 'pending', school_type: first.school_type || 'preschool', notes: first.notes || '', user_id: user.id, user_name: user.name, created_at: new Date().toISOString() }; ctx.schools.push(school); result.schools_added++ }
+      else { school = { id: Math.max(...ctx.schools.map((s) => s.id), 0) + 1, school_name: group.school_name, email: first.email, additional_emails: [], address: group.address, county: group.county, status: first.stage || 'pending', sales_workspace: ctx.area || 'school', school_type: first.school_type || (ctx.area === 'business' ? 'business' : 'preschool'), notes: first.notes || '', user_id: user.id, user_name: user.name, created_at: new Date().toISOString() }; ctx.schools.push(school); result.schools_added++ }
       for (const row of group.rows) {
         const before = links.size
         const link = addLink(school, row.email, row.contact_name || '', row.roles)
@@ -136,3 +139,9 @@ export function contactsPreview(ctx) {
   }
   return undefined
 }
+
+return {contactsPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function contactsPreview(...args){return areaStore(args[0]).contactsPreview(...args)}

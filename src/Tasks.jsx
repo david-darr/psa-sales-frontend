@@ -1,3 +1,5 @@
+import { salesText } from './lib/salesWorkspace'
+import { salesRecordPath } from './lib/salesWorkspace'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
@@ -24,7 +26,7 @@ const VIEWS = [
 export default function Tasks() {
   const { user } = useAuth()
   const [params] = useSearchParams()
-  const schoolId = params.get('school')
+  const schoolId = params.get(salesText("school"))
   const [view, setView] = useState('open')
   const [scope, setScope] = useState(user.admin && schoolId ? 'team' : 'mine')
   const [page, setPage] = useState(1)
@@ -92,8 +94,8 @@ export default function Tasks() {
       {schoolId && (
         <div className="workspace-onboarding">
           <div>
-            <strong>Tasks for one school</strong>
-            <p>Opened from the school workspace.</p>
+            <strong>{salesText("Tasks for one school")}</strong>
+            <p>{salesText("Opened from the school workspace.")}</p>
           </div>
           <Link to="/tasks" className="ui-link-button">
             Show all tasks
@@ -164,7 +166,7 @@ export default function Tasks() {
                 </div>
                 <div className="task-row-meta">
                   {task.school_id && (
-                    <Link to={'/schools/' + task.school_id}>
+                    <Link to={salesRecordPath(task.school_id)}>
                       {task.school_name}
                     </Link>
                   )}
@@ -227,9 +229,7 @@ export default function Tasks() {
           disabled={loading}
         />
       </section>
-      <p className="workspace-subtle" style={{ marginTop: 14 }}>
-        School tasks move with the school when an administrator changes its
-        owner. Today is {dueLabel(localToday())}.
+      <p className="workspace-subtle" style={{ marginTop: 14 }}>{salesText(" School tasks move with the school when an administrator changes its owner. Today is ")}{dueLabel(localToday())}.
       </p>
       {newTask && (
         <TaskDialog

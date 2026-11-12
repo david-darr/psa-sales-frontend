@@ -1,7 +1,10 @@
+import { salesText } from '../../lib/salesWorkspace'
+import { salesWorkspace } from '../../lib/salesWorkspace'
 import { useId, useState } from 'react'
 import Glyph from './icons'
 import {
   KEYWORD_PRESETS,
+  BUSINESS_PRESETS,
   RADIUS_OPTIONS,
   keywordLabel,
   normalizeKeyword,
@@ -25,13 +28,14 @@ export default function SearchCard({
   busy,
   error,
 }) {
+  const presets = salesWorkspace() === 'business' ? BUSINESS_PRESETS : KEYWORD_PRESETS
   const [custom, setCustom] = useState('')
   const formId = useId()
   const radii = RADIUS_OPTIONS.includes(radius)
     ? RADIUS_OPTIONS
     : [...RADIUS_OPTIONS, radius].sort((a, b) => a - b)
   const customKeywords = keywords.filter(
-    (k) => !KEYWORD_PRESETS.some((p) => p.value === k),
+    (k) => !presets.some((p) => p.value === k),
   )
 
   function toggleKeyword(value) {
@@ -58,7 +62,7 @@ export default function SearchCard({
   return (
     <form
       className="fd-search"
-      aria-label="Search for schools"
+      aria-label={salesText("Search for schools")}
       onSubmit={(event) => {
         event.preventDefault()
         onSubmit()
@@ -107,7 +111,7 @@ export default function SearchCard({
             role="group"
             aria-labelledby={`${formId}-kw`}
           >
-            {KEYWORD_PRESETS.map((preset) => {
+            {presets.map((preset) => {
               const on = keywords.includes(preset.value)
               return (
                 <button

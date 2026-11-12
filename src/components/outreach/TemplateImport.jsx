@@ -1,8 +1,9 @@
+import { salesText } from '../../lib/salesWorkspace'
 import { useState } from 'react'
 import FileUpload from '../FileUpload'
 import api from '../../lib/api'
 
-const example = { templates:[{name:'Intro example',kind:'initial',step:0,audience:'general',subject:'Programs for {school name}',body:'Hello {contact name},\n\nMy name is {my name}. You can reach me at {my email}.',attachment_ids:[]}] }
+const example = { templates:[{name:'Intro example',kind:'initial',step:0,audience:'general',subject:salesText("Programs for {school name}"),body:'Hello {contact name},\n\nMy name is {my name}. You can reach me at {my email}.',attachment_ids:[]}] }
 export default function TemplateImport({ onImported }) {
   const [review,setReview]=useState(null)
   const [busy,setBusy]=useState(false)

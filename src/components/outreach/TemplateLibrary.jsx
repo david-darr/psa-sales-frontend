@@ -1,3 +1,4 @@
+import { salesText, salesWorkspace } from '../../lib/salesWorkspace'
 import { useEffect, useState } from 'react'
 import FileUpload from '../FileUpload'
 import TemplateImport from './TemplateImport'
@@ -5,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import api from '../../lib/api'
 import { useSharedTemplates } from '../../emails/useSharedTemplates'
 
-const AUDIENCES = { principal_ap: 'Principal / school staff', pta_pto: 'PTA / PTO', enrichment: 'Enrichment coordinator', trunk_or_treat: 'Trunk-or-Treat contacts', general: 'General' }
+const AUDIENCES = { principal_ap: salesText("Principal / school staff"), pta_pto: 'PTA / PTO', enrichment: 'Enrichment coordinator', trunk_or_treat: 'Trunk-or-Treat contacts', general: 'General', decision_maker: 'Business decision maker', marketing: 'Business marketing', community_relations: 'Community relations' }
 const blank = () => ({ name: '', audience: 'general', kind: 'initial', step: 0, subject: '', body: '', attachments: [], archived: false })
 
 export default function TemplateLibrary() {
@@ -56,7 +57,7 @@ export default function TemplateLibrary() {
   const rows = library.items.filter((item) => `${item.name} ${AUDIENCES[item.audience]}`.toLowerCase().includes(search.toLowerCase()))
   return <section className="ou-card">
     <div className="ou-card-head"><div><h3 className="ou-card-title">Shared template library</h3><p className="ou-muted">Choose these in Compose or Follow-ups. Edits there affect only your batch.</p></div>
-      {user?.admin && <div className="template-actions"><button className="ou-btn ou-btn-ghost" disabled={busy} onClick={seed}>Import Chris’s 16 templates</button><button className="ou-btn ou-btn-primary" disabled={busy} onClick={() => edit(blank())}>New template</button></div>}
+      {user?.admin && <div className="template-actions"><button className="ou-btn ou-btn-ghost" disabled={busy || salesWorkspace() === 'business'} title={salesWorkspace() === 'business' ? 'School campaign templates are available in School Sales' : undefined} onClick={seed}>Import Chris’s 16 templates</button><button className="ou-btn ou-btn-primary" disabled={busy} onClick={() => edit(blank())}>New template</button></div>}
     </div>
     <div className="ou-card-body">
       <p className="ou-muted">Templates do not schedule messages. Chris’s suggested days 0, 4, 10 and 17 are reference information; the current follow-up schedule stays in effect. Chris’s source templates have no attachments. Save reusable PDFs on a template and they attach automatically every time it is used. Follow-up templates start without files; admins can add them explicitly.</p>
@@ -90,7 +91,7 @@ export default function TemplateLibrary() {
           <span className="ou-muted">Up to three PDFs, 10 MB each and 15 MB combined. Saved emails keep the PDFs you reviewed, even if the library changes later.</span>
         </fieldset>}
         {!user?.admin && <p>Attachments: {draft.attachments?.map((item) => item.name).join(', ') || 'none'}</p>}
-        <p className="ou-muted">Personalized details: {'{school name}, {contact name}, {my name}, {my email}'}. These are filled in for each school. Missing information must be completed before sending.</p>
+        <p className="ou-muted">Personalized details: {salesText("{school name}, {contact name}, {my name}, {my email}")}{salesText(". These are filled in for each school. Missing information must be completed before sending.")}</p>
         {user?.admin && <><label className="ou-checkline"><input type="checkbox" checked={draft.archived} disabled={busy} onChange={(event) => field('archived', event.target.checked)} />Archive for future selections</label>
           <div className="template-actions"><button className="ou-btn ou-btn-primary" disabled={busy} onClick={save}>{busy ? 'Working...' : 'Save template'}</button>{draft.id && <button className="ou-btn ou-btn-ghost" disabled={busy} onClick={() => act(async () => setHistory((await api.get(`/api/outreach/templates/${draft.id}/versions`)).items))}>Previous versions</button>}<button className="ou-btn ou-btn-ghost" disabled={busy} onClick={() => { library.reload(); setDraft(null) }}>Close</button></div></>}
         {history && <ol>{history.map((version) => <li key={version.revision}><details><summary>Version {version.revision} · {new Date(version.created_at).toLocaleString()}{version.archived ? ' · Archived' : ''}</summary><p>{version.subject}</p><p>Attachments: {version.attachments?.map((item) => item.name).join(', ') || 'none'}</p><pre className="template-history">{version.body}</pre></details></li>)}</ol>}

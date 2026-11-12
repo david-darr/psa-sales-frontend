@@ -1,3 +1,4 @@
+import { salesText, salesWorkspace } from '../../lib/salesWorkspace'
 import { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_TEMPLATES, KINDS, plural, toServerTemplate } from '../../emails/constants'
 import { loadAllRecipients, outreachApi } from '../../emails/outreachApi'
@@ -16,9 +17,9 @@ const STEPS = [
 ]
 
 const emptyMessage = (kind) => ({
-  custom: kind === 'custom',
-  subject: DEFAULT_TEMPLATES[kind]?.subject ?? '',
-  body: DEFAULT_TEMPLATES[kind]?.body ?? '',
+  custom: salesWorkspace() === 'business' || kind === 'custom',
+  subject: salesWorkspace() === 'business' ? 'Sponsorship opportunity for {business name}' : DEFAULT_TEMPLATES[kind]?.subject ?? '',
+  body: salesWorkspace() === 'business' ? 'Hello {contact name},\n\nCould we arrange a short call to discuss a sponsorship opportunity with {business name}?\n\nBest,\n{my name}' : DEFAULT_TEMPLATES[kind]?.body ?? '',
   attachments: false,
   attachment_ids: [],
 })
@@ -67,10 +68,10 @@ export default function ComposeFlow({
         setNote(
           ready.length === preselect.length
             ? ''
-            : `${plural(ready.length, 'of your schools')} could be selected. The rest are missing an email, already contacted, or not assigned to you.`,
+            : `${plural(ready.length, salesText("of your schools"))} could be selected. The rest are missing an email, already contacted, or not assigned to you.`,
         )
       })
-      .catch(() => alive && setNote('Could not preselect those schools.'))
+      .catch(() => alive && setNote(salesText("Could not preselect those schools.")))
     return () => {
       alive = false
     }
@@ -119,8 +120,8 @@ export default function ComposeFlow({
   if (overLimit) blockers.push(`You can send ${remaining} more today. Deselect ${ready - remaining} to continue.`)
   if (remaining === 0) blockers.push('You have reached today\'s sending limit.')
   if (!ready) blockers.push('Select at least one recipient who is ready.')
-  if (preview.truncated || !preview.token) blockers.push('Review every contact. Select at most 100 schools and 100 contact mailboxes per batch.')
-  if (preview.previews.some((row) => row.context_required)) blockers.push('Choose a school context for each shared mailbox.')
+  if (preview.truncated || !preview.token) blockers.push(salesText("Review every contact. Select at most 100 schools and 100 contact mailboxes per batch."))
+  if (preview.previews.some((row) => row.context_required)) blockers.push(salesText("Choose a school context for each shared mailbox."))
   const canSend = !blockers.length && !sending && !preview.loading && !preview.error
 
   const send = async () => {
@@ -188,7 +189,8 @@ export default function ComposeFlow({
             <select className="ou-select" value={message.template_audience && message.template_audience !== 'general' ? message.template_audience : audience}
               disabled={Boolean(message.template_audience && message.template_audience !== 'general')}
               onChange={(event) => setAudience(event.target.value)}>
-              <option value="all">All school contacts, including unknown roles</option>
+              <option value="decision_maker">Business decision makers</option><option value="marketing">Business marketing</option><option value="community_relations">Community relations</option>
+              <option value="all">{salesText("All school contacts, including unknown roles")}</option>
               <option value="principal_ap">Principals and assistant principals</option>
               <option value="pta_pto">PTA / PTO</option><option value="enrichment">Enrichment coordinators</option>
               <option value="trunk_or_treat">Trunk-or-Treat tagged contacts</option>
@@ -198,7 +200,7 @@ export default function ComposeFlow({
         <p className="ou-muted">One email per matching mailbox. Shared mailboxes are deduplicated across reps in this campaign.
           Your daily allowance resets at midnight Eastern.</p>
         <CampaignCreate onCreated={(campaign) => { setCampaigns((rows) => [...rows, campaign]); setCampaignId(campaign.id) }} />
-        <details><summary className="ou-muted">How sending pauses</summary><p className="ou-muted">PSA checks your inbox between groups of five messages. Detected hard bounces, stop requests and complaints pause remaining outreach. Inbox checks must complete before continuing. Gmail complaints are not a connected feedback feed; record a phone request or reported complaint from the contact’s school page. A message already being sent may still finish.</p></details>
+        <details><summary className="ou-muted">How sending pauses</summary><p className="ou-muted">{salesText("PSA checks your inbox between groups of five messages. Detected hard bounces, stop requests and complaints pause remaining outreach. Inbox checks must complete before continuing. Gmail complaints are not a connected feedback feed; record a phone request or reported complaint from the contact’s school page. A message already being sent may still finish.")}</p></details>
       </div>
 
       {note && (
@@ -209,9 +211,7 @@ export default function ComposeFlow({
       {inboxBlocked && step === 'review' && (
         <div className="ou-callout tone-warning" role="status">
           <span>
-            <strong>Check replies before following up.</strong> It takes a moment and keeps you from nudging schools
-            that already answered.
-          </span>
+            <strong>Check replies before following up.</strong>{salesText(" It takes a moment and keeps you from nudging schools that already answered. ")}</span>
           <button type="button" className="ou-btn ou-btn-ghost ou-btn-sm" onClick={onCheckReplies} disabled={syncing}>
             {syncing ? 'Checking...' : 'Check replies'}
           </button>
@@ -266,7 +266,7 @@ export default function ComposeFlow({
             onRetry={preview.reload}
             onContext={(id, school) => setContexts((value) => ({ ...value, [id]: school }))}
           />
-          {preview.unmatched?.length > 0 && <p className="ou-callout tone-warning" role="status">{preview.unmatched.length} selected schools have no contacts matching this audience. Add contacts on the school page or choose a different audience.</p>}
+          {preview.unmatched?.length > 0 && <p className="ou-callout tone-warning" role="status">{preview.unmatched.length}{salesText(" selected schools have no contacts matching this audience. Add contacts on the school page or choose a different audience.")}</p>}
           {ids.length === 1 && <SelfTest kind={kind} schoolId={ids[0]} message={message} editing={editing} onChanged={limits.reload} />}
           {blockers.length > 0 && (
             <div className="ou-callout tone-danger" role="alert">
@@ -283,7 +283,7 @@ export default function ComposeFlow({
 
       <div className="ou-actionbar">
         <div className="ou-actionbar-info">
-          <span className="ou-strong ou-mono">{plural(ids.length, 'school')}</span>
+          <span className="ou-strong ou-mono">{plural(ids.length, salesText("school"))}</span>
           <span className="ou-muted">selected</span>
         </div>
         <div className="ou-actionbar-buttons">

@@ -1,3 +1,5 @@
+import { salesText } from '../lib/salesWorkspace'
+import { salesWorkspace } from '../lib/salesWorkspace'
 import { useState } from 'react'
 import Card from '../components/Card'
 import ContactImport from '../components/ContactImport'
@@ -8,7 +10,7 @@ import { EMPTY_SCHOOL, SCHOOL_TYPES } from './constants'
  */
 export default function AddSchoolsCard({ onAddSchool }) {
   const [mode, setMode] = useState(null) // null | 'manual' | 'csv'
-  const [draft, setDraft] = useState(EMPTY_SCHOOL)
+  const [draft, setDraft] = useState(() => ({ ...EMPTY_SCHOOL, school_type: salesWorkspace() === 'business' ? 'business' : 'preschool' }))
   const [submitting, setSubmitting] = useState(false)
 
   const update = (field) => (e) => setDraft((d) => ({ ...d, [field]: e.target.value }))
@@ -34,19 +36,19 @@ export default function AddSchoolsCard({ onAddSchool }) {
     const ok = await onAddSchool(draft)
     setSubmitting(false)
     if (ok) {
-      setDraft(EMPTY_SCHOOL)
+      setDraft({ ...EMPTY_SCHOOL, school_type: salesWorkspace() === 'business' ? 'business' : 'preschool' })
       setMode(null)
     }
   }
 
   return (
-    <Card title="Add Schools" icon="🏫" tone="success" style={{ marginBottom: 'var(--space-6)' }}>
+    <Card title={salesText("Add Schools")} icon="🏫" tone="success" style={{ marginBottom: 'var(--space-6)' }}>
       <div className="ui-btn-row" style={{ marginBottom: 'var(--space-5)' }}>
         <button
           className={`modern-btn-primary ${mode === 'manual' ? 'is-danger' : 'is-success'}`}
           onClick={() => setMode(mode === 'manual' ? null : 'manual')}
         >
-          {mode === 'manual' ? 'Cancel Manual Entry' : 'Add Single School'}
+          {mode === 'manual' ? 'Cancel Manual Entry' : salesText("Add Single School")}
         </button>
         <button
           className={`modern-btn-primary ${mode === 'csv' ? 'is-danger' : ''}`}
@@ -61,11 +63,11 @@ export default function AddSchoolsCard({ onAddSchool }) {
           <div className="ui-btn-row" style={{ marginBottom: 'var(--space-4)' }}>
             <input
               className="ui-input"
-              placeholder="School Name *"
+              placeholder={salesText("School Name *")}
               value={draft.school_name}
               onChange={update('school_name')}
               required
-              aria-label="School name"
+              aria-label={salesText("School name")}
             />
             <input
               className="ui-input"
@@ -77,11 +79,11 @@ export default function AddSchoolsCard({ onAddSchool }) {
           </div>
 
           <div style={{ marginBottom: 'var(--space-4)' }}>
-            <label className="ui-field-label" htmlFor="school-primary-email">
+            <label className="ui-field-label" htmlFor={salesText("school-primary-email")}>
               Primary Email *
             </label>
             <input
-              id="school-primary-email"
+              id={salesText("school-primary-email")}
               type="email"
               className="ui-input"
               placeholder="director@example.com"
@@ -144,17 +146,15 @@ export default function AddSchoolsCard({ onAddSchool }) {
           </div>
 
           <div style={{ marginBottom: 'var(--space-4)' }}>
-            <label className="ui-field-label" htmlFor="school-type">
-              School Type
-            </label>
+            <label className="ui-field-label" htmlFor={salesText("school-type")}>{salesText(" School Type ")}</label>
             <select
-              id="school-type"
+              id={salesText("school-type")}
               className="ui-select"
               value={draft.school_type}
               onChange={update('school_type')}
               required
             >
-              {SCHOOL_TYPES.map((type) => (
+              {(salesWorkspace() === 'business' ? [{ value: 'business', label: 'Business' }] : SCHOOL_TYPES).map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
@@ -162,13 +162,13 @@ export default function AddSchoolsCard({ onAddSchool }) {
             </select>
           </div>
 
-          <label className="workspace-subtle"><input type="checkbox" checked={draft.shared_contact_confirmed || false} onChange={(e) => setDraft((old) => ({ ...old, shared_contact_confirmed: e.target.checked }))} /> Distinct school sharing a mailbox. Keep profiles separate; still check name and address.</label>
+          <label className="workspace-subtle"><input type="checkbox" checked={draft.shared_contact_confirmed || false} onChange={(e) => setDraft((old) => ({ ...old, shared_contact_confirmed: e.target.checked }))} />{salesText(" Distinct school sharing a mailbox. Keep profiles separate; still check name and address.")}</label>
           <button
             type="submit"
             className="modern-btn-primary ui-block"
             disabled={submitting}
           >
-            {submitting ? 'Adding...' : 'Add School'}
+            {submitting ? 'Adding...' : salesText("Add School")}
           </button>
         </form>
       )}

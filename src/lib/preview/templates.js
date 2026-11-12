@@ -25,7 +25,7 @@ const importKey = (item) => JSON.stringify(Object.fromEntries(['name','kind','st
 const importedKeys = new Set(originals.map(importKey))
 let uploadSequence = 0
 const histories = new Map(items.map((item) => [item.id, [{ ...item, created_at: new Date().toISOString() }]]))
-const aliases = { school_name: 'school name', contact_name: 'contact name', user_name: 'my name', user_email: 'my email' }
+const aliases = { business_name: 'business name', school_name: 'school name', contact_name: 'contact name', user_name: 'my name', user_email: 'my email' }
 const tokens = /\{([^{}]*)\}|\[([^\]\r\n[]*)\]/g
 function validate(subject, body) {
   if (typeof subject !== 'string' || !subject.trim() || subject.length > 200 || /[\r\n]/.test(subject)) throw new Error('Enter a valid subject.')
@@ -61,7 +61,7 @@ export function renderDemoTemplate(body, row, user) {
   if (body.kind === 'followup' && template.step !== (row.followups_sent || 0) + 1) throw new Error(`The follow-up template step does not match ${row.school_name}.`)
   const subject = body.subject ?? template.subject, text = body.body ?? template.body
   validate(subject, text)
-  const values = { 'school name': row.school_name, 'contact name': row.contact_name, 'my name': user.name, 'my email': user.email }
+  const values = { 'business name': row.school_name, 'school name': row.school_name, 'contact name': row.contact_name, 'my name': user.name, 'my email': user.email }
   const fill = (value) => value.replace(tokens, (token, curly, square) => {
     const key = curly ?? aliases[square]
     if (!values[key]?.trim()) throw new Error(`Missing ${key} for ${row.school_name}.`)
@@ -76,7 +76,7 @@ export function templatesPreview(ctx) {
   if (download && method === 'GET') { const blob=pdfBlobs.get(download[1]);if(!blob)throw new Error('PDF not found');return blob }
   if (endpoint === '/api/outreach/template-assets' && method === 'GET') { return { items: structuredClone(assets), saved: structuredClone(savedAssets), max_bytes: 10485760 } }
   const clone = (value) => structuredClone(value)
-  if (endpoint === '/api/outreach/templates' && method === 'GET') return { items: clone(items.filter((item) => !item.archived || (user.admin && ctx.params.get('include_archived') === '1'))) }
+  if (endpoint === '/api/outreach/templates' && method === 'GET') return { items: clone(items.filter((item) => (item.sales_workspace || 'school') === (ctx.area || 'school') && (!item.archived || (user.admin && ctx.params.get('include_archived') === '1')))) }
   if (!user.admin) throw new Error('Admin access required')
   if (endpoint === '/api/outreach/template-assets/publish' && method === 'POST') {
     const file=assets.find((asset)=>asset.filename===body?.filename)
@@ -104,7 +104,7 @@ export function templatesPreview(ctx) {
       if(audienceNames.includes(row.audience))row.audience=audienceIds[audienceNames.indexOf(row.audience)]
       if(row.step==null && [0,4,10,17].includes(row.send_on_day))row.step=[0,4,10,17].indexOf(row.send_on_day)
       validate(row.subject,row.body)
-      if (!row.name?.trim() || !['initial','followup'].includes(row.kind) || !['principal_ap','pta_pto','enrichment','trunk_or_treat','general'].includes(row.audience)) throw new Error('Invalid template metadata')
+      if (!row.name?.trim() || !['initial','followup'].includes(row.kind) || !['principal_ap','pta_pto','enrichment','trunk_or_treat','general','marketing','decision_maker','community_relations'].includes(row.audience)) throw new Error('Invalid template metadata')
       const copy={...row,step:row.step || 0,attachment_ids:row.attachment_ids || [],attachments:(row.attachment_ids || []).map((id)=>savedAssets.find((asset)=>asset.id===id))}
       if(copy.attachments.some((asset)=>!asset))throw new Error('A referenced PDF is unavailable')
       const key=importKey(copy),duplicate=seen.has(key);seen.add(key)
@@ -131,13 +131,13 @@ export function templatesPreview(ctx) {
   if ((endpoint === '/api/outreach/templates' && method === 'POST') || (match && method === 'PUT')) {
     validate(body?.subject, body?.body)
     if (!body.name?.trim() || body.name.length > 180) throw new Error('Enter a template name.')
-    if (!['principal_ap', 'pta_pto', 'enrichment', 'trunk_or_treat', 'general'].includes(body.audience)) throw new Error('Choose a supported audience.')
+    if (!['principal_ap', 'pta_pto', 'enrichment', 'trunk_or_treat', 'general', 'marketing', 'decision_maker', 'community_relations'].includes(body.audience)) throw new Error('Choose a supported audience.')
     if (!['initial', 'followup'].includes(body.kind) || !(body.kind === 'initial' ? [0] : [1, 2, 3]).includes(body.step)) throw new Error('Choose a valid message step.')
     const asset = body.attachment_file && assets.find((item) => item.filename === body.attachment_file)
     if (body.attachment_file && !asset) throw new Error('Choose a PDF from the approved attachment list.')
     const current = match && items.find((item) => item.id === Number(match[1]))
     if (match && (!current || body.revision !== current.revision)) throw new Error('This template changed. Reload before saving.')
-    const next = { ...clone(body), id: current?.id || Math.max(16, ...items.map((item) => item.id)) + 1, revision: (current?.revision || 0) + 1, attachments: [], archived: !!body.archived }
+    const next = { ...clone(body), sales_workspace: ctx.area || 'school', id: current?.id || Math.max(16, ...items.map((item) => item.id)) + 1, revision: (current?.revision || 0) + 1, attachments: [], archived: !!body.archived }
     const ids = [...new Set(body.attachment_ids || (body.attachment_id ? [body.attachment_id] : []))]
     if (asset) {
       const added = { id: `demo-asset:${asset.filename}`, name: asset.filename, bytes: asset.bytes }

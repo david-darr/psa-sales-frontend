@@ -1,3 +1,5 @@
+import { salesRecordPath } from '../../lib/salesWorkspace'
+import { salesText } from '../../lib/salesWorkspace'
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import Glyph from './icons'
@@ -53,8 +55,8 @@ function StatusBadge({ school, mine }) {
   return school.saved_school_id ? (
     <Link
       className={`${cls} is-link`}
-      to={`/schools/${school.saved_school_id}`}
-      title="Open school workspace"
+      to={salesRecordPath(school.saved_school_id)}
+      title={salesText("Open school workspace")}
     >
       {inner}
     </Link>
@@ -194,7 +196,7 @@ function ResultRow({
             school.saved_school_id && (
               <Link
                 className="fd-btn fd-btn-ghost fd-btn-sm"
-                to={`/schools/${school.saved_school_id}`}
+                to={salesRecordPath(school.saved_school_id)}
               >
                 Open workspace
               </Link>

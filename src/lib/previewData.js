@@ -16,6 +16,7 @@ import { contactOutreachPreview } from './preview/contactOutreach'
 import { sequencesPreview } from './preview/sequences'
 import { agentApprovalsPreview } from './preview/agentApprovals'
 
+function createPreviewStore(area) {
 const user = ADMIN_PREVIEW
   ? DEMO_ADMIN_USER
   : NEW_EMPLOYEE_PREVIEW
@@ -35,7 +36,7 @@ const team = [
 ]
 const ago = (days) => new Date(Date.now() - days * 86400000).toISOString()
 const clone = (value) => structuredClone(value)
-const names = [
+const names = area === 'business' ? ['Cedar Coffee Company', 'Riverview Dental', 'Northfield Market', 'Oak Hill Fitness', 'Bright Horizon Bank', 'Willow Creek Auto', 'Meadowbrook Hardware', 'Little Oak Bakery', 'Bluebird Insurance', 'Westfield Tech', 'Spring Valley Realty', 'Maple Ridge Books', 'Fairview Veterinary', 'Brookside Cycles', 'Crestwood Foods', 'Heritage Printworks'] : [
   'Cedar Grove Preschool',
   'Riverview Elementary',
   'Northfield Academy',
@@ -98,10 +99,12 @@ let schools = names.map((name, index) => {
         'River Road, Arlington, VA',
         'Oak Street, Reston, VA',
       ][index % 3],
-    school_type: ['preschool', 'elementary', 'private'][index % 3],
+    school_type: area === 'business' ? 'business' : ['preschool', 'elementary', 'private'][index % 3],
+    sales_workspace: area, industry: area === 'business' ? ['Food and beverage', 'Professional services', 'Retail'][index % 3] : '', sponsorship_value: area === 'business' && stages[index] === 'partner' ? '2500.00' : null,
     status: stages[index],
     user_id: owner.id,
     user_name: owner.name,
+    owner_name: owner.name,
     notes:
       index % 3 === 0
         ? 'Interested in on-site sports programs. Director prefers a short phone call before scheduling a visit.'
@@ -126,7 +129,7 @@ let schools = names.map((name, index) => {
   }
 })
 // A fictional lead released for claiming; no production records are modified.
-schools.push({ ...schools[0], id: 901, school_name: 'Fairfax Community Learning', email: 'pool@example.test', county: 'Fairfax', user_id: null, user_name: 'Unassigned', owner_name: 'Unassigned', ownership_version: 0, status: 'pending', closed_at: null, closed_by_id: null, closed_by_name: null, notes: '', next_action: '', next_action_at: null })
+schools.push({ ...schools[0], id: 901, school_name: area === 'business' ? 'Fairfax Community Business' : 'Fairfax Community Learning', email: area === 'business' ? 'business-pool@example.test' : 'pool@example.test', county: 'Fairfax', user_id: null, user_name: 'Unassigned', owner_name: 'Unassigned', ownership_version: 0, status: 'pending', closed_at: null, closed_by_id: null, closed_by_name: null, notes: '', next_action: '', next_action_at: null })
 let emails = schools
   .filter((school) => school.status !== 'pending')
   .flatMap((school, index) =>
@@ -284,11 +287,12 @@ const teamStats = () =>
     ).length,
   }))
 
-export function previewRequest(path, { method = 'GET', body = {}, formData } = {}) {
+function previewRequest(path, { method = 'GET', body = {}, formData } = {}) {
   const url = new URL(path, 'http://demo.invalid'),
     endpoint = url.pathname,
     params = url.searchParams
   const ctx = {
+    area,
     endpoint,
     method,
     body,
@@ -344,7 +348,7 @@ export function previewRequest(path, { method = 'GET', body = {}, formData } = {
           .includes(term),
     )
     if (params.get('stage'))
-      rows = rows.filter((row) => row.status === params.get('stage'))
+      rows = rows.filter((row) => params.get('stage').split(',').includes(row.status))
     if (params.get('owner'))
       rows = rows.filter((row) => row.user_id === Number(params.get('owner')))
     if (params.get('county')) rows = rows.filter((row) => (row.county || '').toLowerCase() === params.get('county').toLowerCase())
@@ -410,7 +414,8 @@ export function previewRequest(path, { method = 'GET', body = {}, formData } = {
       if (body.status) school.status = body.status
       if (body.user_id) {
         school.user_id = body.user_id
-        school.user_name = team.find(
+        school.owner_name = team.find((person) => person.id === school.user_id)?.name || null
+      school.user_name = team.find(
           (member) => member.id === body.user_id,
         )?.name
         tasks
@@ -576,7 +581,7 @@ export function previewRequest(path, { method = 'GET', body = {}, formData } = {
   if (endpoint === '/api/add-school' && method === 'POST') {
     if (
       schools.some(
-        (item) => item.email.toLowerCase() === body.email.toLowerCase(),
+        (item) => body.email && item.email.toLowerCase() === body.email.toLowerCase(),
       )
     )
       throw new Error('This school is already assigned to your team.')
@@ -584,9 +589,11 @@ export function previewRequest(path, { method = 'GET', body = {}, formData } = {
       ...body,
       id: Math.max(...schools.map((item) => item.id)) + 1,
       all_emails: [body.email],
-      status: 'pending',
-      user_id: user.id,
-      user_name: user.name,
+      status: body.status || 'pending',
+      sales_workspace: area,
+      user_id: body.user_id === undefined ? user.id : body.user_id,
+      user_name: team.find((person) => person.id === (body.user_id === undefined ? user.id : body.user_id))?.name || null,
+      owner_name: team.find((person) => person.id === (body.user_id === undefined ? user.id : body.user_id))?.name || null,
       created_at: ago(0),
     }
     schools.push(school)
@@ -728,3 +735,8 @@ export function previewRequest(path, { method = 'GET', body = {}, formData } = {
     'This action is disabled in the demo workspace. Email sending never reaches production.',
   )
 }
+
+return previewRequest
+}
+export const previewRequest = createPreviewStore('school')
+export const previewBusinessRequest = createPreviewStore('business')

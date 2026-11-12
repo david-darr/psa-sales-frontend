@@ -9,6 +9,7 @@ import JoinLinks from './components/JoinLinks'
 import { Empty, ErrorNotice } from './components/WorkspaceUI'
 import { useResource } from './lib/crm'
 import api from './lib/api'
+import { salesPath, salesText } from './lib/salesWorkspace'
 import './styles/portfolio.css'
 
 export default function Team() {
@@ -83,7 +84,7 @@ export default function Team() {
             'team',
             'People building PSA relationships',
           ],
-          ['Assigned schools', totalSchools, 'school', 'One owner per school'],
+          [salesText('Assigned schools'), totalSchools, 'school', salesText('One owner per school')],
           ['Emails sent', totalEmails, 'mail', 'Tracked team outreach'],
           [
             'Response rate',
@@ -105,7 +106,7 @@ export default function Team() {
           </div>
         ))}
       </div>
-      {user.admin && <p className="workspace-subtle">New employees join as sales reps. Use invitations or a join link, then grant admin access separately for management responsibilities. <Link to="/schools?view=unassigned">Review unassigned schools</Link> before allocating territories.</p>}
+      {user.admin && <p className="workspace-subtle">New employees join as sales reps. Use invitations or a join link, then grant admin access separately for management responsibilities. <Link to={salesPath('/schools') + '?scope=unassigned&view=unassigned'}>{salesText('Review unassigned schools')}</Link> before allocating territories.</p>}
       <section className="workspace-panel">
         <div className="workspace-toolbar">
           <label className="workspace-toolbar-search">
@@ -127,7 +128,7 @@ export default function Team() {
                   <th></th>
                   <th>Team member</th>
                   <th>Role</th>
-                  <th>Schools</th>
+                  <th>{salesText('Schools')}</th>
                   <th>Sent</th>
                   <th>Responses</th>
                   <th>Overdue tasks</th>
@@ -179,7 +180,7 @@ export default function Team() {
                     </td>
                     <td>
                       {user.admin ? (
-                        <Link to={'/schools?owner=' + member.id}>
+                        <Link to={salesPath('/schools') + '?owner=' + member.id}>
                           {member.schools}
                         </Link>
                       ) : (

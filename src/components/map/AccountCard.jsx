@@ -1,3 +1,5 @@
+import { salesText } from '../../lib/salesWorkspace'
+import { salesRecordPath } from '../../lib/salesWorkspace'
 import { Link } from 'react-router-dom'
 import Icon from '../Icon'
 import {
@@ -75,9 +77,7 @@ export default function AccountCard({ point, onClose }) {
 
       <div className="tm-detail-actions">
         {isAccount && (
-          <Link className="tm-btn tm-btn-solid" to={`/schools/${point.id}`}>
-            Open school
-            <Icon name="arrow" size={13} />
+          <Link className="tm-btn tm-btn-solid" to={salesRecordPath(point.id)}>{salesText(" Open school ")}<Icon name="arrow" size={13} />
           </Link>
         )}
         {directions && (

@@ -1,6 +1,8 @@
 // Fictional preview only. The API client never calls fetch in this mode.
 import { contactsPreview } from './contacts'
 import { buildPool, evaluate, previewFor, outreachPreview } from './outreach'
+function createAreaPreview(){
+
 
 const reviews = new Map(), ledger = new Map(), batches = [], campaigns = []
 let sequence = 10000
@@ -54,7 +56,7 @@ function create(ctx, kind, recipients, saved) {
   batches.push(batch); saved.batch = batch
   return { batch_id: batch.id, status: 'queued', total: recipients.length, skipped: [] }
 }
-export function contactOutreachPreview(ctx) {
+function contactOutreachPreview(ctx) {
   const { endpoint, method, body } = ctx
   const report = endpoint.match(/^\/api\/contacts\/(\d+)\/report$/)
   if (report) {
@@ -142,3 +144,9 @@ export function contactOutreachPreview(ctx) {
   }
   return undefined
 }
+
+return {contactOutreachPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function contactOutreachPreview(...args){return areaStore(args[0]).contactOutreachPreview(...args)}

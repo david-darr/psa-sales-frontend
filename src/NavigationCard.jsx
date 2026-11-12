@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Icon from './components/Icon'
+import { salesWorkspace } from './lib/salesWorkspace'
+import './styles/business.css'
 
 const groups = [
   {
@@ -34,6 +36,17 @@ const groups = [
 
 export default function NavigationCard({ collapsed = false, onToggle }) {
   const { user } = useAuth()
+  const business = salesWorkspace() === 'business'
+  const navigation = business ? [{ label: 'Business Sales', items: [
+    { label: 'Overview', path: '/businesses', icon: 'grid' },
+    { label: 'Businesses', path: '/businesses/records', icon: 'team' },
+    { label: 'Sponsorship pipeline', path: '/businesses/pipeline', icon: 'pipeline' },
+    { label: 'Sponsors', path: '/businesses/sponsors', icon: 'team' },
+    { label: 'Discover businesses', path: '/businesses/discover', icon: 'search' },
+    { label: 'My tasks', path: '/businesses/tasks', icon: 'check' },
+    { label: 'Outreach', path: '/businesses/outreach', icon: 'mail' },
+    { label: 'Territory map', path: '/businesses/map', icon: 'map' },
+  ] }, { label: 'Organization', items: groups[2].items.map((item) => ({ ...item, path: ({ '/team':'/businesses/team', '/account':'/businesses/settings', '/support':'/businesses/support' })[item.path] || item.path, label: item.path === '/admin' ? 'School program admin' : item.label })) }] : groups
 
   return (
     <div className="nav-sidebar">
@@ -47,8 +60,12 @@ export default function NavigationCard({ collapsed = false, onToggle }) {
         )}
       </div>
 
+      <div className="sales-area-switch" aria-label="Sales workspace">
+        <a href="/" aria-label="School Sales" aria-current={!business ? 'page' : undefined} title="School Sales">{collapsed ? 'S' : 'School Sales'}</a>
+        <a href="/businesses" aria-label="Business Sales" aria-current={business ? 'page' : undefined} title="Business Sales">{collapsed ? 'B' : 'Business Sales'}</a>
+      </div>
       <nav aria-label="Main navigation" className="nav-groups">
-        {groups.map((group) => (
+        {navigation.map((group) => (
           <div className="nav-group" key={group.label}>
             {!collapsed && <div className="nav-group-label">{group.label}</div>}
             <ul className="nav-menu">
@@ -56,7 +73,7 @@ export default function NavigationCard({ collapsed = false, onToggle }) {
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
-                    end={item.path === '/'}
+                    end={item.path === '/' || item.path === '/businesses'}
                     className={({ isActive }) =>
                       `nav-menu-link${isActive ? ' active' : ''}`
                     }
@@ -79,15 +96,15 @@ export default function NavigationCard({ collapsed = false, onToggle }) {
       <div className="nav-user-section">
         {!collapsed && (
           <div className="nav-workspace-note">
-            <strong>Every connection counts.</strong>Find the right school.
+            <strong>Every connection counts.</strong>{business ? 'Meet local businesses.' : 'Find the right school.'}
             Build the next partnership.
-            <NavLink to="/finder">
+            <NavLink to={business ? "/businesses/records" : "/finder"}>
               Discover opportunities <Icon name="arrow" size={13} />
             </NavLink>
           </div>
         )}
         <NavLink
-          to="/account"
+          to={business ? '/businesses/settings' : '/account'}
           className="nav-user-info"
           title={collapsed ? user?.name || 'Sign in' : undefined}
         >

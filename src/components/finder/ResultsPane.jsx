@@ -1,3 +1,4 @@
+import { salesText } from '../../lib/salesWorkspace'
 import { useCallback, useEffect, useRef } from 'react'
 import Glyph from './icons'
 import ResultRow, { SkeletonRows } from './ResultRow'
@@ -106,9 +107,7 @@ export default function ResultsPane({
         <div className="fd-toolbar" aria-hidden="true">
           <span className="fd-skel fd-skel-line" style={{ width: 220, height: 16 }} />
         </div>
-        <p className="fd-sr" role="status">
-          Searching for schools
-        </p>
+        <p className="fd-sr" role="status">{salesText(" Searching for schools ")}</p>
         <ul className="fd-list">
           <SkeletonRows count={6} />
         </ul>
@@ -126,7 +125,7 @@ export default function ResultsPane({
         <span className="fd-state-icon">
           <Glyph name="search" size={20} />
         </span>
-        <h2>No schools found</h2>
+        <h2>{salesText("No schools found")}</h2>
         <p>
           Nothing matched within {radius} km of {label}. Try a wider radius or
           different keywords.
@@ -149,7 +148,7 @@ export default function ResultsPane({
       <div className="fd-toolbar">
         <div className="fd-toolbar-title">
           <h2>
-            {loadedCount} school{loadedCount === 1 ? '' : 's'}
+            {loadedCount}{salesText(" school")}{loadedCount === 1 ? '' : 's'}
             {hasMore ? '+' : ''}
           </h2>
           <span className="fd-muted">
@@ -245,7 +244,7 @@ export default function ResultsPane({
             <Glyph name="search" size={20} />
           </span>
           <h2>Every result is filtered out</h2>
-          <p>Loosen the rating or show saved schools to see them again.</p>
+          <p>{salesText("Loosen the rating or show saved schools to see them again.")}</p>
           <button
             type="button"
             className="fd-btn fd-btn-solid"
@@ -255,7 +254,7 @@ export default function ResultsPane({
           </button>
         </div>
       ) : (
-        <ul className="fd-list" aria-label="School results">
+        <ul className="fd-list" aria-label={salesText("School results")}>
           {rows.map((school) => {
             const id = school.place_id
             return (
@@ -300,7 +299,7 @@ export default function ResultsPane({
               ? 'Loading more...'
               : moreError
                 ? 'Retry loading more'
-                : 'Load more schools'}
+                : salesText("Load more schools")}
           </button>
         </div>
       )}

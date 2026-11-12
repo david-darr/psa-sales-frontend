@@ -1,3 +1,4 @@
+import { salesWorkspace, salesText } from '../lib/salesWorkspace'
 import { useState } from 'react'
 import Modal from './Modal'
 import api from '../lib/api'
@@ -10,7 +11,7 @@ export default function SchoolDialog({ onClose, onSaved, initial = {} }) {
     contact_name: initial.contact || '',
     address: initial.address || '',
     phone: initial.phone || '',
-    school_type: 'preschool',
+    school_type: salesWorkspace() === 'business' ? 'business' : 'preschool',
     shared_contact_confirmed: false,
   })
   const [saving, setSaving] = useState(false)
@@ -35,7 +36,7 @@ export default function SchoolDialog({ onClose, onSaved, initial = {} }) {
   }
   return (
     <Modal
-      title="Add a school"
+      title={salesText("Add a school")}
       onClose={onClose}
       footer={
         <>
@@ -60,7 +61,7 @@ export default function SchoolDialog({ onClose, onSaved, initial = {} }) {
       <ErrorNotice error={error} />
       <form id="new-school-form" className="workspace-form" onSubmit={submit}>
         <label className="workspace-field">
-          School name
+          {salesText("School name")}
           <input
             autoFocus
             className="ui-input"
@@ -93,15 +94,15 @@ export default function SchoolDialog({ onClose, onSaved, initial = {} }) {
             />
           </label>
           <label className="workspace-field">
-            School type
+            {salesText("School type")}
             <select
               className="ui-select"
               value={draft.school_type}
               onChange={(e) => change('school_type', e.target.value)}
             >
-              <option value="preschool">Preschool</option>
-              <option value="elementary">Elementary</option>
-              <option value="private">Private school</option>
+              {salesWorkspace() === 'business' ? <option value="business">Business</option> : <option value="preschool">Preschool</option>}
+              {salesWorkspace() !== 'business' && <option value="elementary">Elementary</option>}
+              {salesWorkspace() !== 'business' && <option value="private">Private school</option>}
             </select>
           </label>
         </div>

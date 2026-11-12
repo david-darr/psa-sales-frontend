@@ -1,3 +1,4 @@
+import { salesText } from '../../lib/salesWorkspace'
 import { useMemo, useState } from 'react'
 import Icon from '../Icon'
 import MapLegend from '../MapLegend'
@@ -69,8 +70,8 @@ export default function ControlCard({
           <input
             value={term}
             onChange={(event) => setTerm(event.target.value)}
-            placeholder="Find a school on the map"
-            aria-label="Search schools on the map"
+            placeholder={salesText("Find a school on the map")}
+            aria-label={salesText("Search schools on the map")}
           />
           {term && (
             <button
@@ -103,7 +104,7 @@ export default function ControlCard({
                   </li>
                 ))
               ) : (
-                <li className="tm-result-empty">No matching schools on the map</li>
+                <li className="tm-result-empty">{salesText("No matching schools on the map")}</li>
               )}
             </ul>
           )}
@@ -183,17 +184,13 @@ export default function ControlCard({
             onChange={(value) => onToggle('active', value)}
             count={stageCounts.active}
           >
-            <span className="tm-key tm-key-active" />
-            Active clients
-          </Toggle>
+            <span className="tm-key tm-key-active" />{salesText(" Active clients ")}</Toggle>
           <Toggle
             checked={toggles.former}
             onChange={(value) => onToggle('former', value)}
             count={stageCounts.former}
           >
-            <span className="tm-key tm-key-former" />
-            Former clients
-          </Toggle>
+            <span className="tm-key tm-key-former" />{salesText(" Former clients ")}</Toggle>
           <Toggle
             checked={toggles.pipeline}
             onChange={(value) => onToggle('pipeline', value)}

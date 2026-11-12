@@ -1,3 +1,5 @@
+import { salesRecordPath, salesPath } from '../../lib/salesWorkspace'
+import { salesText } from '../../lib/salesWorkspace'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Glyph from './icons'
@@ -86,15 +88,13 @@ export default function SaveToast({ result, onDismiss, lifted }) {
           {single && (
             <Link
               className="fd-btn fd-btn-ghost fd-btn-sm"
-              to={`/schools/${single.id}`}
+              to={salesRecordPath(single.id)}
             >
               Open workspace
             </Link>
           )}
           {!single && (
-            <Link className="fd-btn fd-btn-ghost fd-btn-sm" to="/schools">
-              View schools
-            </Link>
+            <Link className="fd-btn fd-btn-ghost fd-btn-sm" to={salesPath('/schools')}>{salesText(" View schools ")}</Link>
           )}
         </div>
       )}

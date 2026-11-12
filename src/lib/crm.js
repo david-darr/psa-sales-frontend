@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from './api'
+import { salesWorkspace, salesText } from './salesWorkspace'
 
 export const STAGES = [
   { id: 'pending', label: 'New lead', color: '#a1a1aa' },
@@ -12,7 +13,7 @@ export const STAGES = [
 ]
 
 export const stageLabel = (id) =>
-  STAGES.find((stage) => stage.id === id)?.label || id
+  salesText(STAGES.find((stage) => stage.id === id)?.label || id)
 export const stageColor = (id) =>
   STAGES.find((stage) => stage.id === id)?.color || '#8b8b94'
 export const initials = (name) =>
@@ -66,9 +67,10 @@ export function clearResourceCache() {
 }
 
 export function useResource(path) {
-  const requestPath = path?.startsWith('/api/crm/')
-    ? `${path}${path.includes('?') ? '&' : '?'}today=${localToday()}`
-    : path
+  const areaPath = path ? `${path}${path.includes('?') ? '&' : '?'}workspace=${salesWorkspace()}` : path
+  const requestPath = areaPath?.startsWith('/api/crm/')
+    ? `${areaPath}&today=${localToday()}`
+    : areaPath
   const [data, setData] = useState(() =>
     requestPath ? (resourceCache.get(requestPath) ?? null) : null,
   )

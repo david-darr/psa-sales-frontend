@@ -1,5 +1,7 @@
 import { renderDemoTemplate, resolveDemoTemplate, demoAttachments } from './templates'
 import { contactsPreview } from './contacts'
+function createAreaPreview(){
+
 // Demo handlers for the outreach endpoints. Return undefined to fall through to previewRequest.
 //
 // Everything here is in-memory and only reachable when UI_PREVIEW is on (the
@@ -56,7 +58,7 @@ const pageParams = () =>
 const dayStart = (date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
 
-export function buildPool(ctx) {
+function buildPool(ctx) {
   const { user, team } = ctx
   const rows = ctx.scoped(ctx.schools, new URLSearchParams()).map((school) => {
     const sent = ctx.emails.filter((e) => e.sales_school_id === school.id)
@@ -73,7 +75,8 @@ export function buildPool(ctx) {
     }
   })
   const owners = user.admin ? team.slice(0, 3) : [user]
-  EXTRA.forEach(([name, status, days = null, extra = {}], index) => {
+  EXTRA.forEach(([originalName, status, days = null, extra = {}], index) => {
+    const name = ctx.area === 'business' ? `Community Business ${index + 1}` : originalName
     const owner = owners[index % owners.length]
     rows.push({
       school_id: 200 + index,
@@ -99,7 +102,7 @@ export function buildPool(ctx) {
   return rows
 }
 
-export function evaluate(row, kind, ctx) {
+function evaluate(row, kind, ctx) {
   const blockers = []
   if (!ctx.user.mail_connected) blockers.push('no_mailbox')
   if (!row.email) blockers.push('missing_email')
@@ -314,7 +317,7 @@ function fill(template, row, user) {
     .replace(/\[user_email\]/g, user.email)
 }
 
-export function previewFor(row, body, ctx) {
+function previewFor(row, body, ctx) {
   const defaults = DEFAULTS[body.kind] || DEFAULTS.custom
   const shared = renderDemoTemplate(body, row, ctx.user)
   const subject = shared?.subject ?? (body.subject?.trim()
@@ -352,7 +355,7 @@ const SNIPPETS = [
   'Please call the front office after 3pm to set up a visit.',
 ]
 
-export function outreachPreview(ctx) {
+function outreachPreview(ctx) {
   const { endpoint, method, body, params } = ctx
 
   if (endpoint === '/api/sent-emails' && method === 'GET') {
@@ -522,3 +525,12 @@ export function outreachPreview(ctx) {
 
   return undefined
 }
+
+return {buildPool,evaluate,previewFor,outreachPreview}
+}
+const areaStores=new Map()
+function areaStore(ctx){const area=ctx?.area || 'school';if(!areaStores.has(area))areaStores.set(area,createAreaPreview());return areaStores.get(area)}
+export function buildPool(...args){return areaStore(args[0]).buildPool(...args)}
+export function evaluate(...args){return areaStore(args[2]).evaluate(...args)}
+export function previewFor(...args){return areaStore(args[2]).previewFor(...args)}
+export function outreachPreview(...args){return areaStore(args[0]).outreachPreview(...args)}

@@ -1,3 +1,4 @@
+import { salesText } from '../lib/salesWorkspace'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { localToday, useDebounced, useResource } from '../lib/crm'
@@ -102,9 +103,7 @@ export default function TaskDialog({ onClose, onSaved, school }) {
             </select>
           </label>
         </div>
-        <div className="workspace-field">
-          School (optional)
-          {selectedSchool ? (
+        <div className="workspace-field">{salesText(" School (optional) ")}{selectedSchool ? (
             <div className="workspace-inline">
               <strong>{selectedSchool.school_name}</strong>
               {!school && (
@@ -125,9 +124,9 @@ export default function TaskDialog({ onClose, onSaved, school }) {
               <input
                 className="ui-input"
                 value={search}
-                placeholder="Search a school to link this task"
+                placeholder={salesText("Search a school to link this task")}
                 onChange={(e) => setSearch(e.target.value)}
-                aria-label="Find school for task"
+                aria-label={salesText("Find school for task")}
               />
               {matches?.items?.map((item) => (
                 <button
@@ -161,9 +160,7 @@ export default function TaskDialog({ onClose, onSaved, school }) {
               ))}
             </select>
             {selectedSchool && (
-              <small className="workspace-subtle">
-                School tasks stay with the school’s owner.
-              </small>
+              <small className="workspace-subtle">{salesText(" School tasks stay with the school’s owner. ")}</small>
             )}
           </label>
         )}

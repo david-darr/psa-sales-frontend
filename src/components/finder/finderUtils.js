@@ -1,3 +1,4 @@
+import { salesWorkspace } from '../../lib/salesWorkspace'
 // Pure helpers for the school finder: presets, persistence, geometry, URLs.
 
 export const KEYWORD_PRESETS = [
@@ -11,6 +12,8 @@ export const KEYWORD_PRESETS = [
 ]
 
 export const DEFAULT_KEYWORDS = ['preschool', 'daycare']
+export const BUSINESS_PRESETS = ['restaurant','coffee shop','dentist','real estate','bank','fitness center','retail store'].map((value) => ({ value, label: value.charAt(0).toUpperCase() + value.slice(1) }))
+export const defaultKeywords = () => salesWorkspace() === 'business' ? ['restaurant','coffee shop'] : DEFAULT_KEYWORDS
 export const RADIUS_OPTIONS = [2, 5, 10, 20]
 export const DEFAULT_RADIUS = 10
 export const MAX_ROUTE_STOPS = 25
@@ -40,7 +43,7 @@ export function keywordLabel(value) {
 
 export function loadLastSearch() {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
+    const raw = JSON.parse(localStorage.getItem(`${STORAGE_KEY}-${salesWorkspace()}`) || 'null')
     if (!raw || typeof raw !== 'object') return null
     const keywords = Array.isArray(raw.keywords)
       ? raw.keywords.map(normalizeKeyword).filter(Boolean)
@@ -58,7 +61,7 @@ export function loadLastSearch() {
 export function saveLastSearch({ address, keywords, radius }) {
   try {
     localStorage.setItem(
-      STORAGE_KEY,
+      `${STORAGE_KEY}-${salesWorkspace()}`,
       JSON.stringify({ address, keywords, radius }),
     )
   } catch {
@@ -162,6 +165,8 @@ export function typeLabels(types, max = 2) {
 
 /** Maps Google place types and the name onto SchoolDialog's school_type values. */
 export function guessSchoolType(school) {
+  if (salesWorkspace() === 'business') return 'business'
+
   const text = `${(school.types || []).join(' ')} ${school.school_name || ''}`
     .toLowerCase()
   if (/montessori|preschool|pre-school|daycare|day care|child ?care|nursery|early learning/.test(text))

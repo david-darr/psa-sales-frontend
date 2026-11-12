@@ -1,3 +1,5 @@
+import { salesText } from './lib/salesWorkspace'
+import { salesWorkspace, salesPath } from './lib/salesWorkspace'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
@@ -26,7 +28,7 @@ function Territory() {
   const [params] = useSearchParams()
   const ownerParam = params.get('owner')
   const poolScope = params.get('scope') === 'unassigned'
-  const schoolParam = params.get('school')
+  const schoolParam = params.get(salesText("school"))
 
   const [repSel, setRepSel] = useState(() => (ownerParam ? [String(ownerParam)] : []))
   const [toggles, setToggles] = useState(() => togglesFromStages(params.get('stages')))
@@ -68,7 +70,7 @@ function Territory() {
 
   const loadProspects = useCallback(async () => {
     try {
-      setProspects((await api.get('/api/map-schools')) || {})
+      setProspects(salesWorkspace() === 'business' ? {} : (await api.get('/api/map-schools')) || {})
     } catch {
       // The prospect layers are optional context; accounts still render.
     }
@@ -380,12 +382,10 @@ function Territory() {
             <strong>No accounts on the map yet</strong>
             <p>
               {user?.admin
-                ? 'Close a school or sync locations and it will appear here.'
-                : 'Schools you close will appear here once they have a location.'}
+                ? salesText("Close a school or sync locations and it will appear here.")
+                : salesText("Schools you close will appear here once they have a location.")}
             </p>
-            <Link className="tm-btn" to="/schools">
-              Browse schools
-            </Link>
+            <Link className="tm-btn" to={salesPath('/schools')}>{salesText(" Browse schools ")}</Link>
           </div>
         )}
         {noMatch && !nothingAtAll && (

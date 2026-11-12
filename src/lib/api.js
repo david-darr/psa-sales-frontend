@@ -1,5 +1,6 @@
 /* Vite development requests use the local Flask proxy. Production uses Render.
    Set VITE_API_BASE_URL to override either environment. */
+import { salesWorkspace } from './salesWorkspace'
 import { UI_PREVIEW } from './previewMode'
 
 export const API_BASE_URL = (
@@ -65,9 +66,10 @@ function storedToken() {
  * @returns {Promise<any>} the parsed JSON body (or null for 204/empty responses)
  */
 export async function apiFetch(path, options = {}) {
+  const area = options.workspace || salesWorkspace()
   if (UI_PREVIEW) {
-    const { previewRequest } = await import('./previewData')
-    return previewRequest(path, options)
+    const { previewRequest, previewBusinessRequest } = await import('./previewData')
+    return (area === 'business' ? previewBusinessRequest : previewRequest)(path, options)
   }
 
   const {
@@ -79,7 +81,7 @@ export async function apiFetch(path, options = {}) {
     signal,
   } = options
 
-  const headers = {}
+  const headers = { 'X-PSA-Workspace': area }
   if (auth && token) headers.Authorization = `Bearer ${token}`
 
   // Only set Content-Type for JSON. For FormData the browser must generate it

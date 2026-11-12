@@ -1,3 +1,4 @@
+import { salesText, salesWorkspace } from '../../lib/salesWorkspace'
 import { useRef } from 'react'
 import { useSharedTemplates } from '../../emails/useSharedTemplates'
 import AttachmentPicker from './AttachmentPicker'
@@ -8,7 +9,7 @@ import { DEFAULT_TEMPLATES, KINDS, TEMPLATE_VARS } from '../../emails/constants'
 export default function MessageStep({ kind, message, onChange }) {
   const bodyRef = useRef(null)
   const library = useSharedTemplates()
-  const always = kind === 'custom'
+  const always = kind === 'custom' || salesWorkspace() === 'business'
   const editing = always || message.custom
 
   const setMode = (custom) => {
@@ -61,9 +62,7 @@ export default function MessageStep({ kind, message, onChange }) {
         {message.template_id && <p className="ou-muted">Editing a batch copy of version {message.template_revision}. The shared library stays unchanged. Every recipient must be reviewed before sending.</p>}
         {!editing && (
           <p className="ou-muted" style={{ marginTop: 0 }}>
-            {KINDS[kind]?.blurb} The standard message fills in each school and contact name. Choose Customize to
-            write your own.
-          </p>
+            {KINDS[kind]?.blurb}{salesText(" The standard message fills in each school and contact name. Choose Customize to write your own. ")}</p>
         )}
         {editing && (
           <>
@@ -87,7 +86,7 @@ export default function MessageStep({ kind, message, onChange }) {
                 onChange={(event) => onChange({ ...message, body: event.target.value })}
               />
               <div className="ou-vars">
-                {TEMPLATE_VARS.map(({ token }) => (
+                {TEMPLATE_VARS.filter((item) => salesWorkspace() === 'business' ? item.token !== '{school name}' : item.token !== '{business name}').map(({ token }) => (
                   <button
                     key={token}
                     type="button"

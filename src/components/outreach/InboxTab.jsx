@@ -1,3 +1,4 @@
+import { salesText } from '../../lib/salesWorkspace'
 import { relativeTime } from '../../emails/constants'
 import { Dot } from './bits'
 
@@ -21,9 +22,7 @@ export default function InboxTab({ emails, onOpen, onCheckReplies, syncing, mail
       </div>
       {!threads.length && (
         <div className="ou-empty">
-          <strong>No replies yet.</strong>
-          When a school answers one of your emails, the conversation shows up here.
-        </div>
+          <strong>No replies yet.</strong>{salesText(" When a school answers one of your emails, the conversation shows up here. ")}</div>
       )}
       {threads.map((email) => (
         <button

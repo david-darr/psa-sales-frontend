@@ -1,3 +1,4 @@
+import { salesText } from './lib/salesWorkspace'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
@@ -26,7 +27,7 @@ import './styles/outreach.css'
 
 const parseIds = (search) => {
   const params = new URLSearchParams(search)
-  const raw = params.get('school_ids') || params.get('school') || ''
+  const raw = params.get('school_ids') || params.get(salesText("school")) || ''
   const ids = raw
     .split(',')
     .map((value) => Number(value))
@@ -115,7 +116,7 @@ export default function Emails() {
 
   if (!user) {
     return (
-      <AppLayout title="Outreach" subtitle="Reach more schools with less typing">
+      <AppLayout title="Outreach" subtitle={salesText("Reach more schools with less typing")}>
         <Card>
           <EmptyState
             icon="🔐"

@@ -1,3 +1,5 @@
+import { salesRecordPath } from '../../lib/salesWorkspace'
+import { salesText } from '../../lib/salesWorkspace'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { STAGES, stageColor, stageLabel, useDebounced } from '../../lib/crm'
@@ -40,7 +42,7 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
     const next = new Map(selected)
     if (next.has(row.school_id)) next.delete(row.school_id)
     else if (next.size < SCHOOL_CAP) next.set(row.school_id, row)
-    else setBulkNote('Select up to 100 schools, then review their matching contacts.')
+    else setBulkNote(salesText("Select up to 100 schools, then review their matching contacts."))
     onSelect(next)
   }
 
@@ -66,7 +68,7 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
       onSelect(next)
       setBulkNote(
         truncated
-          ? `Selected up to 100 schools from ${count.toLocaleString()} matches. Review their contacts next.`
+          ? salesText(`Selected up to 100 schools from ${count.toLocaleString()} matches. Review their contacts next.`)
           : `Selected every eligible match (${next.size.toLocaleString()} total).`,
       )
     } catch (err) {
@@ -78,12 +80,12 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
 
   return (
     <div className="ou-card">
-      <p className="ou-muted" style={{ padding: 'var(--space-4)', margin: 0 }}>Choose schools first. Your audience determines which contacts receive messages in the review step. A school may have several matching mailboxes.</p>
+      <p className="ou-muted" style={{ padding: 'var(--space-4)', margin: 0 }}>{salesText("Choose schools first. Your audience determines which contacts receive messages in the review step. A school may have several matching mailboxes.")}</p>
       <div className="ou-toolbar">
         <input
           className="ou-input"
           type="search"
-          placeholder="Search school, contact or email"
+          placeholder={salesText("Search school, contact or email")}
           aria-label="Search recipients"
           value={q}
           onChange={(event) => setQ(event.target.value)}
@@ -133,13 +135,13 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
                 <input
                   type="checkbox"
                   className="ou-check"
-                  aria-label="Select every eligible school on this page"
+                  aria-label={salesText("Select every eligible school on this page")}
                   checked={allOnPage}
                   onChange={togglePage}
                   disabled={!pageEligible.length}
                 />
               </th>
-              <th>School</th>
+              <th>{salesText("School")}</th>
               <th className="ou-hide-sm">Contact</th>
               <th className="ou-hide-sm">Stage</th>
               <th className="ou-hide-sm">Last email</th>
@@ -165,7 +167,7 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
                     />
                   </td>
                   <td>
-                    <Link className="ou-strong" to={`/schools/${row.school_id}`}>{row.school_name}</Link>
+                    <Link className="ou-strong" to={salesRecordPath(row.school_id)}>{row.school_name}</Link>
                     <span className="ou-sub">{row.email || 'No email on file'}</span>
                     {row.contact_count != null && <span className="ou-sub">{plural(row.contact_count, 'contact')} on file</span>}
                   </td>
@@ -192,18 +194,18 @@ export default function RecipientPicker({ kind, selected, onSelect, rev }) {
       {!loading && !items.length && !error && (
         <div className="ou-empty">
           <strong>
-            {kind === 'followup' ? 'No follow-ups are due.' : 'No schools match.'}
+            {kind === 'followup' ? 'No follow-ups are due.' : salesText("No schools match.")}
           </strong>
           {kind === 'followup'
-            ? 'Current follow-ups become due 3 and 7 days after the intro, unless the school replies or asks to stop.'
-            : 'Try a different search or stage, or find new schools to add.'}
+            ? salesText("Current follow-ups become due 3 and 7 days after the intro, unless the school replies or asks to stop.")
+            : salesText("Try a different search or stage, or find new schools to add.")}
         </div>
       )}
       {loading && !items.length && <div className="ou-empty">Loading recipients...</div>}
 
       <div className="ou-pager">
         <span>
-          {plural(total, 'school')}
+          {plural(total, salesText("school"))}
           {selected.size > 0 && ` · ${selected.size.toLocaleString()} selected`}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>

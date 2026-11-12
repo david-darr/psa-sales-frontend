@@ -8,6 +8,7 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
+const BusinessSales = lazy(() => import("./BusinessSales"));
 const Home = lazy(() => import("./Home"));
 const SchoolsList = lazy(() => import("./SchoolsList"));
 const SchoolWorkspace = lazy(() => import("./SchoolWorkspace"));
@@ -68,6 +69,18 @@ function App() {
             }
           >
             <Routes>
+              <Route path="/businesses" element={<ProtectedRoute><BusinessSales /></ProtectedRoute>} />
+              <Route path="/businesses/discover" element={<ProtectedRoute><SchoolFinder key="business" /></ProtectedRoute>} />
+              <Route path="/businesses/settings" element={<Account />} />
+              <Route path="/businesses/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
+              <Route path="/businesses/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+              <Route path="/businesses/records" element={<ProtectedRoute><BusinessSales /></ProtectedRoute>} />
+              <Route path="/businesses/pipeline" element={<ProtectedRoute><BusinessSales /></ProtectedRoute>} />
+              <Route path="/businesses/sponsors" element={<ProtectedRoute><BusinessSales /></ProtectedRoute>} />
+              <Route path="/businesses/outreach" element={<ProtectedRoute><Emails key="business" /></ProtectedRoute>} />
+              <Route path="/businesses/map" element={<ProtectedRoute><PSAMap key="business" /></ProtectedRoute>} />
+              <Route path="/businesses/tasks" element={<ProtectedRoute><Tasks key="business" /></ProtectedRoute>} />
+              <Route path="/businesses/:id" element={<ProtectedRoute><BusinessSales /></ProtectedRoute>} />
               <Route
                 path="/"
                 element={
